@@ -66,8 +66,7 @@ export default function LevelModal({ onClose, planetName, levelId }: LevelModalP
             setAnswered(false);
         } else {
             // Finish
-            const earned = totalXP + (answered && selected === question.correct ? question.xp : 0);
-            await addXP(earned);
+            await addXP(totalXP);
             await completeLevel(levelId);
             setShowConfetti(true);
             setPhase("result");
@@ -75,8 +74,8 @@ export default function LevelModal({ onClose, planetName, levelId }: LevelModalP
     };
 
 
-    const finalScore = score + (answered && selected === question.correct ? 1 : 0);
-    const finalXP = totalXP + (answered && selected === question.correct ? question.xp : 0);
+    const finalScore = score;
+    const finalXP = totalXP;
 
     return (
         <AnimatePresence>
