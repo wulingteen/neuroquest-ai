@@ -1,3 +1,5 @@
+# AGENT.md
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
@@ -16,14 +18,21 @@ No test runner is configured yet.
 **NeuroQuest AI** is a gamified GenAI learning platform built as a Next.js 16 app with React 19, TypeScript, Tailwind CSS 4, and Zustand for state management.
 
 ### Frontend-Backend Status
-- **Frontend:** Fully implemented (5 pages, Zustand state, localStorage persistence)
-- **Backend:** Not yet implemented — Supabase SDK is installed (`@supabase/supabase-js`) but unused
+- **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), `localStorage` fallback persistence.
+- **Backend:** Setup started using Next.js API Routes (`src/app/api/...`) as the dedicated backend controller layer, ensuring strict frontend-backend separation within this monorepo.
+- **Database:** Supabase tools setup in `src/lib/supabase/`. Ensure any future data fetching/mutation flows through the API Routes or dedicated Next.js Server Actions, separating direct DB calls from Frontend UI.
 
 ### Key Layers
 
+**`src/app/api/`** — Backend API routes. Handlers here (e.g., `src/app/api/planets/route.ts`) acts as our backend microservices ensuring clean separation from the UI.
+
+**`src/lib/supabase/`** — Database clients (`client.ts` and `server.ts`) implementing SSR best practices with `@supabase/ssr`.
+
+**`src/types/`** — Shared TypeScript models (e.g., `game.ts`) between frontend boundaries and backend logic.
+
 **`src/store/gameStore.ts`** — Single Zustand store managing all game state (XP, level, streaks, completed levels, achievements, modal visibility). Persists to `localStorage` key `neuroquest-game`. XP→Level formula: `level = floor(sqrt(xp / 100))`.
 
-**`src/lib/gameData.ts`** — All static game content: 6 planets (each with 4–6 levels), quiz questions, arena challenges, achievements, and news items. This is the single source of truth for content until backend is wired.
+**`src/lib/gameData.ts`** — Current static fallback data until Supabase remote fetches are fully piped.
 
 **`src/app/`** — Five pages using Next.js App Router:
 - `/` — AI Universe Map (6 planets, progressive unlock at 70% completion)
