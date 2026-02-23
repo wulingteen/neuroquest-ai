@@ -1,0 +1,41 @@
+import type { Metadata } from "next";
+import { Inter, Orbitron } from "next/font/google";
+import "./globals.css";
+import NavBar from "@/components/NavBar";
+import StarField from "@/components/StarField";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  variable: "--font-orbitron",
+  weight: ["400", "700", "900"],
+});
+
+export const metadata: Metadata = {
+  title: "NeuroQuest AI — 探索 GenAI 宇宙",
+  description: "透過遊戲化學習掌握生成式 AI 新知。結合八角理論打造極致學習體驗——Prompt Engineering、LLM 原理、AI 倫理，全都在這裡。",
+  keywords: ["GenAI", "生成式AI", "Prompt Engineering", "LLM", "AI學習", "教育遊戲"],
+  openGraph: {
+    title: "NeuroQuest AI",
+    description: "讓學習 GenAI 比打遊戲還上癮",
+    type: "website",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="zh-TW" className={`${inter.variable} ${orbitron.variable}`}>
+      <body className="min-h-screen bg-[#0D0D2B] text-slate-100 font-inter">
+        <StarField />
+        <NavBar />
+        <main className="relative z-10 pt-16 md:pt-20 min-h-screen">
+          {children}
+        </main>
+      </body>
+    </html>
+  );
+}

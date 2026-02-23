@@ -1,0 +1,272 @@
+@import "tailwindcss";
+
+@theme {
+  --color-neon-blue: #00D4FF;
+  --color-neon-purple: #8B5CF6;
+  --color-neon-gold: #FFB800;
+  --color-neon-green: #10B981;
+  --color-deep-space: #0D0D2B;
+  --color-space-mid: #0F0F3A;
+  --color-space-card: rgba(255,255,255,0.04);
+  --color-space-border: rgba(255,255,255,0.08);
+
+  --font-orbitron: "Orbitron", sans-serif;
+  --font-inter: "Inter", sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0D0D2B;
+    color: #E2E8F0;
+    font-family: var(--font-inter);
+    overflow-x: hidden;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0D0D2B;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.5);
+    border-radius: 3px;
+  }
+}
+
+@layer utilities {
+  /* Glassmorphism cards */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+  }
+
+  .glass-card-hover {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
+    transition: all 0.3s ease;
+  }
+
+  .glass-card-hover:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(139, 92, 246, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.2);
+  }
+
+  /* Neon glow effects */
+  .neon-glow-purple {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.4), 0 0 60px rgba(139, 92, 246, 0.1);
+  }
+
+  .neon-glow-blue {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.4), 0 0 60px rgba(0, 212, 255, 0.1);
+  }
+
+  .neon-glow-gold {
+    box-shadow: 0 0 20px rgba(255, 184, 0, 0.4), 0 0 60px rgba(255, 184, 0, 0.1);
+  }
+
+  .neon-text-purple {
+    color: #8B5CF6;
+    text-shadow: 0 0 10px rgba(139, 92, 246, 0.8), 0 0 20px rgba(139, 92, 246, 0.4);
+  }
+
+  .neon-text-blue {
+    color: #00D4FF;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.8), 0 0 20px rgba(0, 212, 255, 0.4);
+  }
+
+  .neon-text-gold {
+    color: #FFB800;
+    text-shadow: 0 0 10px rgba(255, 184, 0, 0.8), 0 0 20px rgba(255, 184, 0, 0.4);
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #00D4FF, #8B5CF6, #FFB800);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-text-purple {
+    background: linear-gradient(135deg, #8B5CF6, #EC4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background: linear-gradient(135deg, #8B5CF6, #00D4FF);
+    color: white;
+    font-weight: 700;
+    padding: 0.75rem 2rem;
+    border-radius: 0.75rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: var(--font-inter);
+    letter-spacing: 0.05em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #00D4FF, #8B5CF6);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .btn-primary:hover::before {
+    opacity: 1;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.5);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: #8B5CF6;
+    font-weight: 600;
+    padding: 0.75rem 2rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(139, 92, 246, 0.5);
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .btn-secondary:hover {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: #8B5CF6;
+    transform: translateY(-1px);
+  }
+
+  /* XP bar */
+  .xp-bar-track {
+    background: rgba(255,255,255,0.1);
+    border-radius: 999px;
+    overflow: hidden;
+    height: 8px;
+  }
+
+  .xp-bar-fill {
+    background: linear-gradient(90deg, #8B5CF6, #00D4FF);
+    height: 100%;
+    border-radius: 999px;
+    transition: width 1s ease;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+  }
+
+  /* Star particles */
+  .star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--duration, 3s) ease-in-out infinite;
+  }
+
+  /* Rarity colors */
+  .rarity-common { color: #9CA3AF; border-color: #9CA3AF; }
+  .rarity-rare { color: #3B82F6; border-color: #3B82F6; }
+  .rarity-epic { color: #8B5CF6; border-color: #8B5CF6; }
+  .rarity-legendary { color: #FFB800; border-color: #FFB800; }
+
+  .rarity-bg-common { background: rgba(156,163,175,0.1); }
+  .rarity-bg-rare { background: rgba(59,130,246,0.1); }
+  .rarity-bg-epic { background: rgba(139,92,246,0.1); }
+  .rarity-bg-legendary { background: rgba(255,184,0,0.1); }
+
+  /* Planet pulse animation */
+  .planet-pulse {
+    animation: planet-pulse 3s ease-in-out infinite;
+  }
+
+  /* Scanline effect */
+  .scanline::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+    pointer-events: none;
+    border-radius: inherit;
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.5); }
+}
+
+@keyframes planet-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.05); filter: brightness(1.2); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes neon-flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.8; }
+  97% { opacity: 1; }
+  98% { opacity: 0.6; }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.6s ease-out forwards;
+}
+
+.animate-neon-flicker {
+  animation: neon-flicker 5s ease-in-out infinite;
+}
