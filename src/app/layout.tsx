@@ -3,6 +3,7 @@ import { Inter, Orbitron } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
 import StarField from "@/components/StarField";
+import GameInitializer from "@/components/GameInitializer";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const orbitron = Orbitron({
@@ -30,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="zh-TW" className={`${inter.variable} ${orbitron.variable}`}>
       <body className="min-h-screen bg-[#0D0D2B] text-slate-100 font-inter">
+        <GameInitializer />
         <StarField />
         <NavBar />
         <main className="relative z-10 pt-16 md:pt-20 min-h-screen">
@@ -39,3 +41,4 @@ export default function RootLayout({
     </html>
   );
 }
+

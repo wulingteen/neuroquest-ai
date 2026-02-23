@@ -11,9 +11,11 @@ const Confetti = dynamic(() => import("react-confetti"), { ssr: false });
 
 interface LevelModalProps {
     onClose: () => void;
+    planetName: string;
+    levelId: string;
 }
 
-export default function LevelModal({ onClose }: LevelModalProps) {
+export default function LevelModal({ onClose, planetName, levelId }: LevelModalProps) {
     const { addXP, completeLevel } = useGameStore();
     const [phase, setPhase] = useState<"intro" | "quiz" | "result">("intro");
     const [currentQ, setCurrentQ] = useState(0);
@@ -57,7 +59,7 @@ export default function LevelModal({ onClose }: LevelModalProps) {
         }
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (currentQ < questions.length - 1) {
             setCurrentQ((q) => q + 1);
             setSelected(null);
@@ -65,12 +67,13 @@ export default function LevelModal({ onClose }: LevelModalProps) {
         } else {
             // Finish
             const earned = totalXP + (answered && selected === question.correct ? question.xp : 0);
-            addXP(earned);
-            completeLevel("p1-2");
+            await addXP(earned);
+            await completeLevel(levelId);
             setShowConfetti(true);
             setPhase("result");
         }
     };
+
 
     const finalScore = score + (answered && selected === question.correct ? 1 : 0);
     const finalXP = totalXP + (answered && selected === question.correct ? question.xp : 0);
@@ -103,7 +106,7 @@ export default function LevelModal({ onClose }: LevelModalProps) {
                     <div className="p-6 border-b border-white/10">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-xs text-slate-500 uppercase tracking-widest">Prompt 星 · 關卡訓練</p>
+                                <p className="text-xs text-slate-500 uppercase tracking-widest">{planetName} · 關卡訓練</p>
                                 <h2 className="text-xl font-black gradient-text mt-0.5" style={{ fontFamily: "Orbitron, sans-serif" }}>
                                     GenAI 知識挑戰
                                 </h2>

@@ -9,7 +9,7 @@ import DailyRewardModal from "@/components/DailyRewardModal";
 import LevelModal from "@/components/LevelModal";
 
 export default function WorldMapPage() {
-  const { level, xp, streak, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, currentPlanet } = useGameStore();
+  const { level, xp, streak, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, setCurrentLevel, currentPlanet } = useGameStore();
   const [selectedPlanet, setSelectedPlanet] = useState<string | null>(null);
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [planets, setPlanets] = useState<Planet[]>([]);
@@ -272,7 +272,12 @@ export default function WorldMapPage() {
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: idx * 0.06 }}
-                      onClick={() => available && setShowLevelModal(true)}
+                      onClick={() => {
+                        if (available) {
+                          setCurrentLevel(lvl.id);
+                          setShowLevelModal(true);
+                        }
+                      }}
                       className={cn(
                         "shrink-0 w-32 rounded-xl p-3 border text-left transition-all",
                         done
@@ -307,8 +312,13 @@ export default function WorldMapPage() {
       </AnimatePresence>
 
       {showLevelModal && (
-        <LevelModal onClose={() => setShowLevelModal(false)} />
+        <LevelModal
+          onClose={() => setShowLevelModal(false)}
+          planetName={planet?.name || ""}
+          levelId={levels.find(l => l.id === useGameStore.getState().currentLevel)?.id || ""}
+        />
       )}
+
     </div>
   );
 }

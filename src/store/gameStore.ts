@@ -12,6 +12,7 @@ interface GameState {
     lastLogin: string | null;
     completedLevels: Set<string>;
     unlockedAchievements: Set<string>;
+    isLoaded: boolean;
 
     // UI state
     currentPlanet: string | null;
@@ -24,8 +25,9 @@ interface GameState {
     levelTitle: string;
 
     // Actions
-    addXP: (amount: number) => void;
-    completeLevel: (levelId: string) => void;
+    fetchUser: () => Promise<void>;
+    addXP: (amount: number) => Promise<void>;
+    completeLevel: (levelId: string) => Promise<void>;
     unlockAchievement: (achievementId: string) => void;
     setCurrentPlanet: (planetId: string | null) => void;
     setCurrentLevel: (levelId: string | null) => void;
@@ -36,38 +38,84 @@ interface GameState {
 export const useGameStore = create<GameState>()(
     persist(
         (set, get) => ({
-            playerName: "YouPlayer",
-            playerAvatar: "🌟",
-            xp: 14500,
-            streak: 4,
+            playerName: "Loading...",
+            playerAvatar: "👤",
+            xp: 0,
+            streak: 0,
             lastLogin: null,
-            completedLevels: new Set(["p1-1"]),
-            unlockedAchievements: new Set(["first-step"]),
+            completedLevels: new Set(),
+            unlockedAchievements: new Set(),
+            isLoaded: false,
             currentPlanet: null,
             currentLevel: null,
             showDailyReward: false,
-            level: getLevelFromXP(14500),
-            levelProgress: getLevelProgress(14500),
-            levelTitle: getLevelTitle(getLevelFromXP(14500)),
+            level: 1,
+            levelProgress: 0,
+            levelTitle: getLevelTitle(1),
 
-            addXP: (amount) => {
-                set((state) => {
-                    const newXP = state.xp + amount;
-                    return {
-                        xp: newXP,
-                        level: getLevelFromXP(newXP),
-                        levelProgress: getLevelProgress(newXP),
-                        levelTitle: getLevelTitle(getLevelFromXP(newXP)),
-                    };
-                });
+            fetchUser: async () => {
+                try {
+                    const response = await fetch('/api/user');
+                    const result = await response.json();
+                    if (result.success) {
+                        const { playerName, playerAvatar, xp, streak, lastLogin, completedLevels, unlockedAchievements } = result.data;
+                        set({
+                            playerName,
+                            playerAvatar,
+                            xp,
+                            streak,
+                            lastLogin,
+                            completedLevels: new Set(completedLevels),
+                            unlockedAchievements: new Set(unlockedAchievements),
+                            level: getLevelFromXP(xp),
+                            levelProgress: getLevelProgress(xp),
+                            levelTitle: getLevelTitle(getLevelFromXP(xp)),
+                            isLoaded: true,
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch user:", error);
+                }
             },
 
-            completeLevel: (levelId) => {
+            addXP: async (amount) => {
+                const newXP = get().xp + amount;
+                set((state) => ({
+                    xp: newXP,
+                    level: getLevelFromXP(newXP),
+                    levelProgress: getLevelProgress(newXP),
+                    levelTitle: getLevelTitle(getLevelFromXP(newXP)),
+                }));
+
+                // Sync with DB
+                try {
+                    await fetch('/api/user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ xp: newXP }),
+                    });
+                } catch (error) {
+                    console.error("Failed to sync XP with DB:", error);
+                }
+            },
+
+            completeLevel: async (levelId) => {
                 set((state) => {
                     const newCompleted = new Set(state.completedLevels);
                     newCompleted.add(levelId);
                     return { completedLevels: newCompleted };
                 });
+
+                // Sync with DB
+                try {
+                    await fetch('/api/user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ completedLevelId: levelId }),
+                    });
+                } catch (error) {
+                    console.error("Failed to sync progress with DB:", error);
+                }
             },
 
             unlockAchievement: (achievementId) => {
@@ -83,16 +131,25 @@ export const useGameStore = create<GameState>()(
 
             checkDailyLogin: () => {
                 const today = new Date().toDateString();
-                const { lastLogin } = get();
+                const { lastLogin, streak } = get();
                 if (lastLogin !== today) {
                     const yesterday = new Date();
                     yesterday.setDate(yesterday.getDate() - 1);
                     const wasYesterday = lastLogin === yesterday.toDateString();
-                    set((state) => ({
+                    const newStreak = wasYesterday ? streak + 1 : 1;
+
+                    set({
                         lastLogin: today,
-                        streak: wasYesterday ? state.streak + 1 : 1,
+                        streak: newStreak,
                         showDailyReward: true,
-                    }));
+                    });
+
+                    // Sync streak with DB
+                    fetch('/api/user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ streak: newStreak }),
+                    }).catch(err => console.error("Failed to sync streak:", err));
                 }
             },
 
@@ -101,29 +158,10 @@ export const useGameStore = create<GameState>()(
         {
             name: "neuroquest-game",
             partialize: (state) => ({
-                playerName: state.playerName,
-                playerAvatar: state.playerAvatar,
-                xp: state.xp,
-                streak: state.streak,
-                lastLogin: state.lastLogin,
-                completedLevels: Array.from(state.completedLevels),
-                unlockedAchievements: Array.from(state.unlockedAchievements),
+                currentPlanet: state.currentPlanet,
+                currentLevel: state.currentLevel,
             }),
-            onRehydrateStorage: () => (state) => {
-                if (state) {
-                    // Convert arrays back to Sets after rehydration
-                    if (Array.isArray((state as any).completedLevels)) {
-                        state.completedLevels = new Set((state as any).completedLevels);
-                    }
-                    if (Array.isArray((state as any).unlockedAchievements)) {
-                        state.unlockedAchievements = new Set((state as any).unlockedAchievements);
-                    }
-                    const xp = state.xp;
-                    state.level = getLevelFromXP(xp);
-                    state.levelProgress = getLevelProgress(xp);
-                    state.levelTitle = getLevelTitle(getLevelFromXP(xp));
-                }
-            },
         }
     )
 );
+

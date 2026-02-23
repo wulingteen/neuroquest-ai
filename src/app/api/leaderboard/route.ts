@@ -19,7 +19,7 @@ export async function GET() {
         const leaderboard = players.map((player, index) => ({
             ...player,
             rank: index + 1,
-            level: Math.floor(Math.sqrt(player.xp / 100)) + 1, // Formula from AGENT.md
+            level: Math.floor(player.xp / 1000) + 1, // 1000 XP per level
         }));
 
         return NextResponse.json({
