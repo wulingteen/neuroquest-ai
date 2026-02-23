@@ -1,21 +1,30 @@
 import { NextResponse } from 'next/server';
-import { PLANETS } from '@/lib/gameData';
-import { createClient } from '@/lib/supabase/server';
+import sql from '@/lib/db';
 
-// GET /api/planets
 export async function GET() {
     try {
-        // 1. In the fully implemented DB architecture, fetch from Supabase:
-        // const supabase = await createClient();
-        // const { data, error } = await supabase.from('planets').select('*');
-        // if (error) throw error;
-
-        // 2. Currently falling back to static data for demonstration of separation
-        const data = PLANETS;
+        const planets = await sql`
+            SELECT 
+                planet_id as id,
+                name,
+                subtitle,
+                icon,
+                color,
+                glow_color as "glowColor",
+                bg_gradient as "bgGradient",
+                x,
+                y,
+                total_levels as "totalLevels",
+                description,
+                locked,
+                required_planet_id as "requiredPlanet"
+            FROM planets
+            ORDER BY created_at ASC
+        `;
 
         return NextResponse.json({
             success: true,
-            data,
+            data: planets,
         });
     } catch (error) {
         console.error('Error fetching planets:', error);

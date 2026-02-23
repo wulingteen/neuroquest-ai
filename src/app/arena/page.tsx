@@ -1,7 +1,8 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
-import { ARENA_CHALLENGES } from "@/lib/gameData";
+import { useState, useEffect } from "react";
+
+import { getLevelTitle, type ArenaChallenge } from "@/lib/gameData";
 import { useGameStore } from "@/store/gameStore";
 import { Swords, Send, ThumbsUp, Star, Zap, Bot, Users, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,14 +31,33 @@ const MOCK_ENTRIES = [
 export default function ArenaPage() {
     const { addXP } = useGameStore();
     const [selectedChallenge, setSelectedChallenge] = useState(0);
+    const [challenges, setChallenges] = useState<ArenaChallenge[]>([]);
     const [myPrompt, setMyPrompt] = useState("");
     const [submitted, setSubmitted] = useState(false);
     const [aiOutput, setAiOutput] = useState("");
     const [loading, setLoading] = useState(false);
     const [votedIdx, setVotedIdx] = useState<number | null>(null);
     const [votes, setVotes] = useState(MOCK_ENTRIES.map((e) => e.votes));
+    const [fetching, setFetching] = useState(true);
 
-    const challenge = ARENA_CHALLENGES[selectedChallenge];
+    useEffect(() => {
+        const fetchChallenges = async () => {
+            try {
+                const response = await fetch('/api/arena');
+                const result = await response.json();
+                if (result.success) {
+                    setChallenges(result.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch challenges:", error);
+            } finally {
+                setFetching(false);
+            }
+        };
+        fetchChallenges();
+    }, []);
+
+    const challenge = challenges[selectedChallenge];
 
     const handleSubmit = async () => {
         if (!myPrompt.trim()) return;
@@ -95,7 +115,7 @@ export default function ArenaPage() {
                     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-5">
                         <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">本週挑戰</p>
                         <div className="space-y-2 mb-4">
-                            {ARENA_CHALLENGES.map((c, i) => (
+                            {challenges.map((c, i) => (
                                 <button
                                     key={c.id}
                                     onClick={() => { setSelectedChallenge(i); setSubmitted(false); setMyPrompt(""); setAiOutput(""); }}
@@ -123,20 +143,22 @@ export default function ArenaPage() {
                         </div>
 
                         {/* Challenge detail */}
-                        <div className="glass-card p-4 border border-purple-500/20 bg-purple-500/5">
-                            <div className="flex items-start gap-2">
-                                <Bot className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
-                                <div>
-                                    <p className="text-sm font-semibold text-white mb-1">{challenge.title}</p>
-                                    <p className="text-xs text-slate-400">{challenge.description}</p>
-                                    <div className="flex gap-1 flex-wrap mt-2">
-                                        {challenge.examples.map((ex) => (
-                                            <span key={ex} className="text-xs bg-white/5 text-slate-500 px-2 py-0.5 rounded-full">{ex}</span>
-                                        ))}
+                        {challenge && (
+                            <div className="glass-card p-4 border border-purple-500/20 bg-purple-500/5">
+                                <div className="flex items-start gap-2">
+                                    <Bot className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-semibold text-white mb-1">{challenge.title}</p>
+                                        <p className="text-xs text-slate-400">{challenge.description}</p>
+                                        <div className="flex gap-1 flex-wrap mt-2">
+                                            {challenge.examples.map((ex: string) => (
+                                                <span key={ex} className="text-xs bg-white/5 text-slate-500 px-2 py-0.5 rounded-full">{ex}</span>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </motion.div>
 
                     {/* My Prompt Input */}

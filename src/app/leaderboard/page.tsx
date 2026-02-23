@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { LEADERBOARD } from "@/lib/gameData";
+import { useState, useEffect } from "react";
+import { type LeaderboardEntry } from "@/lib/gameData";
 import { useGameStore } from "@/store/gameStore";
 import { Trophy, Crown, Flame, Zap, Star, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,24 @@ const TABS = ["全球榜", "本週榜", "好友榜"];
 export default function LeaderboardPage() {
     const { playerName, xp, level, streak } = useGameStore();
     const [activeTab, setActiveTab] = useState(0);
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+
+    useEffect(() => {
+        const fetchLeaderboard = async () => {
+            try {
+                const response = await fetch('/api/leaderboard');
+                const result = await response.json();
+                if (result.success) {
+                    setLeaderboard(result.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch leaderboard:", error);
+            }
+        };
+        fetchLeaderboard();
+    }, []);
+
+    if (leaderboard.length === 0) return null;
 
     return (
         <div className="min-h-screen px-4 py-6 max-w-4xl mx-auto">
@@ -39,9 +57,9 @@ export default function LeaderboardPage() {
                 {/* 2nd */}
                 <div className="flex flex-col items-center">
                     <div className="glass-card p-4 text-center border border-slate-400/20 mb-2 w-32">
-                        <div className="text-3xl mb-1">{LEADERBOARD[1].avatar}</div>
-                        <p className="text-xs font-bold text-white truncate">{LEADERBOARD[1].name}</p>
-                        <p className="text-xs text-yellow-400">{LEADERBOARD[1].xp.toLocaleString()} XP</p>
+                        <div className="text-3xl mb-1">{leaderboard[1]?.avatar}</div>
+                        <p className="text-xs font-bold text-white truncate">{leaderboard[1]?.name}</p>
+                        <p className="text-xs text-yellow-400">{leaderboard[1]?.xp.toLocaleString()} XP</p>
                     </div>
                     <div className="w-20 h-20 bg-gradient-to-t from-slate-600/30 to-transparent rounded-t-lg flex items-center justify-center">
                         <span className="text-3xl">🥈</span>
@@ -56,10 +74,10 @@ export default function LeaderboardPage() {
                         className="glass-card p-4 text-center border border-yellow-500/40 mb-2 w-36 neon-glow-gold"
                     >
                         <Crown className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
-                        <div className="text-4xl mb-1">{LEADERBOARD[0].avatar}</div>
-                        <p className="text-sm font-bold text-white truncate">{LEADERBOARD[0].name}</p>
-                        <p className="text-sm text-yellow-400 font-bold">{LEADERBOARD[0].xp.toLocaleString()} XP</p>
-                        <p className="text-xs text-slate-400">{LEADERBOARD[0].guild}</p>
+                        <div className="text-4xl mb-1">{leaderboard[0]?.avatar}</div>
+                        <p className="text-sm font-bold text-white truncate">{leaderboard[0]?.name}</p>
+                        <p className="text-sm text-yellow-400 font-bold">{leaderboard[0]?.xp.toLocaleString()} XP</p>
+                        <p className="text-xs text-slate-400">{leaderboard[0]?.guild}</p>
                     </motion.div>
                     <div className="w-24 h-28 bg-gradient-to-t from-yellow-500/20 to-transparent rounded-t-lg flex items-center justify-center">
                         <span className="text-4xl">🥇</span>
@@ -69,9 +87,9 @@ export default function LeaderboardPage() {
                 {/* 3rd */}
                 <div className="flex flex-col items-center">
                     <div className="glass-card p-4 text-center border border-orange-700/20 mb-2 w-32">
-                        <div className="text-3xl mb-1">{LEADERBOARD[2].avatar}</div>
-                        <p className="text-xs font-bold text-white truncate">{LEADERBOARD[2].name}</p>
-                        <p className="text-xs text-yellow-400">{LEADERBOARD[2].xp.toLocaleString()} XP</p>
+                        <div className="text-3xl mb-1">{leaderboard[2]?.avatar}</div>
+                        <p className="text-xs font-bold text-white truncate">{leaderboard[2]?.name}</p>
+                        <p className="text-xs text-yellow-400">{leaderboard[2]?.xp.toLocaleString()} XP</p>
                     </div>
                     <div className="w-20 h-14 bg-gradient-to-t from-orange-900/30 to-transparent rounded-t-lg flex items-center justify-center">
                         <span className="text-3xl">🥉</span>
@@ -99,7 +117,7 @@ export default function LeaderboardPage() {
 
             {/* Full List */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="space-y-2">
-                {LEADERBOARD.map((entry, idx) => {
+                {leaderboard.map((entry, idx) => {
                     const isMe = entry.name === playerName || entry.name === "YouPlayer";
                     return (
                         <motion.div

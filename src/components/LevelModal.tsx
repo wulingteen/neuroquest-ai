@@ -1,8 +1,8 @@
 "use client";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
-import { QUIZ_QUESTIONS } from "@/lib/gameData";
+import { type QuizQuestion } from "@/lib/gameData";
 import { CheckCircle2, XCircle, Zap, ChevronRight, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -22,8 +22,30 @@ export default function LevelModal({ onClose }: LevelModalProps) {
     const [score, setScore] = useState(0);
     const [totalXP, setTotalXP] = useState(0);
     const [showConfetti, setShowConfetti] = useState(false);
+    const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+    const [fetching, setFetching] = useState(true);
 
-    const question = QUIZ_QUESTIONS[currentQ];
+    useEffect(() => {
+        const fetchQuiz = async () => {
+            try {
+                const response = await fetch('/api/quiz');
+                const result = await response.json();
+                if (result.success) {
+                    setQuestions(result.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch quiz:", error);
+            } finally {
+                setFetching(false);
+            }
+        };
+        fetchQuiz();
+    }, []);
+
+    const question = questions[currentQ];
+
+    if (fetching) return null;
+    if (questions.length === 0) return null;
 
     const handleAnswer = (idx: number) => {
         if (answered) return;
@@ -36,7 +58,7 @@ export default function LevelModal({ onClose }: LevelModalProps) {
     };
 
     const handleNext = () => {
-        if (currentQ < QUIZ_QUESTIONS.length - 1) {
+        if (currentQ < questions.length - 1) {
             setCurrentQ((q) => q + 1);
             setSelected(null);
             setAnswered(false);
@@ -92,7 +114,7 @@ export default function LevelModal({ onClose }: LevelModalProps) {
                         {phase === "quiz" && (
                             <div className="mt-4">
                                 <div className="flex justify-between text-xs text-slate-400 mb-2">
-                                    <span>問題 {currentQ + 1} / {QUIZ_QUESTIONS.length}</span>
+                                    <span>問題 {currentQ + 1} / {questions.length}</span>
                                     <span className="text-yellow-400 flex items-center gap-1">
                                         <Zap className="w-3 h-3" />
                                         累積 {totalXP} XP
@@ -101,7 +123,7 @@ export default function LevelModal({ onClose }: LevelModalProps) {
                                 <div className="xp-bar-track">
                                     <div
                                         className="xp-bar-fill"
-                                        style={{ width: `${((currentQ) / QUIZ_QUESTIONS.length) * 100}%` }}
+                                        style={{ width: `${((currentQ) / questions.length) * 100}%` }}
                                     />
                                 </div>
                             </div>
@@ -115,16 +137,16 @@ export default function LevelModal({ onClose }: LevelModalProps) {
                                 <div className="text-7xl mb-6 animate-float">⚡</div>
                                 <h3 className="text-2xl font-black text-white mb-3">準備好了嗎？</h3>
                                 <p className="text-slate-400 mb-8 max-w-sm mx-auto">
-                                    這個挑戰包含 {QUIZ_QUESTIONS.length} 道 GenAI 知識題。答對得 XP，讓我們開始！
+                                    這個挑戰包含 {questions.length} 道 GenAI 知識題。答對得 XP，讓我們開始！
                                 </p>
                                 <div className="glass-card p-4 mb-8 text-sm text-slate-300">
                                     <div className="flex justify-around">
                                         <div className="text-center">
-                                            <p className="text-2xl font-black text-purple-400">{QUIZ_QUESTIONS.length}</p>
+                                            <p className="text-2xl font-black text-purple-400">{questions.length}</p>
                                             <p className="text-xs text-slate-500">題目數量</p>
                                         </div>
                                         <div className="text-center">
-                                            <p className="text-2xl font-black text-yellow-400">{QUIZ_QUESTIONS.reduce((a, q) => a + q.xp, 0)}</p>
+                                            <p className="text-2xl font-black text-yellow-400">{questions.reduce((a, q) => a + q.xp, 0)}</p>
                                             <p className="text-xs text-slate-500">最高 XP</p>
                                         </div>
                                         <div className="text-center">
@@ -221,7 +243,7 @@ export default function LevelModal({ onClose }: LevelModalProps) {
                                         className="btn-primary w-full flex items-center justify-center gap-2"
                                         onClick={handleNext}
                                     >
-                                        {currentQ < QUIZ_QUESTIONS.length - 1 ? (
+                                        {currentQ < questions.length - 1 ? (
                                             <>
                                                 下一題 <ChevronRight className="w-4 h-4" />
                                             </>
@@ -243,19 +265,19 @@ export default function LevelModal({ onClose }: LevelModalProps) {
                                 className="text-center py-6"
                             >
                                 <div className="text-7xl mb-4">
-                                    {finalScore === QUIZ_QUESTIONS.length ? "🏆" : finalScore >= QUIZ_QUESTIONS.length / 2 ? "⭐" : "💪"}
+                                    {finalScore === questions.length ? "🏆" : finalScore >= questions.length / 2 ? "⭐" : "💪"}
                                 </div>
                                 <h3 className="text-2xl font-black text-white mb-2">
-                                    {finalScore === QUIZ_QUESTIONS.length ? "完美！滿分！" : "挑戰完成！"}
+                                    {finalScore === questions.length ? "完美！滿分！" : "挑戰完成！"}
                                 </h3>
                                 <p className="text-slate-400 mb-6">
-                                    答對 {finalScore} / {QUIZ_QUESTIONS.length} 題
+                                    答對 {finalScore} / {questions.length} 題
                                 </p>
 
                                 <div className="glass-card p-6 mb-6">
                                     <div className="flex justify-around">
                                         <div className="text-center">
-                                            <p className="text-3xl font-black text-purple-400">{finalScore}/{QUIZ_QUESTIONS.length}</p>
+                                            <p className="text-3xl font-black text-purple-400">{finalScore}/{questions.length}</p>
                                             <p className="text-xs text-slate-500 mt-1">正確題數</p>
                                         </div>
                                         <div className="text-center">
@@ -264,7 +286,7 @@ export default function LevelModal({ onClose }: LevelModalProps) {
                                         </div>
                                         <div className="text-center">
                                             <p className="text-3xl font-black text-cyan-400">
-                                                {Math.round((finalScore / QUIZ_QUESTIONS.length) * 100)}%
+                                                {Math.round((finalScore / questions.length) * 100)}%
                                             </p>
                                             <p className="text-xs text-slate-500 mt-1">準確率</p>
                                         </div>

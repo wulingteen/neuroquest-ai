@@ -20,7 +20,9 @@ No test runner is configured yet.
 ### Frontend-Backend Status
 - **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), `localStorage` fallback persistence.
 - **Backend:** Setup started using Next.js API Routes (`src/app/api/...`) as the dedicated backend controller layer, ensuring strict frontend-backend separation within this monorepo.
-- **Database:** Supabase tools setup in `src/lib/supabase/`. Ensure any future data fetching/mutation flows through the API Routes or dedicated Next.js Server Actions, separating direct DB calls from Frontend UI.
+- **Database:** Supabase tools setup in `src/lib/supabase/`. For testing, a local PostgreSQL instance is provided via `docker-compose.yml` with a schema in `db/schema.sql`. Initial game data is migrated into this local instance.
+- **Local DB:** Use `docker-compose up -d` to start the PostgreSQL instance on port 5433.
+
 
 ### Key Layers
 

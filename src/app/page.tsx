@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
-import { PLANETS, PROMPT_LEVELS, getLevelTitle } from "@/lib/gameData";
+import { getLevelTitle, type Planet, type Level } from "@/lib/gameData";
 import { Lock, Star, Zap, ChevronRight, CheckCircle2, Shield, Sword } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DailyRewardModal from "@/components/DailyRewardModal";
@@ -12,10 +12,45 @@ export default function WorldMapPage() {
   const { level, xp, streak, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, currentPlanet } = useGameStore();
   const [selectedPlanet, setSelectedPlanet] = useState<string | null>(null);
   const [showLevelModal, setShowLevelModal] = useState(false);
+  const [planets, setPlanets] = useState<Planet[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/planets');
+        const result = await response.json();
+        if (result.success) {
+          setPlanets(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch planets:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
     checkDailyLogin();
-  }, []);
+  }, [checkDailyLogin]);
+
+  useEffect(() => {
+    if (selectedPlanet) {
+      const fetchLevels = async () => {
+        try {
+          const response = await fetch(`/api/levels?planetId=${selectedPlanet}`);
+          const result = await response.json();
+          if (result.success) {
+            setLevels(result.data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch levels:", error);
+        }
+      };
+      fetchLevels();
+    }
+  }, [selectedPlanet]);
 
   const handlePlanetClick = (planetId: string, locked: boolean) => {
     if (locked) return;
@@ -23,7 +58,7 @@ export default function WorldMapPage() {
     setCurrentPlanet(planetId);
   };
 
-  const planet = PLANETS.find((p) => p.id === selectedPlanet);
+  const planet = planets.find((p) => p.id === selectedPlanet);
 
   return (
     <div className="relative min-h-screen px-4 py-6">
@@ -64,9 +99,11 @@ export default function WorldMapPage() {
       {/* Planet Grid */}
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {PLANETS.map((p, i) => {
+          {planets.map((p, i) => {
             const completed = completedLevels ? completedLevels.size : 0;
-            const planetCompleted = PROMPT_LEVELS.filter(
+            // Note: In a real scenario, we might want to fetch progress from DB too
+            // For now, continuing to use the Zustand store progress
+            const planetCompleted = levels.filter(
               (l) => l.planetId === p.id && completedLevels?.has(l.id)
             ).length;
 
@@ -168,7 +205,7 @@ export default function WorldMapPage() {
                       <Lock className="w-3 h-3" />
                       <span>
                         需完成{" "}
-                        {PLANETS.find((x) => x.id === p.requiredPlanet)?.name ?? p.requiredPlanet} 70%
+                        {planets.find((x) => x.id === p.requiredPlanet)?.name ?? p.requiredPlanet} 70%
                       </span>
                     </div>
                   )}
@@ -226,9 +263,9 @@ export default function WorldMapPage() {
 
               {/* Levels */}
               <div className="flex gap-3 overflow-x-auto pb-2">
-                {PROMPT_LEVELS.map((lvl, idx) => {
+                {levels.map((lvl, idx) => {
                   const done = completedLevels?.has(lvl.id);
-                  const available = idx === 0 || completedLevels?.has(PROMPT_LEVELS[idx - 1]?.id);
+                  const available = idx === 0 || completedLevels?.has(levels[idx - 1]?.id);
                   return (
                     <motion.button
                       key={lvl.id}

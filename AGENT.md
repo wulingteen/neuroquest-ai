@@ -19,20 +19,18 @@ No test runner is configured yet.
 
 ### Frontend-Backend Status
 - **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), `localStorage` fallback persistence.
-- **Backend:** Setup started using Next.js API Routes (`src/app/api/...`) as the dedicated backend controller layer, ensuring strict frontend-backend separation within this monorepo.
-- **Database:** Supabase tools setup in `src/lib/supabase/`. Ensure any future data fetching/mutation flows through the API Routes or dedicated Next.js Server Actions, separating direct DB calls from Frontend UI.
+- **Backend:** Next.js API Routes (`src/app/api/...`) act as the controller layer, fetching data from PostgreSQL using the `postgres` library (`src/lib/db.ts`).
+- **Database:** Local PostgreSQL instance managed via `docker-compose.yml`. Schema defined in `db/schema.sql`.
+- **Frontend Integration:** All main pages (World Map, Arena, Lab, Leaderboard, Quiz) now fetch real-time data from the backend APIs.
+
 
 ### Key Layers
 
 **`src/app/api/`** — Backend API routes. Handlers here (e.g., `src/app/api/planets/route.ts`) acts as our backend microservices ensuring clean separation from the UI.
 
-**`src/lib/supabase/`** — Database clients (`client.ts` and `server.ts`) implementing SSR best practices with `@supabase/ssr`.
+**`src/lib/db.ts`** — PostgreSQL connection utility using the `postgres` JS library. It uses environment variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) for configuration, which should be set in a `.env` file.
 
-**`src/types/`** — Shared TypeScript models (e.g., `game.ts`) between frontend boundaries and backend logic.
-
-**`src/store/gameStore.ts`** — Single Zustand store managing all game state (XP, level, streaks, completed levels, achievements, modal visibility). Persists to `localStorage` key `neuroquest-game`. XP→Level formula: `level = floor(sqrt(xp / 100))`.
-
-**`src/lib/gameData.ts`** — Current static fallback data until Supabase remote fetches are fully piped.
+**`src/lib/gameData.ts`** — TypeScript interfaces and shared game logic. Static data has been migrated to the database.
 
 **`src/app/`** — Five pages using Next.js App Router:
 - `/` — AI Universe Map (6 planets, progressive unlock at 70% completion)
@@ -54,6 +52,7 @@ Path alias `@/*` maps to `./src/*`.
 
 ## Adding New Content
 
-- New quiz questions, planets, levels, or news → edit `src/lib/gameData.ts`
-- New game state fields → extend the Zustand store in `src/store/gameStore.ts`
-- New pages → add under `src/app/[route]/page.tsx` and link from `NavBar.tsx`
+- New quiz questions, planets, levels, or achievements → update the database schema in `db/schema.sql` and re-seed.
+- New game state fields → extend the Zustand store in `src/store/gameStore.ts`.
+- New backend functionality → add a route under `src/app/api/` and a database query in the handler.
+- New pages → add under `src/app/[route]/page.tsx` and link from `NavBar.tsx`.

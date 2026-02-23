@@ -1,6 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
-import { ACHIEVEMENTS, getLevelTitle } from "@/lib/gameData";
+import { useState, useEffect } from "react";
+import { getLevelTitle, type Achievement } from "@/lib/gameData";
 import { useGameStore } from "@/store/gameStore";
 import { cn } from "@/lib/utils";
 import { Star, Zap, Flame, Trophy, Lock } from "lucide-react";
@@ -14,6 +15,22 @@ const RARITY_LABELS: Record<string, string> = {
 
 export default function LabPage() {
     const { xp, level, streak, playerName, playerAvatar, levelTitle, levelProgress, unlockedAchievements } = useGameStore();
+    const [achievements, setAchievements] = useState<Achievement[]>([]);
+
+    useEffect(() => {
+        const fetchAchievements = async () => {
+            try {
+                const response = await fetch('/api/achievements');
+                const result = await response.json();
+                if (result.success) {
+                    setAchievements(result.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch achievements:", error);
+            }
+        };
+        fetchAchievements();
+    }, []);
 
     const petStage = level >= 20 ? "🤖" : level >= 10 ? "🌱" : level >= 5 ? "🐣" : "🥚";
     const petName = level >= 20 ? "Alpha AI" : level >= 10 ? "小Neuro" : level >= 5 ? "AI幼苗" : "神秘AI蛋";
@@ -138,11 +155,11 @@ export default function LabPage() {
                             <Star className="w-4 h-4 text-yellow-400" />
                             成就館
                             <span className="ml-auto text-xs text-slate-500">
-                                {unlockedAchievements.size}/{ACHIEVEMENTS.length} 解鎖
+                                {unlockedAchievements.size}/{achievements.length} 解鎖
                             </span>
                         </p>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {ACHIEVEMENTS.map((ach, idx) => {
+                            {achievements.map((ach, idx) => {
                                 const unlocked = unlockedAchievements.has(ach.id);
                                 return (
                                     <motion.div
