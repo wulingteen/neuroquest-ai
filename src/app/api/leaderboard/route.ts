@@ -7,6 +7,7 @@ export async function GET() {
             SELECT 
                 username as name,
                 xp,
+                level,
                 streak_days as streak,
                 guild_name as guild,
                 avatar
@@ -19,7 +20,6 @@ export async function GET() {
         const leaderboard = players.map((player, index) => ({
             ...player,
             rank: index + 1,
-            level: Math.floor(player.xp / 1000) + 1, // 1000 XP per level
         }));
 
         return NextResponse.json({

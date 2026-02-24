@@ -95,6 +95,8 @@ CREATE TABLE IF NOT EXISTS players (
     streak_days INTEGER NOT NULL DEFAULT 0 CHECK (streak_days >= 0),
     guild_name TEXT,
     last_login_at TIMESTAMPTZ,
+    last_reward_claimed_at TIMESTAMPTZ,
+    level INTEGER GENERATED ALWAYS AS (floor(xp / 1000) + 1) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -204,3 +206,10 @@ INSERT INTO players (username, xp, streak_days, guild_name) VALUES
 ('AgentAlpha', 17200, 9, 'AI Pioneers'),
 ('YouPlayer', 14500, 4, '新手村')
 ON CONFLICT (username) DO NOTHING;
+
+-- Initial Progress for YouPlayer
+INSERT INTO player_progress (player_id, level_id)
+SELECT p.player_id, l.level_id
+FROM players p, levels l
+WHERE p.username = 'YouPlayer' AND l.level_id IN ('p1-1', 'p1-2', 'p1-3')
+ON CONFLICT (player_id, level_id) DO NOTHING;

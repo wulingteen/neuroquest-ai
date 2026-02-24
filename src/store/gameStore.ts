@@ -58,7 +58,7 @@ export const useGameStore = create<GameState>()(
                     const response = await fetch('/api/user');
                     const result = await response.json();
                     if (result.success) {
-                        const { playerName, playerAvatar, xp, streak, lastLogin, completedLevels, unlockedAchievements } = result.data;
+                        const { playerName, playerAvatar, xp, streak, level, lastLogin, completedLevels, unlockedAchievements, showDailyReward } = result.data;
                         set({
                             playerName,
                             playerAvatar,
@@ -67,9 +67,10 @@ export const useGameStore = create<GameState>()(
                             lastLogin,
                             completedLevels: new Set(completedLevels),
                             unlockedAchievements: new Set(unlockedAchievements),
-                            level: getLevelFromXP(xp),
+                            level: level || getLevelFromXP(xp),
                             levelProgress: getLevelProgress(xp),
-                            levelTitle: getLevelTitle(getLevelFromXP(xp)),
+                            levelTitle: getLevelTitle(level || getLevelFromXP(xp)),
+                            showDailyReward: showDailyReward || false,
                             isLoaded: true,
                         });
                     }
@@ -130,30 +131,18 @@ export const useGameStore = create<GameState>()(
             setCurrentLevel: (levelId) => set({ currentLevel: levelId }),
 
             checkDailyLogin: () => {
-                const today = new Date().toDateString();
-                const { lastLogin, streak } = get();
-                if (lastLogin !== today) {
-                    const yesterday = new Date();
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const wasYesterday = lastLogin === yesterday.toDateString();
-                    const newStreak = wasYesterday ? streak + 1 : 1;
-
-                    set({
-                        lastLogin: today,
-                        streak: newStreak,
-                        showDailyReward: true,
-                    });
-
-                    // Sync streak with DB
-                    fetch('/api/user', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ streak: newStreak }),
-                    }).catch(err => console.error("Failed to sync streak:", err));
-                }
+                // Now handled by fetchUser on backend
             },
 
-            dismissDailyReward: () => set({ showDailyReward: false }),
+            dismissDailyReward: () => {
+                set({ showDailyReward: false });
+                // Mark as claimed in DB
+                fetch('/api/user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ claimReward: true }),
+                }).catch(err => console.error("Failed to sync reward claim:", err));
+            },
         }),
         {
             name: "neuroquest-game",
