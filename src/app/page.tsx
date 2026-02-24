@@ -94,8 +94,25 @@ export default function WorldMapPage() {
             // Note: In a real scenario, we might want to fetch progress from DB too
             // For now, continuing to use the Zustand store progress
             const planetCompleted = levels.filter(
-              (l) => l.planetId === p.id && completedLevels?.has(l.id)
+              (l) => l.planetId === p.id && completedLevels?.has(Number(l.id))
             ).length;
+
+            const isLocked = (() => {
+              if (!p.requiredPlanet) return false;
+              let currRef: string | undefined = p.requiredPlanet;
+              while (currRef) {
+                const prevPlanet = planets.find((x) => x.id === currRef);
+                if (!prevPlanet) break;
+                const prevCompletedCount = levels.filter(
+                  (l) => l.planetId === prevPlanet.id && completedLevels?.has(Number(l.id))
+                ).length;
+                if (prevPlanet.totalLevels === 0 || prevCompletedCount < prevPlanet.totalLevels) {
+                  return true;
+                }
+                currRef = prevPlanet.requiredPlanet;
+              }
+              return false;
+            })();
 
             return (
               <motion.div
@@ -103,21 +120,21 @@ export default function WorldMapPage() {
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08, duration: 0.5 }}
-                onClick={() => handlePlanetClick(p.id, p.locked)}
+                onClick={() => handlePlanetClick(p.id, isLocked)}
                 className={cn(
                   "relative overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer group",
-                  p.locked
+                  isLocked
                     ? "border-white/5 opacity-60 cursor-not-allowed"
                     : selectedPlanet === p.id
                       ? "border-2 scale-[1.02]"
                       : "border-white/10 hover:border-white/20 hover:scale-[1.01]"
                 )}
                 style={{
-                  background: p.locked
+                  background: isLocked
                     ? "rgba(255,255,255,0.02)"
                     : `linear-gradient(135deg, rgba(13,13,43,0.9) 0%, ${p.color}22 100%)`,
-                  borderColor: selectedPlanet === p.id && !p.locked ? p.color : undefined,
-                  boxShadow: selectedPlanet === p.id && !p.locked
+                  borderColor: selectedPlanet === p.id && !isLocked ? p.color : undefined,
+                  boxShadow: selectedPlanet === p.id && !isLocked
                     ? `0 0 30px ${p.glowColor}, 0 0 60px ${p.glowColor}50`
                     : undefined,
                 }}
@@ -126,7 +143,7 @@ export default function WorldMapPage() {
                 <div
                   className="h-2 w-full"
                   style={{
-                    background: p.locked ? "#1e293b" : `linear-gradient(90deg, ${p.color}, transparent)`,
+                    background: isLocked ? "#1e293b" : `linear-gradient(90deg, ${p.color}, transparent)`,
                   }}
                 />
 
@@ -134,14 +151,14 @@ export default function WorldMapPage() {
                   {/* Planet icon + lock */}
                   <div className="flex items-start justify-between mb-4">
                     <div
-                      className={cn("text-5xl", !p.locked && "group-hover:scale-110 transition-transform duration-300")}
+                      className={cn("text-5xl", !isLocked && "group-hover:scale-110 transition-transform duration-300")}
                       style={{
-                        filter: p.locked ? "grayscale(1)" : `drop-shadow(0 0 12px ${p.color})`,
+                        filter: isLocked ? "grayscale(1)" : `drop-shadow(0 0 12px ${p.color})`,
                       }}
                     >
                       {p.icon}
                     </div>
-                    {p.locked ? (
+                    {isLocked ? (
                       <div className="flex items-center gap-1 glass-card px-2 py-1 text-xs text-slate-500">
                         <Lock className="w-3 h-3" />
                         <span>未解鎖</span>
@@ -161,17 +178,17 @@ export default function WorldMapPage() {
                     className="text-xl font-black mb-1"
                     style={{
                       fontFamily: "Orbitron, sans-serif",
-                      color: p.locked ? "#334155" : p.color,
+                      color: isLocked ? "#334155" : p.color,
                     }}
                   >
                     {p.name}
                   </h3>
-                  <p className={cn("text-sm mb-4", p.locked ? "text-slate-700" : "text-slate-400")}>
+                  <p className={cn("text-sm mb-4", isLocked ? "text-slate-700" : "text-slate-400")}>
                     {p.description}
                   </p>
 
                   {/* Progress */}
-                  {!p.locked && (
+                  {!isLocked && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs text-slate-400">
                         <span>{planetCompleted} / {p.totalLevels} 關卡</span>
@@ -190,19 +207,19 @@ export default function WorldMapPage() {
                   )}
 
                   {/* Locked requirement */}
-                  {p.locked && p.requiredPlanet && (
+                  {isLocked && p.requiredPlanet && (
                     <div className="text-xs text-slate-600 flex items-center gap-1 mt-2">
                       <Lock className="w-3 h-3" />
                       <span>
                         需完成{" "}
-                        {planets.find((x) => x.id === p.requiredPlanet)?.name ?? p.requiredPlanet} 70%
+                        {planets.find((x) => x.id === p.requiredPlanet)?.name ?? p.requiredPlanet} 所有關卡
                       </span>
                     </div>
                   )}
                 </div>
 
                 {/* Hover overlay CTA */}
-                {!p.locked && (
+                {!isLocked && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     whileHover={{ opacity: 1 }}
@@ -254,8 +271,8 @@ export default function WorldMapPage() {
               {/* Levels */}
               <div className="flex gap-3 overflow-x-auto pb-2">
                 {levels.filter(l => l.planetId === selectedPlanet).map((lvl, idx, arr) => {
-                  const done = completedLevels?.has(lvl.id);
-                  const available = idx === 0 || completedLevels?.has(arr[idx - 1]?.id);
+                  const done = completedLevels?.has(Number(lvl.id));
+                  const available = idx === 0 || completedLevels?.has(Number(arr[idx - 1]?.id));
                   return (
                     <motion.button
                       key={lvl.id}
@@ -301,11 +318,13 @@ export default function WorldMapPage() {
         )}
       </AnimatePresence>
 
-      {showLevelModal && (
+      {showLevelModal && planet && (
         <LevelModal
           onClose={() => setShowLevelModal(false)}
-          planetName={planet?.name || ""}
-          levelId={levels.find(l => l.id === useGameStore.getState().currentLevel)?.id || ""}
+          planetName={planet.name}
+          levelId={levels.find(l => String(l.id) === String(useGameStore.getState().currentLevel))?.id || ""}
+          levelNumber={levels.find(l => String(l.id) === String(useGameStore.getState().currentLevel))?.number || 1}
+          rollup={planet.id}
         />
       )}
 

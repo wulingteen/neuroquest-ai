@@ -60,15 +60,14 @@ model planets {
   bg_gradient     String?
   x               Int
   y               Int
-  total_levels    Int       @default(0)
   description     String?
-  locked          Boolean   @default(true)
   required_rollup String?
   created_at      DateTime  @default(now()) @db.Timestamptz(6)
   updated_at      DateTime  @default(now()) @db.Timestamptz(6)
   levels          levels[]
   planets         planets?  @relation("planetsToplanets", fields: [required_rollup], references: [rollup], onUpdate: NoAction)
   other_planets   planets[] @relation("planetsToplanets")
+  quiz_questions  quiz_questions[]
 
   @@index([required_rollup], map: "idx_planets_required_rollup")
 }
@@ -104,7 +103,8 @@ model players {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model quiz_questions {
   question_id          Int      @id @default(autoincrement())
-  level_id             Int?
+  rollup               String
+  level_number         Int
   question_number      Int
   question_text        String
   options              Json
@@ -113,9 +113,11 @@ model quiz_questions {
   xp_reward            Int      @default(0)
   created_at           DateTime @default(now()) @db.Timestamptz(6)
   updated_at           DateTime @default(now()) @db.Timestamptz(6)
-  levels               levels?  @relation(fields: [level_id], references: [level_id], onDelete: Cascade, onUpdate: NoAction)
+  levels               levels   @relation(fields: [rollup, level_number], references: [rollup, level_number], onDelete: Cascade, onUpdate: NoAction)
+  planets              planets  @relation(fields: [rollup], references: [rollup], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([level_id, question_number])
-  @@index([level_id], map: "idx_quiz_questions_level_id")
+  @@unique([rollup, level_number, question_number])
+  @@index([rollup, level_number], map: "idx_quiz_questions_level_number")
+  @@index([rollup], map: "idx_quiz_questions_rollup")
   @@index([options], map: "idx_quiz_questions_options_gin", type: Gin)
 }

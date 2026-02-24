@@ -12,10 +12,12 @@ const Confetti = dynamic(() => import("react-confetti"), { ssr: false });
 interface LevelModalProps {
     onClose: () => void;
     planetName: string;
-    levelId: string;
+    levelId: string | number;
+    levelNumber: number;
+    rollup: string;
 }
 
-export default function LevelModal({ onClose, planetName, levelId }: LevelModalProps) {
+export default function LevelModal({ onClose, planetName, levelId, levelNumber, rollup }: LevelModalProps) {
     const { addXP, completeLevel } = useGameStore();
     const [phase, setPhase] = useState<"intro" | "quiz" | "result">("intro");
     const [currentQ, setCurrentQ] = useState(0);
@@ -30,8 +32,8 @@ export default function LevelModal({ onClose, planetName, levelId }: LevelModalP
     useEffect(() => {
         const fetchQuiz = async () => {
             try {
-                // Ensure questions for each level_id are sourced from quiz_questions
-                const response = await fetch(`/api/quiz?levelId=${levelId}`);
+                // Ensure questions for each level_number and rollup are sourced from quiz_questions
+                const response = await fetch(`/api/quiz?levelNumber=${levelNumber}&rollup=${rollup}`);
                 const result = await response.json();
                 if (result.success) {
                     setQuestions(result.data);
@@ -43,12 +45,29 @@ export default function LevelModal({ onClose, planetName, levelId }: LevelModalP
             }
         };
         fetchQuiz();
-    }, [levelId]);
+    }, [levelNumber, rollup]);
 
     const question = questions[currentQ];
 
     if (fetching) return null;
-    if (questions.length === 0) return null;
+    if (questions.length === 0) {
+        return (
+            <AnimatePresence>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                    <motion.div
+                        initial={{ scale: 0.85, y: 40 }}
+                        animate={{ scale: 1, y: 0 }}
+                        exit={{ scale: 0.85, opacity: 0 }}
+                        className="glass-card w-full max-w-sm p-6 text-center"
+                    >
+                        <h3 className="text-xl font-black text-white mb-2">施工中 🚧</h3>
+                        <p className="text-slate-400 mb-6">這個關卡還沒有題目資料哦！<br />請確認資料庫中的設定。</p>
+                        <button className="btn-primary" onClick={onClose}>返回</button>
+                    </motion.div>
+                </div>
+            </AnimatePresence>
+        );
+    }
 
     const handleAnswer = (idx: number) => {
         if (answered) return;
@@ -68,7 +87,7 @@ export default function LevelModal({ onClose, planetName, levelId }: LevelModalP
         } else {
             // Finish
             await addXP(totalXP);
-            await completeLevel(levelId);
+            await completeLevel(String(levelId));
             setShowConfetti(true);
             setPhase("result");
         }

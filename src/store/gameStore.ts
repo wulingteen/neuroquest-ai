@@ -10,7 +10,7 @@ interface GameState {
     xp: number;
     streak: number;
     lastLogin: string | null;
-    completedLevels: Set<string>;
+    completedLevels: Set<number>;
     unlockedAchievements: Set<string>;
     isLoaded: boolean;
 
@@ -27,7 +27,7 @@ interface GameState {
     // Actions
     fetchUser: () => Promise<void>;
     addXP: (amount: number) => Promise<void>;
-    completeLevel: (levelId: string) => Promise<void>;
+    completeLevel: (levelId: string | number) => Promise<void>;
     unlockAchievement: (achievementId: string) => void;
     setCurrentPlanet: (planetId: string | null) => void;
     setCurrentLevel: (levelId: string | null) => void;
@@ -101,9 +101,10 @@ export const useGameStore = create<GameState>()(
             },
 
             completeLevel: async (levelId) => {
+                const numId = Number(levelId);
                 set((state) => {
                     const newCompleted = new Set(state.completedLevels);
-                    newCompleted.add(levelId);
+                    newCompleted.add(numId);
                     return { completedLevels: newCompleted };
                 });
 

@@ -4,11 +4,16 @@ import prisma from '@/lib/db';
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const levelId = searchParams.get('levelId');
+        const levelNumber = searchParams.get('levelNumber');
+        const rollup = searchParams.get('rollup');
 
-        if (levelId) {
+        if (levelNumber || rollup) {
+            const whereClause: any = {};
+            if (levelNumber) whereClause.level_number = parseInt(levelNumber, 10);
+            if (rollup) whereClause.rollup = rollup;
+
             const questionsRaw = await prisma.quiz_questions.findMany({
-                where: { level_id: parseInt(levelId, 10) },
+                where: whereClause,
                 orderBy: { question_number: 'asc' },
                 take: 5
             });

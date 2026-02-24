@@ -24,7 +24,6 @@ export async function GET() {
             y: p.y,
             totalLevels: p._count.levels,
             description: p.description,
-            locked: p.locked,
             requiredPlanet: p.required_rollup
         }));
 
