@@ -16,7 +16,7 @@ export default function BottomMenu() {
   const pathname = usePathname();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-200 px-4 py-3 sm:py-4 flex justify-center shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white/15 backdrop-blur-xl border-t border-white/10 px-4 py-2 sm:py-2 flex w-[60%] max-w-[380px] min-w-[320px] rounded-full z-10">
       <div className="w-full max-w-md flex items-center justify-between gap-2">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href || (pathname === "/" && href === "/");

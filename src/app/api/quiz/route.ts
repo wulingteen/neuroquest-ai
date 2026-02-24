@@ -8,7 +8,7 @@ export async function GET(request: Request) {
         const rollup = searchParams.get('rollup');
 
         if (levelNumber || rollup) {
-            const whereClause: any = {};
+            const whereClause: { level_number?: number; rollup?: string } = {};
             if (levelNumber) whereClause.level_number = parseInt(levelNumber, 10);
             if (rollup) whereClause.rollup = rollup;
 
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
                 take: 5
             });
 
-            const questions = questionsRaw.map((q: any) => ({
+            const questions = questionsRaw.map((q) => ({
                 id: q.question_id,
                 number: q.question_number,
                 question: q.question_text,
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
                 data: questions,
             });
         } else {
-            const randomQuestions = await prisma.$queryRaw<any[]>`
+            const randomQuestions = await prisma.$queryRaw<Record<string, unknown>[]>`
                 SELECT 
                     question_id as id,
                     question_number as number,

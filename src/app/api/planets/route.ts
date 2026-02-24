@@ -12,7 +12,7 @@ export async function GET() {
             orderBy: { created_at: 'asc' }
         });
 
-        const formattedPlanets = planets.map((p: any) => ({
+        const formattedPlanets = planets.map((p) => ({
             id: p.rollup,
             name: p.label,
             subtitle: p.subtitle,

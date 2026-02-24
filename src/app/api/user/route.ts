@@ -60,7 +60,7 @@ export async function GET() {
             where: { player_id: player.player_id }
         });
 
-        const completedLevels = progress.map((p: any) => p.level_id);
+        const completedLevels = progress.map((p) => p.level_id);
 
         return NextResponse.json({
             success: true,

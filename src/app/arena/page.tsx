@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
-import { getLevelTitle, type ArenaChallenge } from "@/lib/gameData";
+import { type ArenaChallenge } from "@/lib/gameData";
 import { useGameStore } from "@/store/gameStore";
 import { Swords, Send, ThumbsUp, Star, Zap, Bot, Users, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -38,8 +38,6 @@ export default function ArenaPage() {
     const [loading, setLoading] = useState(false);
     const [votedIdx, setVotedIdx] = useState<number | null>(null);
     const [votes, setVotes] = useState(MOCK_ENTRIES.map((e) => e.votes));
-    const [fetching, setFetching] = useState(true);
-
     useEffect(() => {
         const fetchChallenges = async () => {
             try {
@@ -50,8 +48,6 @@ export default function ArenaPage() {
                 }
             } catch (error) {
                 console.error("Failed to fetch challenges:", error);
-            } finally {
-                setFetching(false);
             }
         };
         fetchChallenges();

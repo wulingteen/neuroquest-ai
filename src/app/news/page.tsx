@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { useGameStore } from "@/store/gameStore";
-import { Newspaper, ExternalLink, Zap, ChevronRight, Star } from "lucide-react";
+import { Newspaper, Zap, ChevronRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NEWS_ITEMS = [

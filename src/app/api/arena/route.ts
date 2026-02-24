@@ -7,7 +7,7 @@ export async function GET() {
             orderBy: { created_at: 'asc' }
         });
 
-        const challenges = challengesRaw.map((c: any) => ({
+        const challenges = challengesRaw.map((c) => ({
             id: c.challenge_id,
             title: c.title,
             description: c.description,

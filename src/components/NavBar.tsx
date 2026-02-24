@@ -1,5 +1,5 @@
 "use client";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useGameStore } from "@/store/gameStore";
 import { Zap, Trophy, Flame, Star, Brain, Swords, Map, Newspaper } from "lucide-react";
 import Link from "next/link";
@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 ];
 
 export default function NavBar() {
-    const { xp, level, levelProgress, streak, playerName, playerAvatar, levelTitle } = useGameStore();
+    const { xp, level, levelProgress, streak, playerAvatar } = useGameStore();
     const pathname = usePathname();
 
     return (

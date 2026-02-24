@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const TABS = ["全球榜", "本週榜", "好友榜"];
 
 export default function LeaderboardPage() {
-    const { playerName, xp, level, streak } = useGameStore();
+    const { playerName } = useGameStore();
     const [activeTab, setActiveTab] = useState(0);
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 

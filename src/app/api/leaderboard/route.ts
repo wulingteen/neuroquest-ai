@@ -8,7 +8,7 @@ export async function GET() {
             take: 100
         });
 
-        const leaderboard = playersRaw.map((player: any, index: number) => ({
+        const leaderboard = playersRaw.map((player, index) => ({
             name: player.username,
             xp: player.xp,
             level: player.level,

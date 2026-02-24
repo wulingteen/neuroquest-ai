@@ -7,7 +7,7 @@ export async function GET() {
             orderBy: { xp_reward: 'asc' }
         });
 
-        const achievements = achievementsRaw.map((a: any) => ({
+        const achievements = achievementsRaw.map((a) => ({
             id: a.achievement_id,
             name: a.name,
             description: a.description,

@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { type Planet, type Level } from "@/lib/gameData";
 import { Lock, Star, Zap, CheckCircle2, Sword, ChevronDown, ChevronUp } from "lucide-react";
@@ -94,27 +94,28 @@ export default function WorldMapPage() {
     checkDailyLogin();
   }, [checkDailyLogin]);
 
-  const sortedPlanets = [...planets];
-  const allSortedLevels = sortedPlanets.flatMap(p =>
-    levels.filter(l => l.planetId === p.id).sort((a, b) => a.number - b.number)
-  );
+  const sortedPlanets = useMemo(() => [...planets], [planets]);
 
   // Pre-compute unlocks
-  let isPreviousLevelCompleted = true;
-  const planetLockedState = new Map<string, boolean>();
-  const levelAvailability = new Map<string, { isAvailable: boolean, isCompleted: boolean }>();
+  const { planetLockedState, levelAvailability } = useMemo(() => {
+    const planetLockedState = new Map<string, boolean>();
+    const levelAvailability = new Map<string, { isAvailable: boolean, isCompleted: boolean }>();
+    let isPreviousLevelCompleted = true;
 
-  sortedPlanets.forEach((p, pIndex) => {
-    const pLevels = levels.filter(l => l.planetId === p.id).sort((a, b) => a.number - b.number);
-    planetLockedState.set(p.id, pIndex > 0 ? !isPreviousLevelCompleted : false);
+    sortedPlanets.forEach((p, pIndex) => {
+      const pLevels = levels.filter(l => l.planetId === p.id).sort((a, b) => a.number - b.number);
+      planetLockedState.set(p.id, pIndex > 0 ? !isPreviousLevelCompleted : false);
 
-    pLevels.forEach((lvl) => {
-      const isCompleted = completedLevels?.has(Number(lvl.id)) || false;
-      const isAvailable = isPreviousLevelCompleted || isCompleted;
-      levelAvailability.set(lvl.id, { isAvailable, isCompleted });
-      if (!isCompleted) isPreviousLevelCompleted = false;
+      pLevels.forEach((lvl) => {
+        const isCompleted = completedLevels?.has(Number(lvl.id)) || false;
+        const isAvailable = isPreviousLevelCompleted || isCompleted;
+        levelAvailability.set(lvl.id, { isAvailable, isCompleted });
+        if (!isCompleted) isPreviousLevelCompleted = false;
+      });
     });
-  });
+
+    return { planetLockedState, levelAvailability };
+  }, [sortedPlanets, levels, completedLevels]);
 
   // Init view index
   useEffect(() => {

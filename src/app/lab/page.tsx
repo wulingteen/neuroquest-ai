@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { getLevelTitle, type Achievement } from "@/lib/gameData";
 import { useGameStore } from "@/store/gameStore";
 import { cn } from "@/lib/utils";
-import { Star, Zap, Flame, Trophy, Lock } from "lucide-react";
+import { Star, Zap, Flame, Trophy } from "lucide-react";
 
 const RARITY_LABELS: Record<string, string> = {
     common: "普通",

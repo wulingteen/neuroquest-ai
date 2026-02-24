@@ -21,7 +21,7 @@ export async function GET(request: Request) {
             });
         }
 
-        const levels = levelsRaw.map((l: any) => ({
+        const levels = levelsRaw.map((l) => ({
             id: l.level_id,
             planetId: l.rollup,
             number: l.level_number,

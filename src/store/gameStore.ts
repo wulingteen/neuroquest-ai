@@ -81,7 +81,7 @@ export const useGameStore = create<GameState>()(
 
             addXP: async (amount) => {
                 const newXP = get().xp + amount;
-                set((state) => ({
+                set(() => ({
                     xp: newXP,
                     level: getLevelFromXP(newXP),
                     levelProgress: getLevelProgress(newXP),

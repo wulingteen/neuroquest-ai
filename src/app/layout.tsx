@@ -30,7 +30,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-TW" className={`${inter.variable} ${orbitron.variable}`}>
-      <body className="min-h-screen bg-[#0D0D2B] text-slate-100 font-inter">
+      <body className="min-h-screen min-h-screen bg-[#0D0D2B] text-slate-100 font-inter items-center">
         <GameInitializer />
         <StarField />
         <main className="relative z-10 min-h-screen pb-20">
