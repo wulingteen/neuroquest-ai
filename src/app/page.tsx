@@ -19,13 +19,20 @@ export default function WorldMapPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/planets');
-        const result = await response.json();
-        if (result.success) {
-          setPlanets(result.data);
+        const [planetsResponse, levelsResponse] = await Promise.all([
+          fetch('/api/planets'),
+          fetch('/api/levels')
+        ]);
+        const planetsResult = await planetsResponse.json();
+        const levelsResult = await levelsResponse.json();
+        if (planetsResult.success) {
+          setPlanets(planetsResult.data);
+        }
+        if (levelsResult.success) {
+          setLevels(levelsResult.data);
         }
       } catch (error) {
-        console.error("Failed to fetch planets:", error);
+        console.error("Failed to fetch data:", error);
       } finally {
         setLoading(false);
       }
@@ -34,23 +41,6 @@ export default function WorldMapPage() {
     fetchData();
     checkDailyLogin();
   }, [checkDailyLogin]);
-
-  useEffect(() => {
-    if (selectedPlanet) {
-      const fetchLevels = async () => {
-        try {
-          const response = await fetch(`/api/levels?planetId=${selectedPlanet}`);
-          const result = await response.json();
-          if (result.success) {
-            setLevels(result.data);
-          }
-        } catch (error) {
-          console.error("Failed to fetch levels:", error);
-        }
-      };
-      fetchLevels();
-    }
-  }, [selectedPlanet]);
 
   const handlePlanetClick = (planetId: string, locked: boolean) => {
     if (locked) return;
@@ -263,9 +253,9 @@ export default function WorldMapPage() {
 
               {/* Levels */}
               <div className="flex gap-3 overflow-x-auto pb-2">
-                {levels.map((lvl, idx) => {
+                {levels.filter(l => l.planetId === selectedPlanet).map((lvl, idx, arr) => {
                   const done = completedLevels?.has(lvl.id);
-                  const available = idx === 0 || completedLevels?.has(levels[idx - 1]?.id);
+                  const available = idx === 0 || completedLevels?.has(arr[idx - 1]?.id);
                   return (
                     <motion.button
                       key={lvl.id}

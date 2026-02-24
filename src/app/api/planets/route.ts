@@ -5,21 +5,21 @@ export async function GET() {
     try {
         const planets = await sql`
             SELECT 
-                planet_id as id,
-                name,
-                subtitle,
-                icon,
-                color,
-                glow_color as "glowColor",
-                bg_gradient as "bgGradient",
-                x,
-                y,
-                total_levels as "totalLevels",
-                description,
-                locked,
-                required_planet_id as "requiredPlanet"
-            FROM planets
-            ORDER BY created_at ASC
+                p.planet_id as id,
+                p.name,
+                p.subtitle,
+                p.icon,
+                p.color,
+                p.glow_color as "glowColor",
+                p.bg_gradient as "bgGradient",
+                p.x,
+                p.y,
+                (SELECT COUNT(*)::int FROM levels l WHERE l.planet_id = p.planet_id) as "totalLevels",
+                p.description,
+                p.locked,
+                p.required_planet_id as "requiredPlanet"
+            FROM planets p
+            ORDER BY p.created_at ASC
         `;
 
         return NextResponse.json({

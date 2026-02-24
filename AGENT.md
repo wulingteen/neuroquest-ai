@@ -39,7 +39,7 @@ No test runner is configured yet.
 
 ### Key Layers
 
-**`src/app/api/`** — Backend API routes. Handlers here (e.g., `src/app/api/user/route.ts` for profile) acts as our backend microservices ensuring clean separation from the UI.
+**`src/app/api/`** — Backend API routes. Handlers here (e.g., `src/app/api/user/route.ts` for profile, `src/app/api/planets/route.ts` which dynamically calculates levels) acts as our backend microservices ensuring clean separation from the UI.
 
 **`src/lib/db.ts`** — PostgreSQL connection utility using the `postgres` JS library. It uses environment variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) for configuration, which should be set in a `.env` file.
 
