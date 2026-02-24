@@ -119,7 +119,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.85, opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                    className="glass-card w-full max-w-2xl flex flex-col max-h-[80vh] min-h-[400px] overflow-hidden"
+                    className="glass-card w-full max-w-2xl flex flex-col max-h-[78vh] min-h-[400px] overflow-hidden"
                 >
                     {/* Header */}
                     <div className="p-4 sm:p-6 border-b border-white/10 shrink-0 bg-black/20">

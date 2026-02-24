@@ -26,10 +26,10 @@ export default function BottomMenu() {
               href={href}
               title={label}
               className={cn(
-                "p-3 rounded-2xl flex items-center justify-center transition-all duration-200",
+                "p-3 rounded-full flex items-center justify-center transition-all duration-200",
                 isActive
-                  ? "bg-purple-500 text-white shadow-md scale-110"
-                  : "bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                  ? "bg-[#ffc800] text-white shadow-md scale-110"
+                  : "bg-transparent text-white/50 hover:bg-white/10 hover:text-white/80"
               )}
             >
               <Icon className="w-7 h-7 sm:w-8 sm:h-8" />
