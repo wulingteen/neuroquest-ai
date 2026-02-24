@@ -181,7 +181,7 @@ export default function WorldMapPage() {
       <BackgroundGraphics colorPreset={viewIndex} />
 
       {/* Top Bar - Duolingo Style */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-black/20 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
+      <div className="fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="bg-black/30 rounded-full p-1.5 px-4 flex items-center gap-2 font-black text-[#1cb0f6] shadow-sm">
             <Star className="w-5 h-5 fill-current" />
