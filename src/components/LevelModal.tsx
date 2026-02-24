@@ -119,10 +119,10 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.85, opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                    className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+                    className="glass-card w-full max-w-2xl flex flex-col max-h-[80vh] min-h-[400px] overflow-hidden"
                 >
                     {/* Header */}
-                    <div className="p-6 border-b border-white/10">
+                    <div className="p-4 sm:p-6 border-b border-white/10 shrink-0 bg-black/20">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-xs text-slate-500 uppercase tracking-widest">{planetName} · 關卡訓練</p>
@@ -152,16 +152,17 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                         )}
                     </div>
 
-                    <div className="p-6">
+                    {/* Scrollable Content Area */}
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
                         {/* Intro Phase */}
                         {phase === "intro" && (
-                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-8">
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-4 flex flex-col items-center">
                                 <div className="text-7xl mb-6 animate-float">⚡</div>
                                 <h3 className="text-2xl font-black text-white mb-3">準備好了嗎？</h3>
                                 <p className="text-slate-400 mb-8 max-w-sm mx-auto">
                                     這個挑戰包含 {questions.length} 道 GenAI 知識題。答對得 XP，讓我們開始！
                                 </p>
-                                <div className="glass-card p-4 mb-8 text-sm text-slate-300">
+                                <div className="glass-card p-4 mb-8 text-sm text-slate-300 w-full max-w-sm">
                                     <div className="flex justify-around">
                                         <div className="text-center">
                                             <p className="text-2xl font-black text-purple-400">{questions.length}</p>
@@ -190,6 +191,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                 initial={{ opacity: 0, x: 30 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.3 }}
+                                className="pb-4"
                             >
                                 <h3 className="text-lg font-bold text-white mb-6 leading-relaxed">
                                     {question.question}
@@ -213,11 +215,12 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                                     answered && !isSelected && !isCorrect && "opacity-40 border-white/5"
                                                 )}
                                             >
+                                                <span className="text-sm font-medium flex-1">{opt}</span>
                                                 <span className={cn(
-                                                    "w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold shrink-0",
+                                                    "w-8 h-8 rounded-full border flex items-center justify-center text-sm font-bold shrink-0 ml-auto",
                                                     !answered && "border-white/20 text-slate-400",
-                                                    answered && isCorrect && "border-green-400 text-green-400",
-                                                    answered && isSelected && !isCorrect && "border-red-400 text-red-400",
+                                                    answered && isCorrect && "border-green-400 text-green-400 bg-green-900/40",
+                                                    answered && isSelected && !isCorrect && "border-red-400 text-red-400 bg-red-900/40",
                                                 )}>
                                                     {answered
                                                         ? isCorrect
@@ -227,7 +230,6 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                                                 : ["A", "B", "C", "D"][idx]
                                                         : ["A", "B", "C", "D"][idx]}
                                                 </span>
-                                                <span className="text-sm font-medium">{opt}</span>
                                             </motion.button>
                                         );
                                     })}
@@ -240,42 +242,25 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             className={cn(
-                                                "p-4 rounded-xl mb-4 text-sm",
+                                                "p-4 rounded-xl text-sm shadow-md",
                                                 selected === question.correct
                                                     ? "bg-green-500/10 border border-green-500/20 text-green-200"
                                                     : "bg-red-500/10 border border-red-500/20 text-red-200"
                                             )}
                                         >
-                                            <p className="font-bold mb-1">
+                                            <p className="font-bold mb-1 text-base">
                                                 {selected === question.correct ? "🎉 答對了！" : "💡 正確解析："}
                                             </p>
-                                            <p>{question.explanation}</p>
+                                            <p className="leading-relaxed opacity-90">{question.explanation}</p>
                                             {selected === question.correct && (
-                                                <p className="mt-2 font-bold text-yellow-400 flex items-center gap-1">
-                                                    <Zap className="w-3 h-3" />
+                                                <p className="mt-3 font-bold text-yellow-400 flex items-center gap-1.5 text-base bg-yellow-400/10 px-3 py-1.5 rounded-lg w-max shadow-sm">
+                                                    <Zap className="w-4 h-4 flex-shrink-0" />
                                                     +{question.xp} XP 獎勵！
                                                 </p>
                                             )}
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
-
-                                {answered && (
-                                    <button
-                                        className="btn-primary w-full flex items-center justify-center gap-2"
-                                        onClick={handleNext}
-                                    >
-                                        {currentQ < questions.length - 1 ? (
-                                            <>
-                                                下一題 <ChevronRight className="w-4 h-4" />
-                                            </>
-                                        ) : (
-                                            <>
-                                                查看結果 <Trophy className="w-4 h-4" />
-                                            </>
-                                        )}
-                                    </button>
-                                )}
                             </motion.div>
                         )}
 
@@ -296,17 +281,17 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                     答對 {finalScore} / {questions.length} 題
                                 </p>
 
-                                <div className="glass-card p-6 mb-6">
+                                <div className="glass-card p-6 mb-8 w-full max-w-sm mx-auto">
                                     <div className="flex justify-around">
-                                        <div className="text-center">
+                                        <div className="text-center flex flex-col items-center">
                                             <p className="text-3xl font-black text-purple-400">{finalScore}/{questions.length}</p>
                                             <p className="text-xs text-slate-500 mt-1">正確題數</p>
                                         </div>
-                                        <div className="text-center">
+                                        <div className="text-center flex flex-col items-center">
                                             <p className="text-3xl font-black text-yellow-400">+{finalXP}</p>
                                             <p className="text-xs text-slate-500 mt-1">獲得 XP</p>
                                         </div>
-                                        <div className="text-center">
+                                        <div className="text-center flex flex-col items-center">
                                             <p className="text-3xl font-black text-cyan-400">
                                                 {Math.round((finalScore / questions.length) * 100)}%
                                             </p>
@@ -315,8 +300,8 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                     </div>
                                 </div>
 
-                                <div className="flex gap-3">
-                                    <button className="btn-secondary flex-1" onClick={() => {
+                                <div className="flex gap-3 justify-center">
+                                    <button className="btn-secondary" onClick={() => {
                                         setPhase("quiz");
                                         setCurrentQ(0);
                                         setSelected(null);
@@ -327,13 +312,33 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                     }}>
                                         再挑戰一次
                                     </button>
-                                    <button className="btn-primary flex-1" onClick={onClose}>
+                                    <button className="btn-primary" onClick={onClose}>
                                         繼續探索
                                     </button>
                                 </div>
                             </motion.div>
                         )}
                     </div>
+
+                    {/* Fixed Footer Phase: Only show the next button for Quiz Phase when answered */}
+                    {phase === "quiz" && answered && (
+                        <div className="p-4 sm:p-6 bg-black/30 border-t border-white/10 shrink-0 backdrop-blur-md">
+                            <button
+                                className="btn-primary w-full flex items-center justify-center gap-2 text-lg py-4 shadow-[0_0_20px_rgba(59,130,246,0.5)] animate-pulse hover:animate-none"
+                                onClick={handleNext}
+                            >
+                                {currentQ < questions.length - 1 ? (
+                                    <>
+                                        下一題 <ChevronRight className="w-5 h-5" />
+                                    </>
+                                ) : (
+                                    <>
+                                        查看結果 <Trophy className="w-5 h-5" />
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </motion.div>
             </motion.div>
         </AnimatePresence>
