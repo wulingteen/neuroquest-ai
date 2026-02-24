@@ -46,7 +46,7 @@ No test runner is configured yet.
 **`src/lib/gameData.ts`** — TypeScript interfaces and shared game logic. Static data has been migrated to the database.
 
 **`src/app/`** — Five pages using Next.js App Router:
-- `/` — AI Universe Map (6 planets, progressive unlock at 70% completion)
+- `/` — AI Universe Map (Vertical, Duolingo-style path layout, progressive level unlock)
 - `/arena` — Prompt Arena (competitive prompt design + voting)
 - `/lab` — Personal AI Lab (profile, AI pet, achievements gallery)
 - `/leaderboard` — Global leaderboard with guilds

@@ -33,8 +33,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#0D0D2B] text-slate-100 font-inter">
         <GameInitializer />
         <StarField />
-        <NavBar />
-        <main className="relative z-10 pt-16 md:pt-20 min-h-screen">
+        <main className="relative z-10 min-h-screen">
           {children}
         </main>
       </body>

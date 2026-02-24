@@ -1,20 +1,81 @@
 "use client";
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
 import { useGameStore } from "@/store/gameStore";
-import { getLevelTitle, type Planet, type Level } from "@/lib/gameData";
-import { Lock, Star, Zap, ChevronRight, CheckCircle2, Shield, Sword } from "lucide-react";
+import { type Planet, type Level } from "@/lib/gameData";
+import { Lock, Star, Zap, CheckCircle2, Sword, ChevronDown, ChevronUp, Map as MapIcon, Swords, Trophy, Newspaper, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DailyRewardModal from "@/components/DailyRewardModal";
 import LevelModal from "@/components/LevelModal";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const PLANET_COLORS = [
+  "#3b82f6", // Blue
+  "#a855f7", // Purple
+  "#22c55e", // Green
+  "#f97316", // Orange
+  "#ec4899", // Pink
+  "#14b8a6", // Teal
+  "#eab308", // Yellow
+  "#f43f5e", // Rose
+];
+
+const NAV_ITEMS = [
+  { href: "/", label: "宇宙地圖", icon: MapIcon },
+  { href: "/arena", label: "競技場", icon: Swords },
+  { href: "/leaderboard", label: "排行榜", icon: Trophy },
+  { href: "/news", label: "AI 快訊", icon: Newspaper },
+  { href: "/lab", label: "我的實驗室", icon: Brain },
+];
+
+const BackgroundGraphics = ({ colorPreset }: { colorPreset: number }) => {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      <svg width="100%" height="100%" className="absolute inset-0">
+        <circle cx="15%" cy="15%" r="6" fill="white" opacity="0.3" />
+        <circle cx="85%" cy="25%" r="4" fill="white" opacity="0.2" />
+        <circle cx="20%" cy="75%" r="8" fill="white" opacity="0.15" />
+        <circle cx="80%" cy="85%" r="5" fill="white" opacity="0.4" />
+        <circle cx="50%" cy="50%" r="3" fill="white" opacity="0.5" />
+        <circle cx="10%" cy="90%" r="4" fill="white" opacity="0.6" />
+
+        {colorPreset % 3 === 0 && (
+          <>
+            <circle cx="90%" cy="10%" r="150" fill="white" opacity="0.05" />
+            <path d="M-50,200 Q150,50 350,250 T700,150" fill="none" stroke="white" strokeWidth="30" opacity="0.05" />
+          </>
+        )}
+        {colorPreset % 3 === 1 && (
+          <>
+            <polygon points="100,20 200,150 0,150" fill="white" opacity="0.05" transform="translate(200, 50) rotate(25) scale(1.2)" />
+            <circle cx="5%" cy="85%" r="200" fill="white" opacity="0.03" />
+          </>
+        )}
+        {colorPreset % 3 === 2 && (
+          <>
+            <rect x="70%" y="30%" width="200" height="200" rx="40" fill="white" opacity="0.05" transform="rotate(15)" />
+            <circle cx="50%" cy="95%" r="250" fill="white" opacity="0.03" />
+          </>
+        )}
+      </svg>
+    </div>
+  );
+};
 
 export default function WorldMapPage() {
-  const { level, xp, streak, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, setCurrentLevel, currentPlanet } = useGameStore();
-  const [selectedPlanet, setSelectedPlanet] = useState<string | null>(null);
+  const { level, xp, streak, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, setCurrentLevel, currentLevel } = useGameStore();
+
   const [showLevelModal, setShowLevelModal] = useState(false);
+  const [selectedPlanetForModal, setSelectedPlanetForModal] = useState<Planet | null>(null);
   const [planets, setPlanets] = useState<Planet[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [viewIndex, setViewIndex] = useState(-1);
+  const initialized = useRef(false);
+
+  const pathname = usePathname();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,291 +103,270 @@ export default function WorldMapPage() {
     checkDailyLogin();
   }, [checkDailyLogin]);
 
-  const handlePlanetClick = (planetId: string, locked: boolean) => {
-    if (locked) return;
-    setSelectedPlanet(planetId === selectedPlanet ? null : planetId);
-    setCurrentPlanet(planetId);
+  const sortedPlanets = [...planets];
+  const allSortedLevels = sortedPlanets.flatMap(p =>
+    levels.filter(l => l.planetId === p.id).sort((a, b) => a.number - b.number)
+  );
+
+  // Pre-compute unlocks
+  let isPreviousLevelCompleted = true;
+  const planetLockedState = new Map<string, boolean>();
+  const levelAvailability = new Map<string, { isAvailable: boolean, isCompleted: boolean }>();
+
+  sortedPlanets.forEach((p, pIndex) => {
+    const pLevels = levels.filter(l => l.planetId === p.id).sort((a, b) => a.number - b.number);
+    planetLockedState.set(p.id, pIndex > 0 ? !isPreviousLevelCompleted : false);
+
+    pLevels.forEach((lvl) => {
+      const isCompleted = completedLevels?.has(Number(lvl.id)) || false;
+      const isAvailable = isPreviousLevelCompleted || isCompleted;
+      levelAvailability.set(lvl.id, { isAvailable, isCompleted });
+      if (!isCompleted) isPreviousLevelCompleted = false;
+    });
+  });
+
+  // Init view index
+  useEffect(() => {
+    if (!loading && !initialized.current && sortedPlanets.length > 0 && completedLevels !== undefined) {
+      let activeIdx = 0;
+      for (let i = 0; i < sortedPlanets.length; i++) {
+        if (!planetLockedState.get(sortedPlanets[i].id)) {
+          activeIdx = i;
+        }
+      }
+      setViewIndex(activeIdx);
+      initialized.current = true;
+    }
+  }, [loading, sortedPlanets, planetLockedState, completedLevels]);
+
+  if (loading || viewIndex === -1) {
+    return (
+      <div className="min-h-screen bg-[#0b1426] flex items-center justify-center text-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  const currentPlanetInfo = sortedPlanets[viewIndex];
+  const planetLevels = levels.filter(l => l.planetId === currentPlanetInfo.id).sort((a, b) => a.number - b.number);
+  const isPlanetLocked = planetLockedState.get(currentPlanetInfo.id);
+  const bgColor = PLANET_COLORS[viewIndex % PLANET_COLORS.length];
+
+  const handleClickLevel = (lvl: Level, p: Planet, isAvailable: boolean) => {
+    if (!isAvailable) return;
+    setCurrentPlanet(p.id);
+    setCurrentLevel(lvl.id);
+    setSelectedPlanetForModal(p);
+    setShowLevelModal(true);
   };
 
-  const planet = planets.find((p) => p.id === selectedPlanet);
+  const handleNextPlanet = () => {
+    if (viewIndex < sortedPlanets.length - 1) setViewIndex(v => v + 1);
+  };
+
+  const handlePrevPlanet = () => {
+    if (viewIndex > 0) setViewIndex(v => v - 1);
+  };
+
+  // Swipe handling
+  let touchStartY = 0;
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touchEndY = e.changedTouches[0].clientY;
+    const diff = touchStartY - touchEndY;
+    if (diff > 80) handleNextPlanet(); // swipe up to go forward down map
+    else if (diff < -80) handlePrevPlanet(); // swipe down to go back up map
+  };
 
   return (
-    <div className="relative min-h-screen px-4 py-6">
-      {showDailyReward && <DailyRewardModal />}
+    <div
+      className="min-h-screen w-full text-white font-sans overflow-x-hidden font-['Inter',sans-serif] transition-colors duration-700 ease-in-out relative flex flex-col pt-16 pb-32"
+      style={{ backgroundColor: isPlanetLocked ? '#1e293b' : bgColor }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <BackgroundGraphics colorPreset={viewIndex} />
 
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-7xl mx-auto mb-8"
-      >
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black gradient-text" style={{ fontFamily: "Orbitron, sans-serif" }}>
-              AI 宇宙地圖
-            </h1>
-            <p className="text-slate-400 mt-1">選擇一個星球，開始你的 GenAI 探索之旅</p>
-          </div>
-          {/* Stats row */}
-          <div className="flex gap-3">
-            <div className="glass-card px-4 py-2 flex items-center gap-2">
-              <Star className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-bold text-purple-300">Lv.{level}</span>
-              <span className="text-xs text-slate-500">{getLevelTitle(level)}</span>
-            </div>
-            <div className="glass-card px-4 py-2 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-bold text-yellow-300">{xp.toLocaleString()} XP</span>
-            </div>
-            <div className="glass-card px-4 py-2 flex items-center gap-2">
-              <span className="text-orange-400 text-sm">🔥</span>
-              <span className="text-sm font-bold text-orange-300">{streak} 天</span>
-            </div>
+      {/* Top Bar - Duolingo Style */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-black/20 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="bg-black/30 rounded-full p-1.5 px-4 flex items-center gap-2 font-black text-[#1cb0f6] shadow-sm">
+            <Star className="w-5 h-5 fill-current" />
+            <span className="text-lg">{level}</span>
           </div>
         </div>
-      </motion.div>
+        <div className="flex justify-end gap-2 flex-1">
+          <div className="bg-black/30 rounded-full p-1.5 px-4 flex items-center gap-2 font-black text-[#ffc800] shadow-sm">
+            <Zap className="w-5 h-5 fill-current" />
+            <span className="text-lg">{xp.toLocaleString()}</span>
+          </div>
+          <div className="bg-black/30 rounded-full p-1.5 px-4 flex items-center gap-2 font-black text-[#ff9600] shadow-sm">
+            <span className="text-lg">🔥</span>
+            <span className="text-lg">{streak}</span>
+          </div>
+        </div>
+      </div>
 
-      {/* Planet Grid */}
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {planets.map((p, i) => {
-            const completed = completedLevels ? completedLevels.size : 0;
-            // Note: In a real scenario, we might want to fetch progress from DB too
-            // For now, continuing to use the Zustand store progress
-            const planetCompleted = levels.filter(
-              (l) => l.planetId === p.id && completedLevels?.has(Number(l.id))
-            ).length;
+      {showDailyReward && <DailyRewardModal />}
 
-            const isLocked = (() => {
-              if (!p.requiredPlanet) return false;
-              let currRef: string | undefined = p.requiredPlanet;
-              while (currRef) {
-                const prevPlanet = planets.find((x) => x.id === currRef);
-                if (!prevPlanet) break;
-                const prevCompletedCount = levels.filter(
-                  (l) => l.planetId === prevPlanet.id && completedLevels?.has(Number(l.id))
-                ).length;
-                if (prevPlanet.totalLevels === 0 || prevCompletedCount < prevPlanet.totalLevels) {
-                  return true;
-                }
-                currRef = prevPlanet.requiredPlanet;
+      <div className="max-w-md mx-auto w-full px-4 flex-1 flex flex-col relative z-20">
+
+        {/* Top-left internal text */}
+        <div className="mt-6 mb-8">
+          <h2 className="text-4xl font-black tracking-widest uppercase drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
+            {currentPlanetInfo.name}
+          </h2>
+          <p className="font-bold opacity-90 text-lg drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+            {currentPlanetInfo.subtitle}
+          </p>
+          {isPlanetLocked && (
+            <div className="mt-2 flex items-center gap-2 text-white/50 bg-black/20 self-start px-3 py-1 rounded-full w-max">
+              <Lock className="w-4 h-4" />
+              <span className="text-sm font-bold">LOCKED</span>
+            </div>
+          )}
+        </div>
+
+        {/* Up arrow for previous planet */}
+        {viewIndex > 0 && (
+          <div className="flex justify-center mb-6">
+            <button
+              onClick={handlePrevPlanet}
+              className="bg-white/20 hover:bg-white/30 p-3 rounded-full backdrop-blur-sm transition shadow-lg active:scale-95"
+            >
+              <ChevronUp className="w-8 h-8 text-white drop-shadow-md" />
+            </button>
+          </div>
+        )}
+
+        {/* Path of Levels */}
+        <div className="flex flex-col items-center relative py-4 flex-1">
+          {planetLevels.map((lvl, lIndex) => {
+            const { isAvailable, isCompleted } = levelAvailability.get(lvl.id) || { isAvailable: false, isCompleted: false };
+
+            const amplitude = 80;
+            const pattern = [0, 0.7, 1, 0.7, 0, -0.7, -1, -0.7];
+            const xOffset = pattern[lIndex % pattern.length] * amplitude;
+            const isCurrent = isAvailable && !isCompleted && !isPlanetLocked;
+
+            let btnBg = "bg-[#e5e5e5] border-[#b3b3b3] text-[#afafaf]";
+            let iconColor = "text-[#afafaf]";
+            let Icon = Star;
+
+            if (isPlanetLocked) {
+              btnBg = "bg-white/20 border-white/10 text-white/40";
+              iconColor = "text-white/40";
+              Icon = Lock;
+            } else if (isCompleted) {
+              btnBg = "bg-[#ffc800] border-[#e5a900] text-white";
+              iconColor = "text-white";
+              Icon = CheckCircle2;
+            } else if (isCurrent) {
+              btnBg = "bg-[#1cb0f6] border-[#1899d6] text-white";
+              iconColor = "text-white";
+              Icon = Star;
+            } else if (lvl.type === 'boss') {
+              Icon = Sword;
+              if (isAvailable && !isCompleted) {
+                btnBg = "bg-[#ff4b4b] border-[#ea2b2b] text-white";
+                iconColor = "text-white";
               }
-              return false;
-            })();
+            }
 
             return (
-              <motion.div
-                key={p.id}
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08, duration: 0.5 }}
-                onClick={() => handlePlanetClick(p.id, isLocked)}
-                className={cn(
-                  "relative overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer group",
-                  isLocked
-                    ? "border-white/5 opacity-60 cursor-not-allowed"
-                    : selectedPlanet === p.id
-                      ? "border-2 scale-[1.02]"
-                      : "border-white/10 hover:border-white/20 hover:scale-[1.01]"
-                )}
-                style={{
-                  background: isLocked
-                    ? "rgba(255,255,255,0.02)"
-                    : `linear-gradient(135deg, rgba(13,13,43,0.9) 0%, ${p.color}22 100%)`,
-                  borderColor: selectedPlanet === p.id && !isLocked ? p.color : undefined,
-                  boxShadow: selectedPlanet === p.id && !isLocked
-                    ? `0 0 30px ${p.glowColor}, 0 0 60px ${p.glowColor}50`
-                    : undefined,
-                }}
-              >
-                {/* Top banner */}
-                <div
-                  className="h-2 w-full"
-                  style={{
-                    background: isLocked ? "#1e293b" : `linear-gradient(90deg, ${p.color}, transparent)`,
-                  }}
-                />
-
-                <div className="p-5">
-                  {/* Planet icon + lock */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div
-                      className={cn("text-5xl", !isLocked && "group-hover:scale-110 transition-transform duration-300")}
-                      style={{
-                        filter: isLocked ? "grayscale(1)" : `drop-shadow(0 0 12px ${p.color})`,
-                      }}
-                    >
-                      {p.icon}
-                    </div>
-                    {isLocked ? (
-                      <div className="flex items-center gap-1 glass-card px-2 py-1 text-xs text-slate-500">
-                        <Lock className="w-3 h-3" />
-                        <span>未解鎖</span>
-                      </div>
-                    ) : (
-                      <div
-                        className="text-xs font-bold px-2 py-1 rounded-lg"
-                        style={{ background: `${p.color}22`, color: p.color }}
-                      >
-                        {p.subtitle}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Planet name */}
-                  <h3
-                    className="text-xl font-black mb-1"
+              <div key={lvl.id} className="relative flex justify-center items-center w-full" style={{ height: "110px" }}>
+                {lIndex < planetLevels.length - 1 && (
+                  <div
+                    className="absolute w-5 -z-10 rounded-full"
                     style={{
-                      fontFamily: "Orbitron, sans-serif",
-                      color: isLocked ? "#334155" : p.color,
+                      height: "110px",
+                      top: "50%",
+                      left: `calc(50% + ${xOffset}px)`,
+                      backgroundColor: isPlanetLocked ? "rgba(255,255,255,0.1)" : isCompleted ? "#ffc800" : "rgba(255,255,255,0.3)",
+                      transformOrigin: "top center",
+                      transform: `rotate(${Math.atan2(
+                        110,
+                        (pattern[(lIndex + 1) % pattern.length] * amplitude) - xOffset
+                      ) * (180 / Math.PI) - 90}deg)`,
                     }}
-                  >
-                    {p.name}
-                  </h3>
-                  <p className={cn("text-sm mb-4", isLocked ? "text-slate-700" : "text-slate-400")}>
-                    {p.description}
-                  </p>
-
-                  {/* Progress */}
-                  {!isLocked && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-slate-400">
-                        <span>{planetCompleted} / {p.totalLevels} 關卡</span>
-                        <span>{Math.round((planetCompleted / p.totalLevels) * 100)}%</span>
-                      </div>
-                      <div className="xp-bar-track">
-                        <div
-                          className="xp-bar-fill"
-                          style={{
-                            width: `${(planetCompleted / p.totalLevels) * 100}%`,
-                            background: `linear-gradient(90deg, ${p.color}, ${p.color}80)`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Locked requirement */}
-                  {isLocked && p.requiredPlanet && (
-                    <div className="text-xs text-slate-600 flex items-center gap-1 mt-2">
-                      <Lock className="w-3 h-3" />
-                      <span>
-                        需完成{" "}
-                        {planets.find((x) => x.id === p.requiredPlanet)?.name ?? p.requiredPlanet} 所有關卡
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Hover overlay CTA */}
-                {!isLocked && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    whileHover={{ opacity: 1 }}
-                    className="absolute bottom-4 right-4 flex items-center gap-1 text-xs font-bold"
-                    style={{ color: p.color }}
-                  >
-                    <span>進入星球</span>
-                    <ChevronRight className="w-3 h-3" />
-                  </motion.div>
+                  />
                 )}
-              </motion.div>
+
+                <motion.button
+                  whileHover={isAvailable && !isPlanetLocked ? { scale: 1.05 } : {}}
+                  whileTap={isAvailable && !isPlanetLocked ? { scale: 0.95 } : {}}
+                  onClick={() => handleClickLevel(lvl, currentPlanetInfo, isAvailable && !isPlanetLocked)}
+                  className={cn(
+                    "relative rounded-full w-[76px] h-[76px] border-b-[8px] flex items-center justify-center transition-all z-10 shadow-lg",
+                    btnBg,
+                    (!isAvailable || isPlanetLocked) && "opacity-80 cursor-not-allowed",
+                    isCurrent && "animate-bounce mt-2"
+                  )}
+                  style={{ transform: `translateX(${xOffset}px)` }}
+                >
+                  {isCurrent && (
+                    <div className="absolute -top-12 bg-white text-[#1cb0f6] text-sm font-black px-4 py-2 rounded-2xl border-[3px] border-[#1cb0f6] shadow-md animate-pulse whitespace-nowrap">
+                      START
+                      <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-[#1cb0f6]"></div>
+                      <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white"></div>
+                    </div>
+                  )}
+                  <Icon className={cn("w-9 h-9", iconColor, isCompleted && "fill-current")} />
+                </motion.button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Down arrow for next planet */}
+        {viewIndex < sortedPlanets.length - 1 && (
+          <div className="flex justify-center mt-6 mb-6">
+            <button
+              onClick={handleNextPlanet}
+              className="bg-white/20 hover:bg-white/30 p-4 rounded-full backdrop-blur-sm transition shadow-lg active:scale-95 animate-bounce"
+            >
+              <ChevronDown className="w-10 h-10 text-white drop-shadow-md" />
+            </button>
+          </div>
+        )}
+
+      </div>
+
+      {showLevelModal && selectedPlanetForModal && (
+        <LevelModal
+          onClose={() => setShowLevelModal(false)}
+          planetName={selectedPlanetForModal.name}
+          levelId={currentLevel?.toString() || ""}
+          levelNumber={levels.find(l => String(l.id) === String(currentLevel))?.number || 1}
+          rollup={selectedPlanetForModal.id}
+        />
+      )}
+
+      {/* Replaced Icon Tabs Menu (preserved arrangement & style, located in map section) */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0b1426]/90 backdrop-blur-md border-t border-white/10 px-4 py-3 sm:py-4 flex justify-center">
+        <div className="w-full max-w-md flex items-center justify-between gap-1">
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname === href || (pathname === "/" && href === "/");
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={label}
+                className={cn(
+                  "p-3 rounded-2xl flex items-center justify-center transition-all duration-200 border",
+                  isActive
+                    ? "bg-purple-500/20 text-purple-300 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+                    : "border-transparent text-slate-400 hover:text-white hover:bg-white/5 hover:border-white/10"
+                )}
+              >
+                <Icon className={cn("w-7 h-7 sm:w-8 sm:h-8", isActive && "drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]")} />
+              </Link>
             );
           })}
         </div>
       </div>
-
-      {/* Level panel when planet selected */}
-      <AnimatePresence>
-        {selectedPlanet && planet && (
-          <motion.div
-            key="level-panel"
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 60 }}
-            transition={{ duration: 0.35 }}
-            className="fixed bottom-0 left-0 right-0 z-40 glass-card rounded-t-3xl border-t border-white/10 p-6 pb-8 md:pb-6"
-          >
-            <div className="max-w-3xl mx-auto">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl" style={{ filter: `drop-shadow(0 0 8px ${planet.color})` }}>
-                    {planet.icon}
-                  </span>
-                  <div>
-                    <h3 className="font-black text-lg" style={{ color: planet.color, fontFamily: "Orbitron, sans-serif" }}>
-                      {planet.name}
-                    </h3>
-                    <p className="text-xs text-slate-400">{planet.subtitle}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setSelectedPlanet(null)}
-                  className="text-slate-500 hover:text-white text-2xl leading-none"
-                >
-                  ×
-                </button>
-              </div>
-
-              {/* Levels */}
-              <div className="flex gap-3 overflow-x-auto pb-2">
-                {levels.filter(l => l.planetId === selectedPlanet).map((lvl, idx, arr) => {
-                  const done = completedLevels?.has(Number(lvl.id));
-                  const available = idx === 0 || completedLevels?.has(Number(arr[idx - 1]?.id));
-                  return (
-                    <motion.button
-                      key={lvl.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: idx * 0.06 }}
-                      onClick={() => {
-                        if (available) {
-                          setCurrentLevel(lvl.id);
-                          setShowLevelModal(true);
-                        }
-                      }}
-                      className={cn(
-                        "shrink-0 w-32 rounded-xl p-3 border text-left transition-all",
-                        done
-                          ? "border-green-500/50 bg-green-500/10"
-                          : available
-                            ? "border-purple-500/50 bg-purple-500/10 hover:bg-purple-500/20 cursor-pointer"
-                            : "border-white/5 bg-white/2 opacity-40 cursor-not-allowed"
-                      )}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-slate-500">關卡 {lvl.number}</span>
-                        {done ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-400" />
-                        ) : lvl.type === "boss" ? (
-                          <Sword className="w-4 h-4 text-red-400" />
-                        ) : (
-                          <Star className="w-4 h-4 text-purple-400" />
-                        )}
-                      </div>
-                      <p className="text-xs font-semibold text-white leading-tight">{lvl.title}</p>
-                      <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
-                        <Zap className="w-2.5 h-2.5" />
-                        {lvl.xpReward} XP
-                      </p>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {showLevelModal && planet && (
-        <LevelModal
-          onClose={() => setShowLevelModal(false)}
-          planetName={planet.name}
-          levelId={levels.find(l => String(l.id) === String(useGameStore.getState().currentLevel))?.id || ""}
-          levelNumber={levels.find(l => String(l.id) === String(useGameStore.getState().currentLevel))?.number || 1}
-          rollup={planet.id}
-        />
-      )}
 
     </div>
   );
