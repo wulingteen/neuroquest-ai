@@ -57,7 +57,7 @@ const BackgroundGraphics = ({ colorPreset }: { colorPreset: number }) => {
 };
 
 export default function WorldMapPage() {
-  const { level, xp, streak, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, setCurrentLevel, currentLevel } = useGameStore();
+  const { level, xp, streak, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, setCurrentLevel, currentLevel, levelProgress } = useGameStore();
 
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [selectedPlanetForModal, setSelectedPlanetForModal] = useState<Planet | null>(null);
@@ -184,19 +184,17 @@ export default function WorldMapPage() {
 
       {/* Top Bar - Duolingo Style */}
       <div className="fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link href="/lab" className="bg-white/15 backdrop-blur-xl border border-white/10 p-2 sm:p-2.5 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-white/20 shadow-md">
-            <Building className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+        <div className="flex items-center gap-3 bg-black/30 p-2 pr-4 rounded-full shadow-sm min-w-[180px] max-w-[220px] backdrop-blur-md">
+          <Link href="/lab" className="bg-white/15 backdrop-blur-xl border border-white/10 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-white/20 shadow-md flex-shrink-0">
+            <Building className="w-5 h-5 text-white" />
           </Link>
-          <div className="bg-black/30 rounded-full p-1.5 px-4 flex items-center gap-2 font-black text-[#1cb0f6] shadow-sm">
-            <Star className="w-5 h-5 fill-current" />
-            <span className="text-lg">{level}</span>
-          </div>
-        </div>
-        <div className="flex justify-end gap-2 flex-1">
-          <div className="bg-black/30 rounded-full p-1.5 px-4 flex items-center gap-2 font-black text-[#ffc800] shadow-sm">
-            <Zap className="w-5 h-5 fill-current" />
-            <span className="text-lg">{xp.toLocaleString()}</span>
+          <div className="flex flex-col flex-1 w-full gap-1">
+            <div className="flex justify-between items-center text-[10px] sm:text-xs font-bold px-1">
+              <span className="text-[#cccccc] font-bold tracking-wide">Lv. {level}</span>
+            </div>
+            <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden border border-white/5">
+              <div className="h-full bg-gradient-to-r from-[#999999] to-[#ffc800] rounded-full transition-all duration-800" style={{ width: `${levelProgress || 0}%` }} />
+            </div>
           </div>
         </div>
       </div>
