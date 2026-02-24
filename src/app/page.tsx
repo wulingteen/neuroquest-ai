@@ -278,7 +278,7 @@ export default function WorldMapPage() {
                     (!isAvailable || isPlanetLocked) && "opacity-80 cursor-not-allowed",
                     isCurrent && "animate-bounce mt-2"
                   )}
-                  style={{ transform: `translateX(${xOffset}px)` }}
+                  style={{ left: `${xOffset}px` }}
                 >
                   {isCurrent && (
                     <div className="absolute -top-12 bg-white text-[#1cb0f6] text-sm font-black px-4 py-2 rounded-2xl border-[3px] border-[#1cb0f6] shadow-md animate-pulse whitespace-nowrap">
