@@ -7,8 +7,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- 1. Planets Table
 -- Reference table for game regions/planets
 CREATE TABLE IF NOT EXISTS planets (
-    planet_id TEXT PRIMARY KEY, -- Using TEXT as ID for human-readable references as per original design
-    name TEXT NOT NULL,
+    planet_id INTEGER PRIMARY KEY,
+    rollup TEXT NOT NULL UNIQUE,
+    label TEXT NOT NULL,
     subtitle TEXT,
     icon TEXT,
     color TEXT,
@@ -19,29 +20,29 @@ CREATE TABLE IF NOT EXISTS planets (
     total_levels INTEGER NOT NULL DEFAULT 0,
     description TEXT,
     locked BOOLEAN NOT NULL DEFAULT TRUE,
-    required_planet_id TEXT REFERENCES planets(planet_id) ON DELETE SET NULL,
+    required_rollup TEXT REFERENCES planets(rollup) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Index for FK column (PostgreSQL doesn't auto-index FKs)
-CREATE INDEX IF NOT EXISTS idx_planets_required_planet_id ON planets(required_planet_id);
+CREATE INDEX IF NOT EXISTS idx_planets_required_rollup ON planets(required_rollup);
 
 -- 2. Levels Table
 -- Game levels within planets
 CREATE TABLE IF NOT EXISTS levels (
     level_id INTEGER PRIMARY KEY, -- changed to integer
-    planet_id TEXT NOT NULL REFERENCES planets(planet_id) ON DELETE CASCADE,
+    rollup TEXT NOT NULL REFERENCES planets(rollup) ON DELETE CASCADE,
     level_number INTEGER NOT NULL,
     title TEXT NOT NULL,
     content_type TEXT NOT NULL CHECK (content_type IN ('teach', 'quiz', 'boss')),
     xp_reward INTEGER NOT NULL DEFAULT 0 CHECK (xp_reward >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (planet_id, level_number) -- Ensure level numbers are unique within a planet
+    UNIQUE (rollup, level_number) -- Ensure level numbers are unique within a planet
 );
 
-CREATE INDEX IF NOT EXISTS idx_levels_planet_id ON levels(planet_id);
+CREATE INDEX IF NOT EXISTS idx_levels_rollup ON levels(rollup);
 
 -- 3. Achievements Table
 -- Unlockable goals
@@ -117,15 +118,16 @@ CREATE TABLE IF NOT EXISTS player_progress (
 -- Initial Data Migration
 
 -- Planets
-INSERT INTO planets (planet_id, name, subtitle, icon, color, glow_color, bg_gradient, x, y, total_levels, description, locked) VALUES
-('prompt', 'Prompt 星', 'Prompt Engineering', '⚡', '#8B5CF6', 'rgba(139,92,246,0.5)', 'from-purple-900 to-violet-950', 30, 40, 6, '掌握 Prompt 的力量，讓 AI 為你所用', false),
-('model', 'Model 星', 'LLM 模型原理', '🧠', '#3B82F6', 'rgba(59,130,246,0.5)', 'from-blue-900 to-cyan-950', 62, 25, 6, '深入 Transformer 的核心，理解 AI 如何思考', true),
-('vision', 'Vision 星', '多模態 AI', '👁️', '#F97316', 'rgba(249,115,22,0.5)', 'from-orange-900 to-red-950', 75, 58, 5, '看見 AI 的眼睛，探索圖像、聲音與文字的融合', true),
-('ethics', 'Ethics 星', 'AI 倫理', '⚖️', '#EF4444', 'rgba(239,68,68,0.5)', 'from-red-900 to-rose-950', 45, 70, 5, '守護 AI 的邊界，成為負責任的創造者', true),
-('agent', 'Agent 星', 'AI Agents', '🤖', '#10B981', 'rgba(16,185,129,0.5)', 'from-emerald-900 to-green-950', 18, 65, 5, '釋放 AI Agent 的潛力，打造自主智能系統', true),
-('future', 'Future 星', 'AGI & 未來趨勢', '🌟', '#FFB800', 'rgba(255,184,0,0.5)', 'from-yellow-900 to-amber-950', 50, 48, 4, '站在時代浪尖，洞察 AI 的未來', true)
+INSERT INTO planets (planet_id, rollup, label, subtitle, icon, color, glow_color, bg_gradient, x, y, total_levels, description, locked) VALUES
+(1, 'prompt', 'Prompt 星', 'Prompt Engineering', '⚡', '#8B5CF6', 'rgba(139,92,246,0.5)', 'from-purple-900 to-violet-950', 30, 40, 6, '掌握 Prompt 的力量，讓 AI 為你所用', false),
+(2, 'model', 'Model 星', 'LLM 模型原理', '🧠', '#3B82F6', 'rgba(59,130,246,0.5)', 'from-blue-900 to-cyan-950', 62, 25, 6, '深入 Transformer 的核心，理解 AI 如何思考', true),
+(3, 'vision', 'Vision 星', '多模態 AI', '👁️', '#F97316', 'rgba(249,115,22,0.5)', 'from-orange-900 to-red-950', 75, 58, 5, '看見 AI 的眼睛，探索圖像、聲音與文字的融合', true),
+(4, 'ethics', 'Ethics 星', 'AI 倫理', '⚖️', '#EF4444', 'rgba(239,68,68,0.5)', 'from-red-900 to-rose-950', 45, 70, 5, '守護 AI 的邊界，成為負責任的創造者', true),
+(5, 'agent', 'Agent 星', 'AI Agents', '🤖', '#10B981', 'rgba(16,185,129,0.5)', 'from-emerald-900 to-green-950', 18, 65, 5, '釋放 AI Agent 的潛力，打造自主智能系統', true),
+(6, 'future', 'Future 星', 'AGI & 未來趨勢', '🌟', '#FFB800', 'rgba(255,184,0,0.5)', 'from-yellow-900 to-amber-950', 50, 48, 4, '站在時代浪尖，洞察 AI 的未來', true)
 ON CONFLICT (planet_id) DO UPDATE SET
-    name = EXCLUDED.name,
+    rollup = EXCLUDED.rollup,
+    label = EXCLUDED.label,
     subtitle = EXCLUDED.subtitle,
     icon = EXCLUDED.icon,
     color = EXCLUDED.color,
@@ -137,14 +139,14 @@ ON CONFLICT (planet_id) DO UPDATE SET
     description = EXCLUDED.description,
     locked = EXCLUDED.locked;
 
-UPDATE planets SET required_planet_id = 'prompt' WHERE planet_id = 'model';
-UPDATE planets SET required_planet_id = 'model' WHERE planet_id = 'vision';
-UPDATE planets SET required_planet_id = 'vision' WHERE planet_id = 'ethics';
-UPDATE planets SET required_planet_id = 'ethics' WHERE planet_id = 'agent';
-UPDATE planets SET required_planet_id = 'agent' WHERE planet_id = 'future';
+UPDATE planets SET required_rollup = 'prompt' WHERE rollup = 'model';
+UPDATE planets SET required_rollup = 'model' WHERE rollup = 'vision';
+UPDATE planets SET required_rollup = 'vision' WHERE rollup = 'ethics';
+UPDATE planets SET required_rollup = 'ethics' WHERE rollup = 'agent';
+UPDATE planets SET required_rollup = 'agent' WHERE rollup = 'future';
 
 -- Levels
-INSERT INTO levels (level_id, planet_id, level_number, title, content_type, xp_reward) VALUES
+INSERT INTO levels (level_id, rollup, level_number, title, content_type, xp_reward) VALUES
 (1, 'prompt', 1, '什麼是 Prompt？', 'teach', 100),
 (2, 'prompt', 2, 'Zero-shot vs Few-shot', 'quiz', 150),
 (3, 'prompt', 3, '角色扮演 Prompt', 'teach', 100),
@@ -152,7 +154,7 @@ INSERT INTO levels (level_id, planet_id, level_number, title, content_type, xp_r
 (5, 'prompt', 5, 'Prompt 注入防禦', 'quiz', 200),
 (6, 'prompt', 6, 'BOSS：綜合挑戰', 'boss', 500)
 ON CONFLICT (level_id) DO UPDATE SET
-    planet_id = EXCLUDED.planet_id,
+    rollup = EXCLUDED.rollup,
     level_number = EXCLUDED.level_number,
     title = EXCLUDED.title,
     content_type = EXCLUDED.content_type,

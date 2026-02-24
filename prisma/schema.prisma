@@ -34,42 +34,43 @@ model arena_challenges {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model levels {
   level_id        Int               @id
-  planet_id       String
+  rollup          String
   level_number    Int
   title           String
   content_type    String
   xp_reward       Int               @default(0)
   created_at      DateTime          @default(now()) @db.Timestamptz(6)
   updated_at      DateTime          @default(now()) @db.Timestamptz(6)
-  planets         planets           @relation(fields: [planet_id], references: [planet_id], onDelete: Cascade, onUpdate: NoAction)
+  planets         planets           @relation(fields: [rollup], references: [rollup], onDelete: Cascade, onUpdate: NoAction)
   player_progress player_progress[]
   quiz_questions  quiz_questions[]
 
-  @@unique([planet_id, level_number])
-  @@index([planet_id], map: "idx_levels_planet_id")
+  @@unique([rollup, level_number])
+  @@index([rollup], map: "idx_levels_rollup")
 }
 
 model planets {
-  planet_id          String    @id
-  name               String
-  subtitle           String?
-  icon               String?
-  color              String?
-  glow_color         String?
-  bg_gradient        String?
-  x                  Int
-  y                  Int
-  total_levels       Int       @default(0)
-  description        String?
-  locked             Boolean   @default(true)
-  required_planet_id String?
-  created_at         DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime  @default(now()) @db.Timestamptz(6)
-  levels             levels[]
-  planets            planets?  @relation("planetsToplanets", fields: [required_planet_id], references: [planet_id], onUpdate: NoAction)
-  other_planets      planets[] @relation("planetsToplanets")
+  planet_id       Int       @id
+  rollup          String    @unique
+  label           String
+  subtitle        String?
+  icon            String?
+  color           String?
+  glow_color      String?
+  bg_gradient     String?
+  x               Int
+  y               Int
+  total_levels    Int       @default(0)
+  description     String?
+  locked          Boolean   @default(true)
+  required_rollup String?
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime  @default(now()) @db.Timestamptz(6)
+  levels          levels[]
+  planets         planets?  @relation("planetsToplanets", fields: [required_rollup], references: [rollup], onUpdate: NoAction)
+  other_planets   planets[] @relation("planetsToplanets")
 
-  @@index([required_planet_id], map: "idx_planets_required_planet_id")
+  @@index([required_rollup], map: "idx_planets_required_rollup")
 }
 
 model player_progress {

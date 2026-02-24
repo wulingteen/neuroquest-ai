@@ -13,8 +13,8 @@ export async function GET() {
         });
 
         const formattedPlanets = planets.map((p: any) => ({
-            id: p.planet_id,
-            name: p.name,
+            id: p.rollup,
+            name: p.label,
             subtitle: p.subtitle,
             icon: p.icon,
             color: p.color,
@@ -25,7 +25,7 @@ export async function GET() {
             totalLevels: p._count.levels,
             description: p.description,
             locked: p.locked,
-            requiredPlanet: p.required_planet_id
+            requiredPlanet: p.required_rollup
         }));
 
         return NextResponse.json({

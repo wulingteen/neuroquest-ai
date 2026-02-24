@@ -9,13 +9,13 @@ export async function GET(request: Request) {
         let levelsRaw;
         if (planetId) {
             levelsRaw = await prisma.levels.findMany({
-                where: { planet_id: planetId },
+                where: { rollup: planetId },
                 orderBy: { level_number: 'asc' }
             });
         } else {
             levelsRaw = await prisma.levels.findMany({
                 orderBy: [
-                    { planet_id: 'asc' },
+                    { rollup: 'asc' },
                     { level_number: 'asc' }
                 ]
             });
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
         const levels = levelsRaw.map((l: any) => ({
             id: l.level_id,
-            planetId: l.planet_id,
+            planetId: l.rollup,
             number: l.level_number,
             title: l.title,
             type: l.content_type,
