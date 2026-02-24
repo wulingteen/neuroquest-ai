@@ -1,38 +1,34 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const planetId = searchParams.get('planetId');
 
-        let levels;
+        let levelsRaw;
         if (planetId) {
-            levels = await sql`
-                SELECT 
-                    level_id as id,
-                    planet_id as "planetId",
-                    level_number as number,
-                    title,
-                    content_type as type,
-                    xp_reward as "xpReward"
-                FROM levels
-                WHERE planet_id = ${planetId}
-                ORDER BY level_number ASC
-            `;
+            levelsRaw = await prisma.levels.findMany({
+                where: { planet_id: planetId },
+                orderBy: { level_number: 'asc' }
+            });
         } else {
-            levels = await sql`
-                SELECT 
-                    level_id as id,
-                    planet_id as "planetId",
-                    level_number as number,
-                    title,
-                    content_type as type,
-                    xp_reward as "xpReward"
-                FROM levels
-                ORDER BY planet_id, level_number ASC
-            `;
+            levelsRaw = await prisma.levels.findMany({
+                orderBy: [
+                    { planet_id: 'asc' },
+                    { level_number: 'asc' }
+                ]
+            });
         }
+
+        const levels = levelsRaw.map((l: any) => ({
+            id: l.level_id,
+            planetId: l.planet_id,
+            number: l.level_number,
+            title: l.title,
+            type: l.content_type,
+            xpReward: l.xp_reward
+        }));
 
         return NextResponse.json({
             success: true,

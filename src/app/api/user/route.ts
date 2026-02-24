@@ -1,65 +1,50 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function GET() {
     try {
-        // Fetch player data
-        const players = await sql`
-            SELECT 
-                player_id,
-                username as "playerName",
-                avatar as "playerAvatar",
-                xp,
-                streak_days as streak,
-                level,
-                last_login_at as "lastLogin",
-                last_reward_claimed_at as "lastRewardClaimed"
-            FROM players
-            WHERE username = 'YouPlayer'
-            LIMIT 1
-        `;
+        const player = await prisma.players.findUnique({
+            where: { username: 'YouPlayer' }
+        });
 
-        if (players.length === 0) {
+        if (!player) {
             return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
         }
 
-        const player = players[0];
         const now = new Date();
-        const lastLoginAt = player.lastLogin ? new Date(player.lastLogin) : null;
-        const lastClaimedAt = player.lastRewardClaimed ? new Date(player.lastRewardClaimed) : null;
+        const lastLoginAt = player.last_login_at;
+        const lastClaimedAt = player.last_reward_claimed_at;
 
-        let currentStreak = player.streak;
+        let currentStreak = player.streak_days;
         let showDailyReward = false;
 
-        // Logic to determine streak and whether to show reward
         if (!lastLoginAt) {
-            // First time login
             currentStreak = 1;
             showDailyReward = true;
-            await sql`
-                UPDATE players SET last_login_at = ${now}, streak_days = 1 WHERE username = 'YouPlayer'
-            `;
+            await prisma.players.update({
+                where: { username: 'YouPlayer' },
+                data: { last_login_at: now, streak_days: 1 }
+            });
         } else {
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             const lastLoginDay = new Date(lastLoginAt.getFullYear(), lastLoginAt.getMonth(), lastLoginAt.getDate());
             const diffDays = Math.floor((today.getTime() - lastLoginDay.getTime()) / (1000 * 60 * 60 * 24));
 
             if (diffDays === 1) {
-                // New day, consecutive
                 currentStreak += 1;
                 showDailyReward = true;
-                await sql`
-                    UPDATE players SET last_login_at = ${now}, streak_days = ${currentStreak} WHERE username = 'YouPlayer'
-                `;
+                await prisma.players.update({
+                    where: { username: 'YouPlayer' },
+                    data: { last_login_at: now, streak_days: currentStreak }
+                });
             } else if (diffDays > 1) {
-                // New day, streak broken
                 currentStreak = 1;
                 showDailyReward = true;
-                await sql`
-                    UPDATE players SET last_login_at = ${now}, streak_days = 1 WHERE username = 'YouPlayer'
-                `;
+                await prisma.players.update({
+                    where: { username: 'YouPlayer' },
+                    data: { last_login_at: now, streak_days: 1 }
+                });
             } else if (diffDays === 0) {
-                // Same day, check if reward already claimed today
                 if (!lastClaimedAt) {
                     showDailyReward = true;
                 } else {
@@ -71,20 +56,23 @@ export async function GET() {
             }
         }
 
-        // Fetch completed levels
-        const progress = await sql`
-            SELECT level_id
-            FROM player_progress
-            WHERE player_id = ${player.player_id}
-        `;
+        const progress = await prisma.player_progress.findMany({
+            where: { player_id: player.player_id }
+        });
 
-        const completedLevels = progress.map(p => p.level_id);
+        const completedLevels = progress.map((p: any) => p.level_id);
 
         return NextResponse.json({
             success: true,
             data: {
-                ...player,
+                player_id: player.player_id,
+                playerName: player.username,
+                playerAvatar: player.avatar,
+                xp: player.xp,
                 streak: currentStreak,
+                level: player.level,
+                lastLogin: player.last_login_at,
+                lastRewardClaimed: player.last_reward_claimed_at,
                 showDailyReward,
                 completedLevels,
                 unlockedAchievements: ["first-step"],
@@ -104,34 +92,32 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { xp, claimReward, completedLevelId } = body;
 
-        // Update basic player stats
+        const player = await prisma.players.findUnique({ where: { username: 'YouPlayer' } });
+        if (!player) throw new Error('Player not found');
+
         if (xp !== undefined) {
-            await sql`
-                UPDATE players
-                SET xp = ${xp}
-                WHERE username = 'YouPlayer'
-            `;
+            await prisma.players.update({
+                where: { username: 'YouPlayer' },
+                data: { xp: xp }
+            });
         }
 
-        // Handle reward claim
         if (claimReward) {
-            await sql`
-                UPDATE players
-                SET last_reward_claimed_at = NOW()
-                WHERE username = 'YouPlayer'
-            `;
+            await prisma.players.update({
+                where: { username: 'YouPlayer' },
+                data: { last_reward_claimed_at: new Date() }
+            });
         }
 
-        // Add progress if a level was completed
         if (completedLevelId) {
-            await sql`
-                INSERT INTO player_progress (player_id, level_id)
-                VALUES (
-                    (SELECT player_id FROM players WHERE username = 'YouPlayer'),
-                    ${completedLevelId}
-                )
-                ON CONFLICT (player_id, level_id) DO NOTHING
-            `;
+            const existingProgress = await prisma.player_progress.findFirst({
+                where: { player_id: player.player_id, level_id: completedLevelId }
+            });
+            if (!existingProgress) {
+                await prisma.player_progress.create({
+                    data: { player_id: player.player_id, level_id: completedLevelId }
+                });
+            }
         }
 
         return NextResponse.json({ success: true });

@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function GET() {
     try {
-        const challenges = await sql`
-            SELECT 
-                challenge_id as id,
-                title,
-                description,
-                difficulty,
-                example_prompts as examples
-            FROM arena_challenges
-            ORDER BY created_at ASC
-        `;
+        const challengesRaw = await prisma.arena_challenges.findMany({
+            orderBy: { created_at: 'asc' }
+        });
+
+        const challenges = challengesRaw.map((c: any) => ({
+            id: c.challenge_id,
+            title: c.title,
+            description: c.description,
+            difficulty: c.difficulty,
+            examples: c.example_prompts
+        }));
 
         return NextResponse.json({
             success: true,

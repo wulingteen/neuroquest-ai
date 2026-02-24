@@ -1,30 +1,36 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function GET() {
     try {
-        const planets = await sql`
-            SELECT 
-                p.planet_id as id,
-                p.name,
-                p.subtitle,
-                p.icon,
-                p.color,
-                p.glow_color as "glowColor",
-                p.bg_gradient as "bgGradient",
-                p.x,
-                p.y,
-                (SELECT COUNT(*)::int FROM levels l WHERE l.planet_id = p.planet_id) as "totalLevels",
-                p.description,
-                p.locked,
-                p.required_planet_id as "requiredPlanet"
-            FROM planets p
-            ORDER BY p.created_at ASC
-        `;
+        const planets = await prisma.planets.findMany({
+            include: {
+                _count: {
+                    select: { levels: true }
+                }
+            },
+            orderBy: { created_at: 'asc' }
+        });
+
+        const formattedPlanets = planets.map((p: any) => ({
+            id: p.planet_id,
+            name: p.name,
+            subtitle: p.subtitle,
+            icon: p.icon,
+            color: p.color,
+            glowColor: p.glow_color,
+            bgGradient: p.bg_gradient,
+            x: p.x,
+            y: p.y,
+            totalLevels: p._count.levels,
+            description: p.description,
+            locked: p.locked,
+            requiredPlanet: p.required_planet_id
+        }));
 
         return NextResponse.json({
             success: true,
-            data: planets,
+            data: formattedPlanets,
         });
     } catch (error) {
         console.error('Error fetching planets:', error);

@@ -1,26 +1,17 @@
-import postgres from 'postgres';
+import { PrismaClient } from '@prisma/client';
 
-// Ensure required environment variables are present
-const dbConfig = {
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT) || 5432,
-    database: process.env.DB_NAME,
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
+const prismaClientSingleton = () => {
+    return new PrismaClient();
 };
 
-// Log a warning if critical config is missing
-if (!dbConfig.host || !dbConfig.database || !dbConfig.username || !dbConfig.password) {
-    console.warn('⚠️  Database configuration is missing. Please check your .env file.');
-}
+type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;
 
-const sql = postgres({
-    host: dbConfig.host,
-    port: dbConfig.port,
-    database: dbConfig.database,
-    username: dbConfig.username,
-    password: dbConfig.password,
-});
+const globalForPrisma = globalThis as unknown as {
+    prisma: PrismaClientSingleton | undefined;
+};
 
-export default sql;
+const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
+export default prisma;
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

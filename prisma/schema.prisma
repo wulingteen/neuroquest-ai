@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model achievements {
+  achievement_id String   @id
+  name           String
+  description    String?
+  icon           String?
+  rarity         String
+  xp_reward      Int      @default(0)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model arena_challenges {
+  challenge_id    String   @id
+  title           String
+  description     String?
+  difficulty      String
+  example_prompts Json     @default("[]")
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([difficulty], map: "idx_arena_challenges_difficulty")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model levels {
+  level_id        String            @id
+  planet_id       String
+  level_number    Int
+  title           String
+  content_type    String
+  xp_reward       Int               @default(0)
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  planets         planets           @relation(fields: [planet_id], references: [planet_id], onDelete: Cascade, onUpdate: NoAction)
+  player_progress player_progress[]
+  quiz_questions  quiz_questions[]
+
+  @@unique([planet_id, level_number])
+  @@index([planet_id], map: "idx_levels_planet_id")
+}
+
+model planets {
+  planet_id          String    @id
+  name               String
+  subtitle           String?
+  icon               String?
+  color              String?
+  glow_color         String?
+  bg_gradient        String?
+  x                  Int
+  y                  Int
+  total_levels       Int       @default(0)
+  description        String?
+  locked             Boolean   @default(true)
+  required_planet_id String?
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime  @default(now()) @db.Timestamptz(6)
+  levels             levels[]
+  planets            planets?  @relation("planetsToplanets", fields: [required_planet_id], references: [planet_id], onUpdate: NoAction)
+  other_planets      planets[] @relation("planetsToplanets")
+
+  @@index([required_planet_id], map: "idx_planets_required_planet_id")
+}
+
+model player_progress {
+  player_id    String   @db.Uuid
+  level_id     String
+  completed_at DateTime @default(now()) @db.Timestamptz(6)
+  levels       levels   @relation(fields: [level_id], references: [level_id], onDelete: Cascade, onUpdate: NoAction)
+  players      players  @relation(fields: [player_id], references: [player_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([player_id, level_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model players {
+  player_id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username               String            @unique
+  email                  String?           @unique
+  avatar                 String?
+  xp                     Int               @default(0)
+  streak_days            Int               @default(0)
+  guild_name             String?
+  last_login_at          DateTime?         @db.Timestamptz(6)
+  last_reward_claimed_at DateTime?         @db.Timestamptz(6)
+  level                  Int?              @default(dbgenerated("(floor(((xp / 1000))::double precision) + (1)::double precision)"))
+  created_at             DateTime          @default(now()) @db.Timestamptz(6)
+  player_progress        player_progress[]
+
+  @@index([xp(sort: Desc)], map: "idx_players_xp")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model quiz_questions {
+  question_id          Int      @id @default(autoincrement())
+  level_id             String?
+  question_number      Int
+  question_text        String
+  options              Json
+  correct_option_index Int
+  explanation          String?
+  xp_reward            Int      @default(0)
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime @default(now()) @db.Timestamptz(6)
+  levels               levels?  @relation(fields: [level_id], references: [level_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([level_id, question_number])
+  @@index([level_id], map: "idx_quiz_questions_level_id")
+  @@index([options], map: "idx_quiz_questions_options_gin", type: Gin)
+}

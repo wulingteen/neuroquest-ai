@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function GET() {
     try {
-        const achievements = await sql`
-            SELECT 
-                achievement_id as id,
-                name,
-                description,
-                icon,
-                rarity,
-                xp_reward as "xpReward"
-            FROM achievements
-            ORDER BY xp_reward ASC
-        `;
+        const achievementsRaw = await prisma.achievements.findMany({
+            orderBy: { xp_reward: 'asc' }
+        });
+
+        const achievements = achievementsRaw.map((a: any) => ({
+            id: a.achievement_id,
+            name: a.name,
+            description: a.description,
+            icon: a.icon,
+            rarity: a.rarity,
+            xpReward: a.xp_reward
+        }));
 
         return NextResponse.json({
             success: true,

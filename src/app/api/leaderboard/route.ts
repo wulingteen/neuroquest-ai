@@ -1,24 +1,20 @@
 import { NextResponse } from 'next/server';
-import sql from '@/lib/db';
+import prisma from '@/lib/db';
 
 export async function GET() {
     try {
-        const players = await sql`
-            SELECT 
-                username as name,
-                xp,
-                level,
-                streak_days as streak,
-                guild_name as guild,
-                avatar
-            FROM players
-            ORDER BY xp DESC
-            LIMIT 100
-        `;
+        const playersRaw = await prisma.players.findMany({
+            orderBy: { xp: 'desc' },
+            take: 100
+        });
 
-        // Add rank
-        const leaderboard = players.map((player, index) => ({
-            ...player,
+        const leaderboard = playersRaw.map((player: any, index: number) => ({
+            name: player.username,
+            xp: player.xp,
+            level: player.level,
+            streak: player.streak_days,
+            guild: player.guild_name,
+            avatar: player.avatar,
             rank: index + 1,
         }));
 
