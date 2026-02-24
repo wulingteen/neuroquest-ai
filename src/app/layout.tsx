@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Orbitron } from "next/font/google";
 import "./globals.css";
-import NavBar from "@/components/NavBar";
+import BottomMenu from "@/components/BottomMenu";
 import StarField from "@/components/StarField";
 import GameInitializer from "@/components/GameInitializer";
 
@@ -33,9 +33,10 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#0D0D2B] text-slate-100 font-inter">
         <GameInitializer />
         <StarField />
-        <main className="relative z-10 min-h-screen">
+        <main className="relative z-10 min-h-screen pb-20">
           {children}
         </main>
+        <BottomMenu />
       </body>
     </html>
   );

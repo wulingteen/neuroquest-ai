@@ -3,12 +3,10 @@ import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { type Planet, type Level } from "@/lib/gameData";
-import { Lock, Star, Zap, CheckCircle2, Sword, ChevronDown, ChevronUp, Map as MapIcon, Swords, Trophy, Newspaper, Brain } from "lucide-react";
+import { Lock, Star, Zap, CheckCircle2, Sword, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DailyRewardModal from "@/components/DailyRewardModal";
 import LevelModal from "@/components/LevelModal";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 const PLANET_COLORS = [
   "#3b82f6", // Blue
@@ -21,13 +19,7 @@ const PLANET_COLORS = [
   "#f43f5e", // Rose
 ];
 
-const NAV_ITEMS = [
-  { href: "/", label: "宇宙地圖", icon: MapIcon },
-  { href: "/arena", label: "競技場", icon: Swords },
-  { href: "/leaderboard", label: "排行榜", icon: Trophy },
-  { href: "/news", label: "AI 快訊", icon: Newspaper },
-  { href: "/lab", label: "我的實驗室", icon: Brain },
-];
+
 
 const BackgroundGraphics = ({ colorPreset }: { colorPreset: number }) => {
   return (
@@ -75,7 +67,6 @@ export default function WorldMapPage() {
   const [viewIndex, setViewIndex] = useState(-1);
   const initialized = useRef(false);
 
-  const pathname = usePathname();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -344,29 +335,7 @@ export default function WorldMapPage() {
         />
       )}
 
-      {/* Replaced Icon Tabs Menu (preserved arrangement & style, located in map section) */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0b1426]/90 backdrop-blur-md border-t border-white/10 px-4 py-3 sm:py-4 flex justify-center">
-        <div className="w-full max-w-md flex items-center justify-between gap-1">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href || (pathname === "/" && href === "/");
-            return (
-              <Link
-                key={href}
-                href={href}
-                title={label}
-                className={cn(
-                  "p-3 rounded-2xl flex items-center justify-center transition-all duration-200 border",
-                  isActive
-                    ? "bg-purple-500/20 text-purple-300 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.4)]"
-                    : "border-transparent text-slate-400 hover:text-white hover:bg-white/5 hover:border-white/10"
-                )}
-              >
-                <Icon className={cn("w-7 h-7 sm:w-8 sm:h-8", isActive && "drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]")} />
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+
 
     </div>
   );
