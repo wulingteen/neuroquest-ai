@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS achievements (
 -- Questions pool
 CREATE TABLE IF NOT EXISTS quiz_questions (
     question_id TEXT PRIMARY KEY,
+    level_id TEXT REFERENCES levels(level_id) ON DELETE CASCADE,
     question_text TEXT NOT NULL,
     options JSONB NOT NULL CHECK (jsonb_typeof(options) = 'array'), -- Validates options is a JSON array
     correct_option_index INTEGER NOT NULL CHECK (correct_option_index >= 0),
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS quiz_questions (
 
 -- GIN index for JSONB options if we ever need to search within them (e.g., finding questions with specific tags/options)
 CREATE INDEX IF NOT EXISTS idx_quiz_questions_options_gin ON quiz_questions USING GIN (options);
+CREATE INDEX IF NOT EXISTS idx_quiz_questions_level_id ON quiz_questions(level_id);
 
 -- 5. Arena Challenges Table
 -- PvP or specialized challenges
@@ -170,12 +172,13 @@ ON CONFLICT (achievement_id) DO UPDATE SET
     xp_reward = EXCLUDED.xp_reward;
 
 -- Quiz Questions
-INSERT INTO quiz_questions (question_id, question_text, options, correct_option_index, explanation, xp_reward) VALUES
-('q1', '以下哪種 Prompt 技術最適合需要 AI 進行逐步推理的任務？', '["Zero-shot Prompting", "Chain of Thought (CoT) Prompting", "One-shot Prompting", "Temperature Adjustment"]', 1, 'Chain of Thought Prompting 讓 AI 展示推理步驟，特別適合數學、邏輯等需要多步推理的任務。', 150),
-('q2', 'LLM 中的 "Token" 最接近以下哪個概念？', '["完整的一個詞語", "文字的最小處理單位（約 3-4 個字元）", "一個完整的句子", "一段程式碼"]', 1, 'Token 是 LLM 處理文字的最小單位，英文中約 4 個字元，中文每個字通常是 1-2 個 Token。', 150),
-('q3', '在 LLM 的 Temperature 參數中，接近 0 的值會產生什麼效果？', '["更有創意和多樣化的輸出", "更隨機和不可預期的回應", "更確定性和保守的輸出", "更快的回應速度"]', 2, 'Temperature 接近 0 時，模型傾向選擇最高機率的 Token，輸出更加確定 and 一致；接近 1 則更有創意和多樣性。', 200),
-('q4', '以下關於 RAG（Retrieval-Augmented Generation）的敘述，哪個正確？', '["RAG 會永久修改 LLM 的參數", "RAG 在推理時動態檢索外部知識庫", "RAG 比 Fine-tuning 需要更多訓練資料", "RAG 只適用於圖像生成"]', 1, 'RAG 在生成回應時即時從外部知識庫檢索相關資訊，不需修改模型本身，適合需要最新資訊的場景。', 200)
+INSERT INTO quiz_questions (question_id, level_id, question_text, options, correct_option_index, explanation, xp_reward) VALUES
+('q1', 'p1-2', '以下哪種 Prompt 技術最適合需要 AI 進行逐步推理的任務？', '["Zero-shot Prompting", "Chain of Thought (CoT) Prompting", "One-shot Prompting", "Temperature Adjustment"]', 1, 'Chain of Thought Prompting 讓 AI 展示推理步驟，特別適合數學、邏輯等需要多步推理的任務。', 150),
+('q2', 'p1-2', 'LLM 中的 "Token" 最接近以下哪個概念？', '["完整的一個詞語", "文字的最小處理單位（約 3-4 個字元）", "一個完整的句子", "一段程式碼"]', 1, 'Token 是 LLM 處理文字的最小單位，英文中約 4 個字元，中文每個字通常是 1-2 個 Token。', 150),
+('q3', 'p1-4', '在 LLM 的 Temperature 參數中，接近 0 的值會產生什麼效果？', '["更有創意和多樣化的輸出", "更隨機和不可預期的回應", "更確定性和保守的輸出", "更快的回應速度"]', 2, 'Temperature 接近 0 時，模型傾向選擇最高機率的 Token，輸出更加確定 and 一致；接近 1 則更有創意和多樣性。', 200),
+('q4', 'p1-5', '以下關於 RAG（Retrieval-Augmented Generation）的敘述，哪個正確？', '["RAG 會永久修改 LLM 的參數", "RAG 在推理時動態檢索外部知識庫", "RAG 比 Fine-tuning 需要更多訓練資料", "RAG 只適用於圖像生成"]', 1, 'RAG 在生成回應時即時從外部知識庫檢索相關資訊，不需修改模型本身，適合需要最新資訊的場景。', 200)
 ON CONFLICT (question_id) DO UPDATE SET
+    level_id = EXCLUDED.level_id,
     question_text = EXCLUDED.question_text,
     options = EXCLUDED.options,
     correct_option_index = EXCLUDED.correct_option_index,

@@ -30,7 +30,8 @@ export default function LevelModal({ onClose, planetName, levelId }: LevelModalP
     useEffect(() => {
         const fetchQuiz = async () => {
             try {
-                const response = await fetch('/api/quiz');
+                // Ensure questions for each level_id are sourced from quiz_questions
+                const response = await fetch(`/api/quiz?levelId=${levelId}`);
                 const result = await response.json();
                 if (result.success) {
                     setQuestions(result.data);
@@ -42,7 +43,7 @@ export default function LevelModal({ onClose, planetName, levelId }: LevelModalP
             }
         };
         fetchQuiz();
-    }, []);
+    }, [levelId]);
 
     const question = questions[currentQ];
 
