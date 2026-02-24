@@ -53,7 +53,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
     if (questions.length === 0) {
         return (
             <AnimatePresence>
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
                     <motion.div
                         initial={{ scale: 0.85, y: 40 }}
                         animate={{ scale: 1, y: 0 }}
@@ -103,7 +103,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
                 onClick={(e) => e.target === e.currentTarget && onClose()}
             >
                 {showConfetti && (
