@@ -267,24 +267,7 @@ export default function WorldMapPage() {
             }
 
             return (
-              <div key={lvl.id} className="relative flex justify-center items-center w-full" style={{ height: "110px" }}>
-                {lIndex < planetLevels.length - 1 && (
-                  <div
-                    className="absolute w-5 -z-10 rounded-full"
-                    style={{
-                      height: "110px",
-                      top: "50%",
-                      left: `calc(50% + ${xOffset}px)`,
-                      backgroundColor: isPlanetLocked ? "rgba(255,255,255,0.1)" : isCompleted ? "#ffc800" : "rgba(255,255,255,0.3)",
-                      transformOrigin: "top center",
-                      transform: `rotate(${Math.atan2(
-                        110,
-                        (pattern[(lIndex + 1) % pattern.length] * amplitude) - xOffset
-                      ) * (180 / Math.PI) - 90}deg)`,
-                    }}
-                  />
-                )}
-
+              <div key={lvl.id} className="relative flex justify-center items-center w-full" style={{ height: "90px" }}>
                 <motion.button
                   whileHover={isAvailable && !isPlanetLocked ? { scale: 1.05 } : {}}
                   whileTap={isAvailable && !isPlanetLocked ? { scale: 0.95 } : {}}
