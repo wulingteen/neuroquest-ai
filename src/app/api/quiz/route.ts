@@ -11,6 +11,7 @@ export async function GET(request: Request) {
             questions = await sql`
                 SELECT 
                     question_id as id,
+                    question_number as number,
                     question_text as question,
                     options,
                     correct_option_index as correct,
@@ -18,13 +19,14 @@ export async function GET(request: Request) {
                     xp_reward as xp
                 FROM quiz_questions
                 WHERE level_id = ${levelId}
-                ORDER BY RANDOM()
+                ORDER BY question_number ASC
                 LIMIT 5
             `;
         } else {
             questions = await sql`
                 SELECT 
                     question_id as id,
+                    question_number as number,
                     question_text as question,
                     options,
                     correct_option_index as correct,

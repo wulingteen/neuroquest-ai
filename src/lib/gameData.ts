@@ -43,7 +43,7 @@ export interface ArenaChallenge {
 }
 
 export interface QuizQuestion {
-    id: string;
+    id: number;
     question: string;
     options: string[];
     correct: number;
