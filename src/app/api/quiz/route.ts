@@ -8,7 +8,7 @@ export async function GET(request: Request) {
 
         if (levelId) {
             const questionsRaw = await prisma.quiz_questions.findMany({
-                where: { level_id: levelId },
+                where: { level_id: parseInt(levelId, 10) },
                 orderBy: { question_number: 'asc' },
                 take: 5
             });

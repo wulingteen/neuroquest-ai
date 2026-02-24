@@ -110,12 +110,13 @@ export async function POST(request: Request) {
         }
 
         if (completedLevelId) {
+            const levelIdInt = Number(completedLevelId);
             const existingProgress = await prisma.player_progress.findFirst({
-                where: { player_id: player.player_id, level_id: completedLevelId }
+                where: { player_id: player.player_id, level_id: levelIdInt }
             });
             if (!existingProgress) {
                 await prisma.player_progress.create({
-                    data: { player_id: player.player_id, level_id: completedLevelId }
+                    data: { player_id: player.player_id, level_id: levelIdInt }
                 });
             }
         }
