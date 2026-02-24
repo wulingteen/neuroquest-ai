@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { getLevelTitle, type Achievement } from "@/lib/gameData";
 import { useGameStore } from "@/store/gameStore";
 import { cn } from "@/lib/utils";
-import { Star, Zap, Flame, Trophy } from "lucide-react";
+import { Star, Zap, Flame, Trophy, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 const RARITY_LABELS: Record<string, string> = {
     common: "普通",
@@ -37,12 +38,11 @@ export default function LabPage() {
 
     return (
         <div className="min-h-screen px-4 py-6 max-w-5xl mx-auto">
-            {/* Header */}
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-                <h1 className="text-3xl font-black gradient-text" style={{ fontFamily: "Orbitron, sans-serif" }}>
-                    我的 AI 實驗室
-                </h1>
-                <p className="text-slate-400 text-sm mt-1">你的個人 AI 研究基地</p>
+            {/* Header / Back Button */}
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex">
+                <Link href="/" className="bg-white/15 backdrop-blur-xl border border-white/10 p-2 sm:p-2.5 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-white/20 shadow-md">
+                    <ArrowLeft className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                </Link>
             </motion.div>
 
             <div className="grid md:grid-cols-3 gap-5">

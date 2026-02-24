@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { type Planet, type Level } from "@/lib/gameData";
-import { Lock, Star, Zap, CheckCircle2, Sword, ChevronDown, ChevronUp } from "lucide-react";
+import { Lock, Star, Zap, CheckCircle2, Sword, ChevronDown, ChevronUp, Building } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import DailyRewardModal from "@/components/DailyRewardModal";
 import LevelModal from "@/components/LevelModal";
@@ -184,6 +185,9 @@ export default function WorldMapPage() {
       {/* Top Bar - Duolingo Style */}
       <div className="fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
+          <Link href="/lab" className="bg-white/15 backdrop-blur-xl border border-white/10 p-2 sm:p-2.5 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-white/20 shadow-md">
+            <Building className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </Link>
           <div className="bg-black/30 rounded-full p-1.5 px-4 flex items-center gap-2 font-black text-[#1cb0f6] shadow-sm">
             <Star className="w-5 h-5 fill-current" />
             <span className="text-lg">{level}</span>
@@ -193,10 +197,6 @@ export default function WorldMapPage() {
           <div className="bg-black/30 rounded-full p-1.5 px-4 flex items-center gap-2 font-black text-[#ffc800] shadow-sm">
             <Zap className="w-5 h-5 fill-current" />
             <span className="text-lg">{xp.toLocaleString()}</span>
-          </div>
-          <div className="bg-black/30 rounded-full p-1.5 px-4 flex items-center gap-2 font-black text-[#ff9600] shadow-sm">
-            <span className="text-lg">🔥</span>
-            <span className="text-lg">{streak}</span>
           </div>
         </div>
       </div>
