@@ -8,6 +8,16 @@
 curl http://localhost:3000/api/news/cron
 ```
 
+## View cron scan logs
+
+```bash
+# List recent scan runs
+curl http://localhost:3000/api/news/scan-logs
+
+# Detail for a specific run (includes per-feed logs)
+curl http://localhost:3000/api/news/scan-logs?run_id=1
+```
+
 ## Database Schema Overview
 
 The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a concise overview of each table and its columns:
@@ -24,6 +34,8 @@ The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a co
 - **news_selections**: AI-chosen articles split into 10 score brackets per cycle date.
 - **news_questions**: AI-generated reading comprehension questions based on `news_selections`.
 - **player_news_answers**: Tracks player answers for news questions for rewards.
+- **cron_scan_runs**: `run_id` (BIGINT PK), `status` (TEXT: running/completed/failed), `total_feeds`, `feeds_ok`, `feeds_failed`, `articles_found`, `articles_selected`, `error_message`, `started_at`, `finished_at`. One row per cron invocation.
+- **cron_scan_feed_logs**: `log_id` (BIGINT PK), `run_id` (FK), `feed_id` (FK), `feed_url`, `feed_name`, `status` (success/failed/skipped), `articles_found`, `error_message`, `duration_ms`, `created_at`. One row per feed per run.
 
 These tables support the core gameplay mechanics, including planet navigation, level progression, achievements, quizzes, arena challenges, and player tracking.
 

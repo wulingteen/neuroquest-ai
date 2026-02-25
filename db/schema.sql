@@ -215,6 +215,42 @@ CREATE TABLE IF NOT EXISTS player_news_answers (
 
 CREATE INDEX IF NOT EXISTS idx_player_news_answers_question_id ON player_news_answers(question_id);
 
+-- 15. Cron Scan Runs Table
+-- One row per cron invocation
+CREATE TABLE IF NOT EXISTS cron_scan_runs (
+    run_id       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    status       TEXT NOT NULL DEFAULT 'running' CHECK (status IN ('running', 'completed', 'failed')),
+    total_feeds  INTEGER NOT NULL DEFAULT 0,
+    feeds_ok     INTEGER NOT NULL DEFAULT 0,
+    feeds_failed INTEGER NOT NULL DEFAULT 0,
+    articles_found   INTEGER NOT NULL DEFAULT 0,
+    articles_selected INTEGER NOT NULL DEFAULT 0,
+    error_message TEXT,
+    started_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    finished_at  TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_cron_scan_runs_started_at ON cron_scan_runs(started_at DESC);
+
+-- 16. Cron Scan Feed Logs Table
+-- One row per feed per run
+CREATE TABLE IF NOT EXISTS cron_scan_feed_logs (
+    log_id       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    run_id       BIGINT NOT NULL REFERENCES cron_scan_runs(run_id) ON DELETE CASCADE,
+    feed_id      BIGINT NOT NULL REFERENCES rss_feeds(feed_id) ON DELETE CASCADE,
+    feed_url     TEXT NOT NULL,
+    feed_name    TEXT NOT NULL,
+    status       TEXT NOT NULL CHECK (status IN ('success', 'failed', 'skipped')),
+    articles_found INTEGER NOT NULL DEFAULT 0,
+    error_message  TEXT,
+    duration_ms    INTEGER,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cron_scan_feed_logs_run_id ON cron_scan_feed_logs(run_id);
+CREATE INDEX IF NOT EXISTS idx_cron_scan_feed_logs_feed_id ON cron_scan_feed_logs(feed_id);
+CREATE INDEX IF NOT EXISTS idx_cron_scan_feed_logs_status ON cron_scan_feed_logs(status) WHERE status = 'failed';
+
 -- Initial Data Migration
 
 -- Planets

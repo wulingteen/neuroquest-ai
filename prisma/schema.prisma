@@ -120,7 +120,8 @@ model rss_feeds {
   enabled         Boolean         @default(true)
   last_fetched_at DateTime?       @db.Timestamptz(6)
   created_at      DateTime        @default(now()) @db.Timestamptz(6)
-  news_articles   news_articles[]
+  news_articles        news_articles[]
+  cron_scan_feed_logs  cron_scan_feed_logs[]
 
   @@index([enabled], map: "idx_rss_feeds_enabled")
 }
@@ -217,4 +218,41 @@ model quiz_questions {
   @@index([rollup, level_number], map: "idx_quiz_questions_level_number")
   @@index([rollup], map: "idx_quiz_questions_rollup")
   @@index([options], map: "idx_quiz_questions_options_gin", type: Gin)
+}
+
+/// Cron scan run log — one row per cron invocation
+model cron_scan_runs {
+  run_id             BigInt                @id @default(autoincrement())
+  status             String                @default("running")
+  total_feeds        Int                   @default(0)
+  feeds_ok           Int                   @default(0)
+  feeds_failed       Int                   @default(0)
+  articles_found     Int                   @default(0)
+  articles_selected  Int                   @default(0)
+  error_message      String?
+  started_at         DateTime              @default(now()) @db.Timestamptz(6)
+  finished_at        DateTime?             @db.Timestamptz(6)
+  feed_logs          cron_scan_feed_logs[]
+
+  @@index([started_at(sort: Desc)], map: "idx_cron_scan_runs_started_at")
+}
+
+/// Cron scan per-feed log — one row per feed per run
+model cron_scan_feed_logs {
+  log_id         BigInt          @id @default(autoincrement())
+  run_id         BigInt
+  feed_id        BigInt
+  feed_url       String
+  feed_name      String
+  status         String
+  articles_found Int             @default(0)
+  error_message  String?
+  duration_ms    Int?
+  created_at     DateTime        @default(now()) @db.Timestamptz(6)
+  cron_scan_runs cron_scan_runs  @relation(fields: [run_id], references: [run_id], onDelete: Cascade, onUpdate: NoAction)
+  rss_feeds      rss_feeds       @relation(fields: [feed_id], references: [feed_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([run_id], map: "idx_cron_scan_feed_logs_run_id")
+  @@index([feed_id], map: "idx_cron_scan_feed_logs_feed_id")
+  @@index([status], map: "idx_cron_scan_feed_logs_status")
 }

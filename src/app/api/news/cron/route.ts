@@ -27,14 +27,14 @@ const RSS_FEEDS_LIST = [
     { name: "Fast. Ai (NLP / general)", url: "http://nlp.fast.ai/feed.xml" },
     { name: "JMLR recent papers", url: "http://www.jmlr.org/jmlr.xml" },
     { name: "Blog Distill", url: "https://distill.pub/rss.xml" },
-    { name: "Blog inFERENCe", url: "https://www.inference.vc/rss/" } // fixed URL from markdown
+    { name: "Blog inFERENCe", url: "https://www.inference.vc/rss/" }
 ];
 
 // Using PrismaClient from config
 const apiKey = process.env.OPENROUTER_API_KEY;
 
 const openai = new OpenAI({
-    apiKey: apiKey || "dummy_key", // dummy_key allows instantiation but will fail gracefully later if used
+    apiKey: apiKey || "dummy_key",
     baseURL: "https://openrouter.ai/api/v1",
     defaultHeaders: {
         "HTTP-Referer": "https://neuroquest.ai",
@@ -47,6 +47,11 @@ const RANKER_MODEL = "google/gemini-2.5-flash";
 const EXAMINER_MODEL = "google/gemini-2.5-pro";
 
 export async function GET() {
+    // Create scan run record immediately
+    const scanRun = await db.cron_scan_runs.create({
+        data: { status: 'running' }
+    });
+
     try {
         const parser = new Parser({
             timeout: 15000,
@@ -57,7 +62,10 @@ export async function GET() {
         });
 
         if (!process.env.OPENROUTER_API_KEY) {
-            console.error("Missing OPENROUTER_API_KEY in environment variables.");
+            await db.cron_scan_runs.update({
+                where: { run_id: scanRun.run_id },
+                data: { status: 'failed', error_message: 'Missing OPENROUTER_API_KEY', finished_at: new Date() }
+            });
             return NextResponse.json({ error: "Missing OPENROUTER_API_KEY in environment variables." }, { status: 500 });
         }
 
@@ -79,14 +87,25 @@ export async function GET() {
 
         const feeds = await db.rss_feeds.findMany({ where: { enabled: true } });
 
+        // Update total feeds count
+        await db.cron_scan_runs.update({
+            where: { run_id: scanRun.run_id },
+            data: { total_feeds: feeds.length }
+        });
+
         // 2. Fetch new RSS articles
         let newArticlesCount = 0;
+        let feedsOk = 0;
+        let feedsFailed = 0;
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         for (const feed of feeds) {
+            const feedStartTime = Date.now();
             try {
                 const parsed = await parser.parseURL(feed.url);
+                let feedArticlesFound = 0;
+
                 for (const item of parsed.items || []) {
                     if (!item.link || !item.title) continue;
 
@@ -95,7 +114,7 @@ export async function GET() {
                     if (pubDate < todayStart) continue;
 
                     const existing = await db.news_articles.findUnique({
-                        where: { url: item.link } // url is unique
+                        where: { url: item.link }
                     });
 
                     if (!existing) {
@@ -109,62 +128,99 @@ export async function GET() {
                             }
                         });
                         newArticlesCount++;
+                        feedArticlesFound++;
                     }
                 }
                 await db.rss_feeds.update({
                     where: { feed_id: feed.feed_id },
                     data: { last_fetched_at: new Date() }
                 });
+
+                // Log success
+                feedsOk++;
+                await db.cron_scan_feed_logs.create({
+                    data: {
+                        run_id: scanRun.run_id,
+                        feed_id: feed.feed_id,
+                        feed_url: feed.url,
+                        feed_name: feed.name,
+                        status: 'success',
+                        articles_found: feedArticlesFound,
+                        duration_ms: Date.now() - feedStartTime,
+                    }
+                });
             } catch (_e) {
                 const errMsg = _e instanceof Error ? _e.message : String(_e);
                 console.warn(`Failed to parse feed ${feed.url}: ${errMsg}`);
+
+                // Log failure
+                feedsFailed++;
+                await db.cron_scan_feed_logs.create({
+                    data: {
+                        run_id: scanRun.run_id,
+                        feed_id: feed.feed_id,
+                        feed_url: feed.url,
+                        feed_name: feed.name,
+                        status: 'failed',
+                        articles_found: 0,
+                        error_message: errMsg.substring(0, 1000),
+                        duration_ms: Date.now() - feedStartTime,
+                    }
+                });
             }
         }
 
+        // Update run with feed scan results
+        await db.cron_scan_runs.update({
+            where: { run_id: scanRun.run_id },
+            data: { feeds_ok: feedsOk, feeds_failed: feedsFailed, articles_found: newArticlesCount }
+        });
+
         // 3. Select articles for today using LLM
-        // Filter strictly for articles published today that haven't been selected yet
         const recentArticles = await db.news_articles.findMany({
             where: {
                 published_at: { gte: todayStart },
-                news_selections: { none: {} } // Not yet selected
+                news_selections: { none: {} }
             },
             select: { article_id: true, title: true, summary: true }
         });
 
         if (recentArticles.length === 0) {
-            return NextResponse.json({ message: "No new articles to rank." });
+            await db.cron_scan_runs.update({
+                where: { run_id: scanRun.run_id },
+                data: { status: 'completed', articles_selected: 0, finished_at: new Date() }
+            });
+            return NextResponse.json({ message: "No new articles to rank.", run_id: scanRun.run_id.toString() });
         }
 
-        // Since LLM needs to process these, we can batch them if too many
-        // For safety, limit to 200 items for context window
         const articlesToRank = recentArticles.slice(0, 200);
         const articlesJSON = articlesToRank.map(a => ({
             id: a.article_id.toString(),
             title: a.title,
-            summary: a.summary?.substring(0, 200) // Truncate summary
+            summary: a.summary?.substring(0, 200)
         }));
 
         const rankerPrompt = `
 You are an expert content curator. I will provide a JSON array of news articles with their 'id', 'title', and 'summary'.
 1. Evaluate each article based on its difficulty, interest, and relevance to AI reading comprehension.
 2. Assign each article a score from 0 to 100.
-3. Group them into 10 score brackets:
-   Bracket 1: 0-10
-   Bracket 2: 11-20
-   Bracket 3: 21-30
-   Bracket 4: 31-40
-   Bracket 5: 41-50
-   Bracket 6: 51-60
-   Bracket 7: 61-70
-   Bracket 8: 71-80
-   Bracket 9: 81-90
-   Bracket 10: 91-100
-4. From each bracket, select exactly 3 articles (if a bracket doesn't have 3, pick as many as available).
+3. Group them into 10 score tiers (0 through 9):
+   Tier 0: score 0-10
+   Tier 1: score 11-20
+   Tier 2: score 21-30
+   Tier 3: score 31-40
+   Tier 4: score 41-50
+   Tier 5: score 51-60
+   Tier 6: score 61-70
+   Tier 7: score 71-80
+   Tier 8: score 81-90
+   Tier 9: score 91-100
+4. From each tier, select exactly 3 articles (if a tier doesn't have 3, pick as many as available).
 5. Output ONLY valid JSON in the form:
 [
-  { "id": "integer string", "tier": "bracket number from 1 to 10" }
+  { "id": "integer string", "tier": 0 }
 ]
-Do not output markdown code blocks or any extra text, ONLY the JSON array.
+Where "tier" is an integer from 0 to 9. Do not output markdown code blocks or any extra text, ONLY the JSON array.
 Articles:
 ${JSON.stringify(articlesJSON)}
 `;
@@ -178,9 +234,18 @@ ${JSON.stringify(articlesJSON)}
         try {
             const respContent = rankingResponse.choices[0].message.content || "[]";
             selectedList = JSON.parse(respContent.replace(/```json|```/gi, '').trim());
+            // Normalise tier values: LLM may return 1-10 instead of 0-9
+            selectedList = selectedList.map(s => ({
+                ...s,
+                tier: Math.max(0, Math.min(9, typeof s.tier === 'number' ? s.tier : Number(s.tier)))
+            }));
         } catch (_e) {
             console.error("Failed to parse LLM ranking response", rankingResponse.choices[0].message.content);
-            return NextResponse.json({ error: "Ranking LLM failed to output JSON" }, { status: 500 });
+            await db.cron_scan_runs.update({
+                where: { run_id: scanRun.run_id },
+                data: { status: 'failed', error_message: 'Ranking LLM failed to output JSON', finished_at: new Date() }
+            });
+            return NextResponse.json({ error: "Ranking LLM failed to output JSON", run_id: scanRun.run_id.toString() }, { status: 500 });
         }
 
         // 4. For the selected articles, fetch full content and generate questions
@@ -195,7 +260,6 @@ ${JSON.stringify(articlesJSON)}
             let fullText = article.full_text;
 
             if (!fullText) {
-                // Fetch original content
                 try {
                     const res = await fetch(article.url, {
                         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
@@ -205,15 +269,11 @@ ${JSON.stringify(articlesJSON)}
                     const html = await res.text();
                     const $ = cheerio.load(html);
 
-                    // Remove scripts, styles, and unwanted tags
                     $("script, style, noscript, nav, header, footer, iframe, aside").remove();
 
-                    // Extract text from commonly used main content tags
                     const mainText = $("main, article, .content, .post, .article").text();
-                    // Fallback to body text if no main tag is found
                     const textContent = mainText.trim() ? mainText : $("body").text();
 
-                    // Clean up extra whitespace
                     const cleanedContent = textContent.replace(/\s+/g, ' ').trim();
 
                     if (cleanedContent) {
@@ -228,12 +288,9 @@ ${JSON.stringify(articlesJSON)}
                 }
             }
 
-            // If we still lack text, fallback to summary
             const textForLLM = fullText || article.summary || article.title;
 
-            // Save selection
             const today = new Date();
-            // Only one selection per article/tier/date constraint 
             try {
                 const selectionObj = await db.news_selections.create({
                     data: {
@@ -243,7 +300,6 @@ ${JSON.stringify(articlesJSON)}
                     }
                 });
 
-                // Generate Questions
                 const examinerPrompt = `
 You are an expert reading comprehension teacher. Based on the following article, create exactly 3 multiple-choice questions.
 Each question must have 4 options and test different aspects of comprehension (main idea, detail, inference).
@@ -277,7 +333,6 @@ ${textForLLM.substring(0, 10000)} // Truncated to prevent context blowout
                     continue;
                 }
 
-                // Insert questions
                 let qNum = 1;
                 for (const q of questionsParsed) {
                     await db.news_questions.create({
@@ -288,24 +343,45 @@ ${textForLLM.substring(0, 10000)} // Truncated to prevent context blowout
                             options: q.options,
                             correct_option_index: q.correct_option_index,
                             explanation: q.explanation,
-                            xp_reward: sel.tier * 10 // scale XP by bracket tier
+                            xp_reward: sel.tier * 10
                         }
                     });
                 }
             } catch (_e) {
-                console.warn("Error inserting selection or questions");
+                const selErrMsg = _e instanceof Error ? _e.message : String(_e);
+                console.warn(`Error inserting selection or questions for article ${sel.id}, tier ${sel.tier}:`, selErrMsg);
             }
         }
 
+        // Finalize scan run as completed
+        await db.cron_scan_runs.update({
+            where: { run_id: scanRun.run_id },
+            data: {
+                status: 'completed',
+                articles_selected: selectedList.length,
+                finished_at: new Date()
+            }
+        });
+
         return NextResponse.json({
             success: true,
+            run_id: scanRun.run_id.toString(),
             newArticlesFetched: newArticlesCount,
-            articlesSelected: selectedList.length
+            articlesSelected: selectedList.length,
+            feedsOk,
+            feedsFailed,
         });
 
     } catch (error) {
         const msg = error instanceof Error ? error.message : "Unknown Error";
         console.error("Cron Job Error:", error);
-        return NextResponse.json({ error: msg }, { status: 500 });
+
+        // Mark scan run as failed
+        await db.cron_scan_runs.update({
+            where: { run_id: scanRun.run_id },
+            data: { status: 'failed', error_message: msg.substring(0, 1000), finished_at: new Date() }
+        }).catch(() => { }); // Don't let this error swallow the original
+
+        return NextResponse.json({ error: msg, run_id: scanRun.run_id.toString() }, { status: 500 });
     }
 }
