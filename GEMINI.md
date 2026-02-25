@@ -18,6 +18,12 @@ curl http://localhost:3000/api/news/scan-logs
 curl http://localhost:3000/api/news/scan-logs?run_id=1
 ```
 
+## Test test-rss-feeds
+
+```
+node scripts/test-rss-feeds.mjs
+```
+
 ## Database Schema Overview
 
 The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a concise overview of each table and its columns:

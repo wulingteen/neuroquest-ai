@@ -12,22 +12,28 @@ const RSS_FEEDS_LIST = [
     { name: "AI Trends", url: "https://www.aitrends.com/feed" },
     { name: "ScienceDaily – Artificial Intelligence", url: "https://www.sciencedaily.com/rss/computers_math/artificial_intelligence.xml" },
     { name: "Artificial-Intelligence. Blog – AI News", url: "https://www.artificial-intelligence.blog/ai-news?format=rss" },
-    { name: "OpenAI Blog", url: "https://openai.com/news/rss.xml" },
+    { name: "OpenAI Blog", url: "https://openai.com/blog/rss.xml" },
+    { name: "Google AI Blog", url: "http://feeds.feedburner.com/blogspot/gJZg" },
     { name: "Google Research Blog", url: "https://research.google/blog/rss/" },
     { name: "VentureBeat AI", url: "https://venturebeat.com/category/ai/feed/" },
     { name: "TechCrunch AI", url: "https://techcrunch.com/tag/artificial-intelligence/feed/" },
     { name: "Amazon Science Blog", url: "https://www.amazon.science/index.rss" },
     { name: "Berkeley AI Research (BAIR) Blog", url: "https://bair.berkeley.edu/blog/feed.xml" },
-    { name: "AI Weirdness", url: "https://aiweirdness.com/feed" },
-    { name: "Medium - Artificial Intelligence Magazine", url: "https://becominghuman.ai/feed" },
+    { name: "AI Weirdness", url: "https://aiweirdness.com/rss" },
+    { name: "Medium – Artificial Intelligence Magazine", url: "https://becominghuman.ai/feed" },
     { name: "MIT AI News", url: "http://news.mit.edu/rss/topic/artificial-intelligence2" },
-    { name: "NVIDIA AI Blog", url: "https://blogs.nvidia.com/feed" },
-    { name: "AI Paper Review – David Stutz", url: "https://davidstutz.de/feed" },
-    { name: "Microsoft Research Blog", url: "https://www.microsoft.com/en-us/research/blog/feed/" },
-    { name: "Fast. Ai (NLP / general)", url: "http://nlp.fast.ai/feed.xml" },
+    { name: "NVIDIA AI Blog", url: "http://feeds.feedburner.com/nvidiablog" },
+    { name: "AI Paper Review – David Stutz", url: "http://davidstutz.de/feed" },
+    { name: "Microsoft Research Blog", url: "https://www.microsoft.com/en-us/research/feed" },
+    { name: "fast.ai (NLP focus)", url: "https://www.fast.ai/index.xml" },
     { name: "JMLR recent papers", url: "http://www.jmlr.org/jmlr.xml" },
     { name: "Blog Distill", url: "https://distill.pub/rss.xml" },
-    { name: "Blog inFERENCe", url: "https://www.inference.vc/rss/" }
+    { name: "Blog inFERENCe", url: "https://www.inference.vc/rss/" },
+    { name: "AI Reddit", url: "https://www.reddit.com/r/artificial/.rss" },
+    { name: "Reddit NN, DL, ML", url: "https://www.reddit.com/r/neuralnetworks/.rss?format=xml" },
+    { name: "Seita's Place (AI/ML)", url: "https://danieltakeshi.github.io/feed.xml" },
+    { name: "Vitalab Literature Review", url: "https://vitalab.github.io/feed.xml" },
+    { name: "Andrej Karpathy", url: "https://medium.com/feed/@karpathy" },
 ];
 
 const apiKey = process.env.OPENROUTER_API_KEY;
@@ -43,6 +49,47 @@ const openai = new OpenAI({
 
 const RANKER_MODEL = "google/gemini-2.5-flash";
 const EXAMINER_MODEL = "minimax/minimax-m2.5";
+
+/** Check if a feed URL is a Reddit feed (RSS blocked, must use JSON API). */
+function isRedditFeed(url: string): boolean {
+    return /reddit\.com\/r\//i.test(url);
+}
+
+/** Fetch Reddit posts via JSON API and return items in the same shape as rss-parser. */
+async function fetchRedditJSON(
+    url: string
+): Promise<{ items: Array<{ title: string; link: string; pubDate: string; contentSnippet: string }> }> {
+    // Convert RSS URL to JSON: /r/foo/.rss → /r/foo/new.json?limit=50
+    const jsonUrl = url
+        .replace(/old\.reddit\.com/, "www.reddit.com")
+        .replace(/\.(rss|xml)(\?.*)?$/, "/new.json?limit=50");
+
+    const res = await fetch(jsonUrl, {
+        headers: {
+            "User-Agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(15000),
+    });
+
+    if (!res.ok) throw new Error(`Reddit JSON status ${res.status}`);
+
+    const json = await res.json();
+    const posts = json?.data?.children || [];
+
+    const items = posts.map((child: { data: { title?: string; url?: string; permalink?: string; created_utc?: number; selftext?: string } }) => {
+        const d = child.data;
+        return {
+            title: d.title || "",
+            link: d.url || `https://www.reddit.com${d.permalink}`,
+            pubDate: d.created_utc ? new Date(d.created_utc * 1000).toUTCString() : new Date().toUTCString(),
+            contentSnippet: (d.selftext || "").substring(0, 500),
+        };
+    });
+
+    return { items };
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -141,7 +188,10 @@ export async function GET() {
         for (const feed of feeds) {
             const feedStartTime = Date.now();
             try {
-                const parsed = await parser.parseURL(feed.url);
+                // Reddit feeds block RSS with 403; use JSON API instead
+                const parsed = isRedditFeed(feed.url)
+                    ? await fetchRedditJSON(feed.url)
+                    : await parser.parseURL(feed.url);
                 let feedArticlesFound = 0;
 
                 for (const item of parsed.items || []) {
@@ -161,7 +211,7 @@ export async function GET() {
                                 feed_id: feed.feed_id,
                                 url: item.link,
                                 title: item.title,
-                                summary: item.contentSnippet || item.content || "",
+                                summary: item.contentSnippet || ("content" in item ? (item as Record<string, string>).content : "") || "",
                                 published_at: pubDate,
                             },
                         });
