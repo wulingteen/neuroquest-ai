@@ -31,7 +31,7 @@ The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a co
 - **player_progress**: `player_id` (UUID FK), `level_id` (INTEGER FK), `completed_at` (TIMESTAMPTZ DEFAULT now()), PRIMARY KEY (`player_id`, `level_id`).
 - **rss_feeds**: Manages RSS source lists and fetch states.
 - **news_articles**: Stores news articles parsed from RSS and fetched full contents.
-- **news_selections**: AI-chosen articles split into 10 score brackets per cycle date.
+- **news_selections**: AI-chosen articles split into 5 difficulty tiers (1–5, 3 articles each) per cycle date.
 - **news_questions**: AI-generated reading comprehension questions based on `news_selections`.
 - **player_news_answers**: Tracks player answers for news questions for rewards.
 - **cron_scan_runs**: `run_id` (BIGINT PK), `status` (TEXT: running/completed/failed), `total_feeds`, `feeds_ok`, `feeds_failed`, `articles_found`, `articles_selected`, `error_message`, `started_at`, `finished_at`. One row per cron invocation.
@@ -63,7 +63,7 @@ No test runner is configured yet.
 ### Key Layers
 
 **`src/app/api/`** — Backend API routes. Handlers here (e.g., `src/app/api/user/route.ts` for profile, `src/app/api/planets/route.ts` which dynamically calculates levels) acts as our backend microservices ensuring clean separation from the UI.
-**`src/app/api/news/cron/route.ts`** — System automated workflow to fetch RSS feeds, use an LLM (`google/gemini-2.5-flash`) to rank and select 3 articles published on the current calendar day across 10 difficulty brackets, and string together another LLM (`google/gemini-2.5-pro`) to generate multiple-choice questions per article. It acts as the backbone for the News capability.
+**`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS feeds and retains articles from yesterday + today, (2) sends all headlines to a ranker LLM (`google/gemini-2.5-flash`) which assigns 3 articles to each of 5 difficulty tiers (1–5) by returning exact titles, (3) sequentially sends each selected article's content to an examiner LLM (`minimax/minimax-m2.5`) to generate 3 multiple-choice questions per article. It acts as the backbone for the News capability.
 
 **`src/lib/db.ts`** — PostgreSQL connection utility using the `postgres` JS library. It uses environment variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) for configuration, which should be set in a `.env` file.
 

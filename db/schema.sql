@@ -174,11 +174,11 @@ CREATE INDEX IF NOT EXISTS idx_news_articles_feed_id ON news_articles(feed_id);
 CREATE INDEX IF NOT EXISTS idx_news_articles_fetched_at ON news_articles(fetched_at);
 
 -- 12. News Selections Table
--- LLM-selected articles: 3 per tier (0-9) per cycle_date
+-- LLM-selected articles: 3 per difficulty tier (1-5) per cycle_date
 CREATE TABLE IF NOT EXISTS news_selections (
     selection_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     article_id BIGINT NOT NULL REFERENCES news_articles(article_id) ON DELETE CASCADE,
-    tier INTEGER NOT NULL CHECK (tier BETWEEN 0 AND 9),
+    tier INTEGER NOT NULL CHECK (tier BETWEEN 1 AND 5),
     cycle_date DATE NOT NULL,
     UNIQUE (article_id, tier, cycle_date)
 );
