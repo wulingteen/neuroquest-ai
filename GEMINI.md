@@ -1,6 +1,12 @@
-# AGENT.md
+# GEMINI.md
 
 **Database is running in Docker**
+
+## Get news_article function
+
+```
+curl http://localhost:3000/api/news/cron
+```
 
 ## Database Schema Overview
 
@@ -13,6 +19,11 @@ The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a co
 - **arena_challenges**: `challenge_id` (TEXT PK), `title` (TEXT), `description` (TEXT), `difficulty` (TEXT CHECK), `example_prompts` (JSONB), `created_at` (TIMESTAMPTZ DEFAULT now()), `updated_at` (TIMESTAMPTZ DEFAULT now()).
 - **players**: `player_id` (UUID PK DEFAULT gen_random_uuid()), `username` (TEXT UNIQUE), `email` (TEXT UNIQUE), `avatar` (TEXT), `xp` (INTEGER DEFAULT 0), `streak_days` (INTEGER DEFAULT 0), `guild_name` (TEXT), `last_login_at` (TIMESTAMPTZ), `last_reward_claimed_at` (TIMESTAMPTZ), `level` (INTEGER GENERATED ALWAYS AS (floor(xp / 1000) + 1) STORED), `created_at` (TIMESTAMPTZ DEFAULT now()).
 - **player_progress**: `player_id` (UUID FK), `level_id` (INTEGER FK), `completed_at` (TIMESTAMPTZ DEFAULT now()), PRIMARY KEY (`player_id`, `level_id`).
+- **rss_feeds**: Manages RSS source lists and fetch states.
+- **news_articles**: Stores news articles parsed from RSS and fetched full contents.
+- **news_selections**: AI-chosen articles split into 10 score brackets per cycle date.
+- **news_questions**: AI-generated reading comprehension questions based on `news_selections`.
+- **player_news_answers**: Tracks player answers for news questions for rewards.
 
 These tables support the core gameplay mechanics, including planet navigation, level progression, achievements, quizzes, arena challenges, and player tracking.
 
@@ -40,6 +51,7 @@ No test runner is configured yet.
 ### Key Layers
 
 **`src/app/api/`** — Backend API routes. Handlers here (e.g., `src/app/api/user/route.ts` for profile, `src/app/api/planets/route.ts` which dynamically calculates levels) acts as our backend microservices ensuring clean separation from the UI.
+**`src/app/api/news/cron/route.ts`** — System automated workflow to fetch RSS feeds, use an LLM (`google/gemini-2.5-flash`) to rank and select 3 articles published on the current calendar day across 10 difficulty brackets, and string together another LLM (`google/gemini-2.5-pro`) to generate multiple-choice questions per article. It acts as the backbone for the News capability.
 
 **`src/lib/db.ts`** — PostgreSQL connection utility using the `postgres` JS library. It uses environment variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) for configuration, which should be set in a `.env` file.
 
