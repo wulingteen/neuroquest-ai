@@ -51,7 +51,7 @@ function getDateRange(): { yesterdayStart: Date; todayStart: Date; tomorrowStart
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterdayStart = new Date(todayStart);
-    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 2);
     const tomorrowStart = new Date(todayStart);
     tomorrowStart.setDate(tomorrowStart.getDate() + 1);
     return { yesterdayStart, todayStart, tomorrowStart };
