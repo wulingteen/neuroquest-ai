@@ -62,10 +62,3 @@ CSS custom properties and utilities are defined in `src/app/globals.css`:
 - Utility classes: `.glass-card`, `.neon-glow-*`, `.gradient-text`, `.btn-primary`, `.rarity-*`
 
 Path alias `@/*` maps to `./src/*`.
-
-## Adding New Content
-
-- New quiz questions, planets, levels, or achievements → update the database schema in `db/schema.sql` and re-seed.
-- New game state fields → extend the Zustand store in `src/store/gameStore.ts`.
-- New backend functionality → add a route under `src/app/api/` and a database query in the handler.
-- New pages → add under `src/app/[route]/page.tsx` and link from `NavBar.tsx`.

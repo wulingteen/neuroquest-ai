@@ -84,20 +84,117 @@ model player_progress {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model players {
-  player_id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  username               String            @unique
-  email                  String?           @unique
+  player_id              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username               String               @unique
+  email                  String?              @unique
   avatar                 String?
-  xp                     Int               @default(0)
-  streak_days            Int               @default(0)
+  xp                     Int                  @default(0)
+  streak_days            Int                  @default(0)
   guild_name             String?
-  last_login_at          DateTime?         @db.Timestamptz(6)
-  last_reward_claimed_at DateTime?         @db.Timestamptz(6)
-  level                  Int?              @default(dbgenerated("(floor(((xp / 1000))::double precision) + (1)::double precision)"))
-  created_at             DateTime          @default(now()) @db.Timestamptz(6)
+  last_login_at          DateTime?            @db.Timestamptz(6)
+  last_reward_claimed_at DateTime?            @db.Timestamptz(6)
+  level                  Int?                 @default(dbgenerated("(floor(((xp / 1000))::double precision) + (1)::double precision)"))
+  created_at             DateTime             @default(now()) @db.Timestamptz(6)
   player_progress        player_progress[]
+  player_profile         player_profiles?
+  player_news_answers    player_news_answers[]
 
   @@index([xp(sort: Desc)], map: "idx_players_xp")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model player_profiles {
+  player_id        String   @id @db.Uuid
+  background       String
+  interests        String[]
+  difficulty_score Int      @default(50)
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime @default(now()) @db.Timestamptz(6)
+  players          players  @relation(fields: [player_id], references: [player_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model rss_feeds {
+  feed_id         BigInt          @id @default(autoincrement())
+  url             String          @unique
+  name            String
+  enabled         Boolean         @default(true)
+  last_fetched_at DateTime?       @db.Timestamptz(6)
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  news_articles   news_articles[]
+
+  @@index([enabled], map: "idx_rss_feeds_enabled")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model llm_configs {
+  config_id      BigInt   @id @default(autoincrement())
+  role           String   @unique
+  provider       String
+  model_name     String
+  api_key_env_var String
+  parameters     Json     @default("{}")
+  enabled        Boolean  @default(true)
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @db.Timestamptz(6)
+}
+
+model news_articles {
+  article_id      BigInt            @id @default(autoincrement())
+  feed_id         BigInt
+  url             String            @unique
+  title           String
+  summary         String?
+  full_text       String?
+  published_at    DateTime?         @db.Timestamptz(6)
+  fetched_at      DateTime          @default(now()) @db.Timestamptz(6)
+  rss_feeds       rss_feeds         @relation(fields: [feed_id], references: [feed_id], onDelete: Cascade, onUpdate: NoAction)
+  news_selections news_selections[]
+
+  @@index([feed_id], map: "idx_news_articles_feed_id")
+  @@index([fetched_at], map: "idx_news_articles_fetched_at")
+}
+
+model news_selections {
+  selection_id   BigInt           @id @default(autoincrement())
+  article_id     BigInt
+  tier           Int
+  cycle_date     DateTime         @db.Date
+  news_articles  news_articles    @relation(fields: [article_id], references: [article_id], onDelete: Cascade, onUpdate: NoAction)
+  news_questions news_questions[]
+
+  @@unique([article_id, tier, cycle_date])
+  @@index([tier, cycle_date], map: "idx_news_selections_tier_date")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model news_questions {
+  question_id          BigInt               @id @default(autoincrement())
+  selection_id         BigInt
+  question_number      Int
+  question_text        String
+  options              Json
+  correct_option_index Int
+  explanation          String?
+  xp_reward            Int                  @default(50)
+  news_selections      news_selections      @relation(fields: [selection_id], references: [selection_id], onDelete: Cascade, onUpdate: NoAction)
+  player_news_answers  player_news_answers[]
+
+  @@unique([selection_id, question_number])
+  @@index([selection_id], map: "idx_news_questions_selection_id")
+}
+
+model player_news_answers {
+  player_id             String         @db.Uuid
+  question_id           BigInt
+  selected_option_index Int
+  is_correct            Boolean
+  xp_earned             Int            @default(0)
+  answered_at           DateTime       @default(now()) @db.Timestamptz(6)
+  players               players        @relation(fields: [player_id], references: [player_id], onDelete: Cascade, onUpdate: NoAction)
+  news_questions        news_questions @relation(fields: [question_id], references: [question_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([player_id, question_id])
+  @@index([question_id], map: "idx_player_news_answers_question_id")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

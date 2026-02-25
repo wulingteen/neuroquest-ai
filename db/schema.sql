@@ -116,6 +116,105 @@ CREATE TABLE IF NOT EXISTS player_progress (
     PRIMARY KEY (player_id, level_id)
 );
 
+-- 8. Player Profiles Table
+-- Stores background, interests, and computed difficulty score
+CREATE TABLE IF NOT EXISTS player_profiles (
+    player_id UUID PRIMARY KEY REFERENCES players(player_id) ON DELETE CASCADE,
+    background TEXT NOT NULL CHECK (background IN (
+        'student', 'developer', 'designer', 'manager',
+        'researcher', 'educator', 'other'
+    )),
+    interests TEXT[] NOT NULL DEFAULT '{}',
+    difficulty_score INTEGER NOT NULL DEFAULT 50 CHECK (difficulty_score BETWEEN 0 AND 100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 9. RSS Feeds Table
+-- Sources for daily news fetching
+CREATE TABLE IF NOT EXISTS rss_feeds (
+    feed_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    url TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    last_fetched_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_rss_feeds_enabled ON rss_feeds(enabled) WHERE enabled = TRUE;
+
+-- 10. LLM Configs Table
+-- Model configuration for article selection and question generation
+CREATE TABLE IF NOT EXISTS llm_configs (
+    config_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    role TEXT NOT NULL UNIQUE CHECK (role IN ('article_selector', 'question_generator')),
+    provider TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    api_key_env_var TEXT NOT NULL,
+    parameters JSONB NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(parameters) = 'object'),
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 11. News Articles Table
+-- Articles fetched from RSS feeds
+CREATE TABLE IF NOT EXISTS news_articles (
+    article_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    feed_id BIGINT NOT NULL REFERENCES rss_feeds(feed_id) ON DELETE CASCADE,
+    url TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    summary TEXT,
+    full_text TEXT,
+    published_at TIMESTAMPTZ,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_articles_feed_id ON news_articles(feed_id);
+CREATE INDEX IF NOT EXISTS idx_news_articles_fetched_at ON news_articles(fetched_at);
+
+-- 12. News Selections Table
+-- LLM-selected articles: 3 per tier (0-9) per cycle_date
+CREATE TABLE IF NOT EXISTS news_selections (
+    selection_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    article_id BIGINT NOT NULL REFERENCES news_articles(article_id) ON DELETE CASCADE,
+    tier INTEGER NOT NULL CHECK (tier BETWEEN 0 AND 9),
+    cycle_date DATE NOT NULL,
+    UNIQUE (article_id, tier, cycle_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_selections_tier_date ON news_selections(tier, cycle_date);
+
+-- 13. News Questions Table
+-- LLM-generated questions for selected articles (3 per article)
+CREATE TABLE IF NOT EXISTS news_questions (
+    question_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    selection_id BIGINT NOT NULL REFERENCES news_selections(selection_id) ON DELETE CASCADE,
+    question_number INTEGER NOT NULL CHECK (question_number BETWEEN 1 AND 3),
+    question_text TEXT NOT NULL,
+    options JSONB NOT NULL CHECK (jsonb_typeof(options) = 'array'),
+    correct_option_index INTEGER NOT NULL CHECK (correct_option_index BETWEEN 0 AND 3),
+    explanation TEXT,
+    xp_reward INTEGER NOT NULL DEFAULT 50 CHECK (xp_reward >= 0),
+    UNIQUE (selection_id, question_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_news_questions_selection_id ON news_questions(selection_id);
+
+-- 14. Player News Answers Table
+-- One attempt per question per player; PK enforces single attempt
+CREATE TABLE IF NOT EXISTS player_news_answers (
+    player_id UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+    question_id BIGINT NOT NULL REFERENCES news_questions(question_id) ON DELETE CASCADE,
+    selected_option_index INTEGER NOT NULL CHECK (selected_option_index BETWEEN 0 AND 3),
+    is_correct BOOLEAN NOT NULL,
+    xp_earned INTEGER NOT NULL DEFAULT 0 CHECK (xp_earned >= 0),
+    answered_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (player_id, question_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_player_news_answers_question_id ON player_news_answers(question_id);
+
 -- Initial Data Migration
 
 -- Planets
