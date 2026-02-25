@@ -10,7 +10,6 @@ const RSS_FEEDS_LIST = [
     { name: "WIRED – Artificial Intelligence", url: "https://www.wired.com/feed/tag/ai/latest/rss" },
     { name: "Hugging Face Blog", url: "https://huggingface.co/blog/feed.xml" },
     { name: "AI Trends", url: "https://www.aitrends.com/feed" },
-    { name: "EnterpriseAI / AIwire (HPCwire)", url: "https://www.hpcwire.com/category/ai/feed/" },
     { name: "ScienceDaily – Artificial Intelligence", url: "https://www.sciencedaily.com/rss/computers_math/artificial_intelligence.xml" },
     { name: "Artificial-Intelligence. Blog – AI News", url: "https://www.artificial-intelligence.blog/ai-news?format=rss" },
     { name: "OpenAI Blog", url: "https://openai.com/news/rss.xml" },
@@ -49,21 +48,34 @@ const EXAMINER_MODEL = "google/gemini-2.5-pro";
 
 export async function GET() {
     try {
-        const parser = new Parser();
+        const parser = new Parser({
+            timeout: 15000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+            },
+        });
 
         if (!process.env.OPENROUTER_API_KEY) {
             console.error("Missing OPENROUTER_API_KEY in environment variables.");
             return NextResponse.json({ error: "Missing OPENROUTER_API_KEY in environment variables." }, { status: 500 });
         }
 
-        // 1. Ensure feeds are in DB
+        // 1. Ensure feeds are in DB and sync enabled state
+        const currentUrls = RSS_FEEDS_LIST.map(f => f.url);
         for (const f of RSS_FEEDS_LIST) {
             await db.rss_feeds.upsert({
                 where: { url: f.url },
-                update: {},
+                update: { enabled: true },
                 create: { name: f.name, url: f.url },
             });
         }
+
+        // Disable any stale feed URLs that are no longer in RSS_FEEDS_LIST
+        await db.rss_feeds.updateMany({
+            where: { url: { notIn: currentUrls } },
+            data: { enabled: false },
+        });
 
         const feeds = await db.rss_feeds.findMany({ where: { enabled: true } });
 
@@ -104,7 +116,8 @@ export async function GET() {
                     data: { last_fetched_at: new Date() }
                 });
             } catch (_e) {
-                console.warn(`Failed to parse feed ${feed.url}`);
+                const errMsg = _e instanceof Error ? _e.message : String(_e);
+                console.warn(`Failed to parse feed ${feed.url}: ${errMsg}`);
             }
         }
 
