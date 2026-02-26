@@ -5,6 +5,7 @@ import { getDateRange } from "@/lib/news/utils";
 import { syncFeeds, fetchFeedArticles } from "@/lib/news/feeds";
 import { rankArticles } from "@/lib/news/ranker";
 import { generateAndSaveQuestions } from "@/lib/news/examiner";
+import { backfillFullText } from "@/lib/news/scraper";
 
 export const maxDuration = 300;
 
@@ -39,6 +40,9 @@ export async function GET() {
             where: { run_id: scanRun.run_id },
             data: { feeds_ok: feedsOk, feeds_failed: feedsFailed, articles_found: newArticlesCount },
         });
+
+        // STEP 2.5 — Backfill full_text for all articles missing it
+        await backfillFullText();
 
         // STEP 3 — Collect unselected articles and rank them
         const recentArticles = await db.news_articles.findMany({

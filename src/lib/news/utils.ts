@@ -9,7 +9,30 @@ export function getDateRange(): { yesterdayStart: Date; todayStart: Date; tomorr
     return { yesterdayStart, todayStart, tomorrowStart };
 }
 
-/** Strip markdown fences and parse JSON from an LLM response. */
+/** Strip markdown fences and parse JSON from an LLM response.
+ *  Tries to extract the first JSON array or object if the model wraps it in prose. */
 export function parseLLMJson<T>(raw: string): T {
-    return JSON.parse(raw.replace(/```json|```/gi, "").trim());
+    // Strip common markdown fences
+    let cleaned = raw.replace(/```json|```/gi, "").trim();
+
+    // Try to extract a JSON array [...] or object {...} if surrounded by prose
+    const arrayMatch = cleaned.match(/(\[[\s\S]*\])/);
+    const objectMatch = cleaned.match(/(\{[\s\S]*\})/);
+    if (arrayMatch) cleaned = arrayMatch[1];
+    else if (objectMatch) cleaned = objectMatch[1];
+
+    return JSON.parse(cleaned);
+}
+
+/** Normalize a title for fuzzy matching: lowercase, collapse whitespace,
+ *  replace typographic punctuation with ASCII equivalents. */
+export function normalizeTitle(title: string): string {
+    return title
+        .toLowerCase()
+        .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'") // smart single quotes → '
+        .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"') // smart double quotes → "
+        .replace(/[\u2013\u2014]/g, "-")                          // en/em dash → -
+        .replace(/\u2026/g, "...")                                 // ellipsis char → ...
+        .replace(/\s+/g, " ")
+        .trim();
 }

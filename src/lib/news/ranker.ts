@@ -1,5 +1,5 @@
 import { openai, RANKER_MODEL } from "./constants";
-import { parseLLMJson } from "./utils";
+import { parseLLMJson, normalizeTitle } from "./utils";
 
 export interface RankedArticle {
     articleId: bigint;
@@ -53,19 +53,34 @@ ${headlineList}
     const raw = rankingResponse.choices[0].message.content || "[]";
     const rankerParsed = parseLLMJson<Array<{ title: string; difficulty: number }>>(raw);
 
-    // Build a title→article map for fast lookup (case-insensitive, trimmed)
+    // Build a title→article map for fast lookup (normalized)
     const titleToArticle = new Map<string, (typeof articlesToRank)[0]>();
     for (const a of articlesToRank) {
-        titleToArticle.set(a.title.trim().toLowerCase(), a);
+        titleToArticle.set(normalizeTitle(a.title), a);
     }
 
     const selectedArticles: RankedArticle[] = [];
 
     for (const item of rankerParsed) {
         const tier = Math.max(1, Math.min(5, Math.round(Number(item.difficulty))));
-        const normalizedTitle = (item.title || "").trim().toLowerCase();
+        const normalizedLlmTitle = normalizeTitle(item.title || "");
 
-        const matched = titleToArticle.get(normalizedTitle);
+        // Exact normalized match
+        let matched = titleToArticle.get(normalizedLlmTitle);
+
+        // Fallback: substring match (LLM may truncate with "...")
+        if (!matched) {
+            const truncated = normalizedLlmTitle.replace(/\.{3}$/, "").trim();
+            if (truncated.length >= 20) {
+                for (const [key, article] of titleToArticle) {
+                    if (key.startsWith(truncated) || truncated.startsWith(key.substring(0, truncated.length))) {
+                        matched = article;
+                        break;
+                    }
+                }
+            }
+        }
+
         if (!matched) {
             console.warn(`Ranker returned unmatched title: "${item.title}"`);
             continue;
