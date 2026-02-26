@@ -268,12 +268,12 @@ CREATE INDEX IF NOT EXISTS idx_cron_scan_feed_logs_status ON cron_scan_feed_logs
 
 -- Planets
 INSERT INTO planets (planet_id, rollup, label, subtitle, icon, color, glow_color, bg_gradient, x, y, description) VALUES
-(1, 'prompt', 'Prompt 星', 'Prompt Engineering', '⚡', '#8B5CF6', 'rgba(139,92,246,0.5)', 'from-purple-900 to-violet-950', 30, 40, '掌握 Prompt 的力量，讓 AI 為你所用'),
-(2, 'model', 'Model 星', 'LLM 模型原理', '🧠', '#3B82F6', 'rgba(59,130,246,0.5)', 'from-blue-900 to-cyan-950', 62, 25, '深入 Transformer 的核心，理解 AI 如何思考'),
-(3, 'vision', 'Vision 星', '多模態 AI', '👁️', '#F97316', 'rgba(249,115,22,0.5)', 'from-orange-900 to-red-950', 75, 58, '看見 AI 的眼睛，探索圖像、聲音與文字的融合'),
-(4, 'ethics', 'Ethics 星', 'AI 倫理', '⚖️', '#EF4444', 'rgba(239,68,68,0.5)', 'from-red-900 to-rose-950', 45, 70, '守護 AI 的邊界，成為負責任的創造者'),
-(5, 'agent', 'Agent 星', 'AI Agents', '🤖', '#10B981', 'rgba(16,185,129,0.5)', 'from-emerald-900 to-green-950', 18, 65, '釋放 AI Agent 的潛力，打造自主智能系統'),
-(6, 'future', 'Future 星', 'AGI & 未來趨勢', '🌟', '#FFB800', 'rgba(255,184,0,0.5)', 'from-yellow-900 to-amber-950', 50, 48, '站在時代浪尖，洞察 AI 的未來')
+(1, 'prompt', 'Prompt Planet', 'Prompt Engineering', '⚡', '#8B5CF6', 'rgba(139,92,246,0.5)', 'from-purple-900 to-violet-950', 30, 40, 'Master the power of Prompts and make AI work for you'),
+(2, 'model', 'Model Planet', 'LLM Fundamentals', '🧠', '#3B82F6', 'rgba(59,130,246,0.5)', 'from-blue-900 to-cyan-950', 62, 25, 'Dive into the core of Transformers and understand how AI thinks'),
+(3, 'vision', 'Vision Planet', 'Multimodal AI', '👁️', '#F97316', 'rgba(249,115,22,0.5)', 'from-orange-900 to-red-950', 75, 58, 'See through the eyes of AI, exploring the fusion of images, sounds, and text'),
+(4, 'ethics', 'Ethics Planet', 'AI Ethics', '⚖️', '#EF4444', 'rgba(239,68,68,0.5)', 'from-red-900 to-rose-950', 45, 70, 'Guard the boundaries of AI and become a responsible creator'),
+(5, 'agent', 'Agent Planet', 'AI Agents', '🤖', '#10B981', 'rgba(16,185,129,0.5)', 'from-emerald-900 to-green-950', 18, 65, 'Unleash the potential of AI Agents and build autonomous intelligent systems'),
+(6, 'future', 'Future Planet', 'AGI & Future Trends', '🌟', '#FFB800', 'rgba(255,184,0,0.5)', 'from-yellow-900 to-amber-950', 50, 48, 'Stay on the cutting edge and gain insights into the future of AI')
 ON CONFLICT (planet_id) DO UPDATE SET
     rollup = EXCLUDED.rollup,
     label = EXCLUDED.label,
@@ -294,24 +294,24 @@ UPDATE planets SET required_rollup = 'agent' WHERE rollup = 'future';
 
 -- Levels
 INSERT INTO levels (level_id, rollup, level_number, title, content_type, xp_reward) VALUES
-(1, 'prompt', 1, '什麼是 Prompt？', 'teach', 100),
+(1, 'prompt', 1, 'What is a Prompt?', 'teach', 100),
 (2, 'prompt', 2, 'Zero-shot vs Few-shot', 'quiz', 150),
-(3, 'prompt', 3, '角色扮演 Prompt', 'teach', 100),
+(3, 'prompt', 3, 'Role-play Prompting', 'teach', 100),
 (4, 'prompt', 4, 'Chain of Thought', 'quiz', 200),
-(5, 'prompt', 5, 'Prompt 注入防禦', 'quiz', 200),
-(6, 'prompt', 6, 'BOSS：綜合挑戰', 'boss', 500),
-(10, 'model', 1, '什麼是 LLM？', 'teach', 150),
-(11, 'model', 2, 'Transformer 架構', 'quiz', 200),
-(12, 'model', 3, '微調技術 (Fine-tuning)', 'boss', 400),
-(13, 'vision', 1, '多模態簡介', 'teach', 150),
-(14, 'vision', 2, '圖像生成模型', 'quiz', 250),
-(15, 'ethics', 1, 'AI 偏見與公平性', 'teach', 150),
-(16, 'ethics', 2, '版權與隱私', 'quiz', 200),
-(17, 'ethics', 3, '負責任的 AI', 'boss', 400),
-(18, 'agent', 1, '什麼是 AI Agent？', 'teach', 200),
-(19, 'agent', 2, '工具調用 (Tool Use)', 'quiz', 300),
-(20, 'future', 1, 'AGI 概念', 'teach', 250),
-(21, 'future', 2, 'AI 的下一步', 'quiz', 350)
+(5, 'prompt', 5, 'Prompt Injection Defense', 'quiz', 200),
+(6, 'prompt', 6, 'BOSS: Comprehensive Challenge', 'boss', 500),
+(10, 'model', 1, 'What is an LLM?', 'teach', 150),
+(11, 'model', 2, 'Transformer Architecture', 'quiz', 200),
+(12, 'model', 3, 'Fine-tuning Techniques', 'boss', 400),
+(13, 'vision', 1, 'Introduction to Multimodality', 'teach', 150),
+(14, 'vision', 2, 'Image Generation Models', 'quiz', 250),
+(15, 'ethics', 1, 'AI Bias and Fairness', 'teach', 150),
+(16, 'ethics', 2, 'Copyright and Privacy', 'quiz', 200),
+(17, 'ethics', 3, 'Responsible AI', 'boss', 400),
+(18, 'agent', 1, 'What is an AI Agent?', 'teach', 200),
+(19, 'agent', 2, 'Tool Use / Function Calling', 'quiz', 300),
+(20, 'future', 1, 'AGI Concepts', 'teach', 250),
+(21, 'future', 2, 'The Next Step of AI', 'quiz', 350)
 ON CONFLICT (level_id) DO UPDATE SET
     rollup = EXCLUDED.rollup,
     level_number = EXCLUDED.level_number,
@@ -321,12 +321,12 @@ ON CONFLICT (level_id) DO UPDATE SET
 
 -- Achievements
 INSERT INTO achievements (achievement_id, name, description, icon, rarity, xp_reward) VALUES
-('first-step', '初學者', '完成第一個關卡', '🌱', 'common', 50),
-('prompt-master', 'Prompt 大師', '完成 Prompt 星所有關卡', '⚡', 'epic', 500),
-('streak-7', '連勝達人', '連續登入 7 天', '🔥', 'rare', 200),
-('arena-winner', '競技場冠軍', '在 Prompt Arena 獲得第一名', '🏆', 'legendary', 1000),
-('speed-run', '閃電學者', '在 30 秒內完成一個關卡', '⚡', 'rare', 300),
-('perfect', '完美主義者', '一題都不錯的完成一章', '💎', 'epic', 400)
+('first-step', 'Beginner', 'Complete your first level', '🌱', 'common', 50),
+('prompt-master', 'Prompt Master', 'Complete all levels on Prompt Planet', '⚡', 'epic', 500),
+('streak-7', 'Streak Pro', 'Log in for 7 consecutive days', '🔥', 'rare', 200),
+('arena-winner', 'Arena Champion', 'Win first place in the Prompt Arena', '🏆', 'legendary', 1000),
+('speed-run', 'Lightning Learner', 'Complete a level within 30 seconds', '⚡', 'rare', 300),
+('perfect', 'Perfectionist', 'Complete a chapter without any mistakes', '💎', 'epic', 400)
 ON CONFLICT (achievement_id) DO UPDATE SET
     name = EXCLUDED.name,
     description = EXCLUDED.description,
@@ -336,18 +336,18 @@ ON CONFLICT (achievement_id) DO UPDATE SET
 
 -- Quiz Questions
 INSERT INTO quiz_questions (rollup, level_number, question_number, question_text, options, correct_option_index, explanation, xp_reward) VALUES
-('prompt', 2, 1, '以下哪種 Prompt 技術最適合需要 AI 進行逐步推理的任務？', '["Zero-shot Prompting", "Chain of Thought (CoT) Prompting", "One-shot Prompting", "Temperature Adjustment"]', 1, 'Chain of Thought Prompting 讓 AI 展示推理步驟，特別適合數學、邏輯等需要多步推理的任務。', 150),
-('prompt', 2, 2, 'LLM 中的 "Token" 最接近以下哪個概念？', '["完整的一個詞語", "文字的最小處理單位（約 3-4 個字元）", "一個完整的句子", "一段程式碼"]', 1, 'Token 是 LLM 處理文字的最小單位，英文中約 4 個字元，中文每個字通常是 1-2 個 Token。', 150),
-('prompt', 4, 1, '在 LLM 的 Temperature 參數中，接近 0 的值會產生什麼效果？', '["更有創意和多樣化的輸出", "更隨機和不可預期的回應", "更確定性和保守的輸出", "更快的回應速度"]', 2, 'Temperature 接近 0 時，模型傾向選擇最高機率的 Token，輸出更加確定 and 一致；接近 1 則更有創意和多樣性。', 200),
-('prompt', 5, 1, '以下關於 RAG（Retrieval-Augmented Generation）的敘述，哪個正確？', '["RAG 會永久修改 LLM 的參數", "RAG 在推理時動態檢索外部知識庫", "RAG 比 Fine-tuning 需要更多訓練資料", "RAG 只適用於圖像生成"]', 1, 'RAG 在生成回應時即時從外部知識庫檢索相關資訊，不需修改模型本身，適合需要最新資訊的場景。', 200),
-('prompt', 6, 1, '以下關於 RAG（Retrieval-Augmented Generation）的敘述，哪個正確？', '["RAG 會永久修改 LLM 的參數", "RAG 在推理時動態檢索外部知識庫", "RAG 比 Fine-tuning 需要更多訓練資料", "RAG 只適用於圖像生成"]', 1, 'RAG 在生成回應時即時從外部知識庫檢索相關資訊，不需修改模型本身，適合需要最新資訊的場景。', 200),
-('model', 2, 1, 'Transformer 模型的哪一個核心機制讓它能夠處理長文本中的依賴關係？', '["Self-Attention 機制", "卷積層 (Convolution)", "循環神經網絡 (RNN)", "池化層 (Pooling)"]', 0, 'Self-Attention (自注意力機制) 允許模型在處理一個詞時，同時關注序列中的其他詞，從而理解長距離依賴關係。', 200),
-('model', 3, 1, '以下哪一種微調方法可以在大幅減少計算資源的情況下，調整大模型？', '["Full Fine-tuning (全參數微調)", "LoRA (Low-Rank Adaptation)", "Pre-training (預訓練)", "RAG"]', 1, 'LoRA 是一種參數高效微調 (PEFT) 方法，通過在模型的權重矩陣旁添加低秩矩陣來更新參數，大幅節省資源。', 400),
-('vision', 2, 1, 'Midjourney 和 Stable Diffusion 主要基於哪種技術架構？', '["GAN (生成對抗網絡)", "Diffusion Model (擴散模型)", "RNN", "CNN"]', 1, '擴散模型 (Diffusion Model) 是目前主流的圖像生成技術，透過學習去噪過程來生成高質量的圖片。', 250),
-('ethics', 2, 1, '如果 AI 模型使用受版權保護的資料進行訓練，這在目前的法律界定上主要面臨什麼爭議？', '["違反了模型的安全協議", "合理使用 (Fair Use) 與侵權的界限", "模型將會變慢", "開源協定的衝突"]', 1, 'AI 訓練資料是否屬於「合理使用」目前是版權法中的重大爭議，牽涉創作者權益和技術發展。', 200),
-('ethics', 3, 1, '在開發「負責任的 AI」時，以下哪項是最核心的原則之一？', '["盡可能提升模型參數", "確保透明度和可解釋性", "完全自動化無需人工審查", "追求最高的準確率而忽略偏見"]', 1, '透明度和可解釋性是負責任 AI 的基準，讓使用者和開發者了解 AI 的決策過程並追溯潛在錯誤。', 400),
-('agent', 2, 1, '當 AI Agent 需要獲取即時天氣資訊時，它依賴的關鍵能力是什麼？', '["增加 Temperature 參數", "Tool Use (工具調用 / 函數調用)", "改變 Prompt 風格", "Zero-shot 推理"]', 1, '工具調用 (Tool Use 或 Function Calling) 賦予 Agent 執行外部 API或腳本的能力，使其能獲取實時數據。', 300),
-('future', 2, 1, '關於 AGI (通用人工智慧) 的敘述，以下何者最準確？', '["AGI 指的是只能進行單一任務的專家系統", "AGI 能夠在任何智力任務上達到或超越人類水平", "目前的 ChatGPT 已經是完美的 AGI", "AGI 只是指計算機的算力大幅提升"]', 1, 'AGI 是一種假想中的人工智慧，能在各種認知任務上展現出與人類相當或超越人類的能力。', 350)
+('prompt', 2, 1, 'Which of the following Prompt techniques is best suited for tasks requiring AI to perform step-by-step reasoning?', '["Zero-shot Prompting", "Chain of Thought (CoT) Prompting", "One-shot Prompting", "Temperature Adjustment"]', 1, 'Chain of Thought Prompting allows the AI to show its reasoning steps, making it particularly suitable for tasks requiring multi-step reasoning like math and logic.', 150),
+('prompt', 2, 2, 'What concept does "Token" in an LLM most closely represent?', '["A complete word", "The smallest unit of text processing (about 3-4 characters)", "A complete sentence", "A block of code"]', 1, 'A Token is the smallest unit an LLM uses to process text. In English, it is about 4 characters; in Chinese, each character is usually 1-2 Tokens.', 150),
+('prompt', 4, 1, 'In an LLM''s Temperature parameter, what effect does a value close to 0 have?', '["More creative and diverse output", "More random and unpredictable responses", "More deterministic and conservative output", "Faster response speed"]', 2, 'When Temperature is close to 0, the model tends to choose the most probable Tokens, making the output more deterministic and consistent; close to 1 makes it more creative and diverse.', 200),
+('prompt', 5, 1, 'Which of the following statements about RAG (Retrieval-Augmented Generation) is correct?', '["RAG permanently modifies LLM parameters", "RAG dynamically retrieves from an external knowledge base during inference", "RAG requires more training data than Fine-tuning", "RAG only applies to image generation"]', 1, 'RAG retrieves relevant information from an external knowledge base in real-time when generating responses, without modifying the model itself, making it suitable for scenarios needing up-to-date information.', 200),
+('prompt', 6, 1, 'Which of the following statements about RAG (Retrieval-Augmented Generation) is correct?', '["RAG permanently modifies LLM parameters", "RAG dynamically retrieves from an external knowledge base during inference", "RAG requires more training data than Fine-tuning", "RAG only applies to image generation"]', 1, 'RAG retrieves relevant information from an external knowledge base in real-time when generating responses, without modifying the model itself, making it suitable for scenarios needing up-to-date information.', 200),
+('model', 2, 1, 'Which core mechanism of the Transformer model allows it to handle dependencies in long texts?', '["Self-Attention mechanism", "Convolutional layer (Convolution)", "Recurrent Neural Network (RNN)", "Pooling layer (Pooling)"]', 0, 'Self-Attention allows the model to focus on other words in a sequence while processing a single word, thereby understanding long-distance dependencies.', 200),
+('model', 3, 1, 'Which of the following fine-tuning methods can adjust large models while significantly reducing computational resources?', '["Full Fine-tuning", "LoRA (Low-Rank Adaptation)", "Pre-training", "RAG"]', 1, 'LoRA is a Parameter-Efficient Fine-Tuning (PEFT) method that updates parameters by adding low-rank matrices alongside the model''s weight matrices, significantly saving resources.', 400),
+('vision', 2, 1, 'What technical architecture are Midjourney and Stable Diffusion primarily based on?', '["GAN (Generative Adversarial Network)", "Diffusion Model", "RNN", "CNN"]', 1, 'Diffusion Models are currently the mainstream image generation technology, generating high-quality images by learning a denoising process.', 250),
+('ethics', 2, 1, 'If an AI model is trained using copyrighted material, what is the primary legal controversy it faces?', '["Violating model safety protocols", "The boundary between Fair Use and infringement", "The model will become slower", "Conflicts in open-source agreements"]', 1, 'Whether AI training data constitutes "Fair Use" is currently a major controversy in copyright law, involving creator rights and technological development.', 200),
+('ethics', 3, 1, 'Which of the following is one of the core principles when developing "Responsible AI"?', '["Increasing parameters as much as possible", "Ensuring transparency and explainability", "Complete automation without human review", "Pursuing highest accuracy while ignoring bias"]', 1, 'Transparency and explainability are benchmarks for Responsible AI, allowing users and developers to understand the AI''s decision-making process and trace potential errors.', 400),
+('agent', 2, 1, 'When an AI Agent needs to obtain real-time weather information, what key capability does it rely on?', '["Increasing Temperature", "Tool Use / Function Calling", "Changing Prompt style", "Zero-shot reasoning"]', 1, 'Tool Use (or Function Calling) empowers an Agent to execute external APIs or scripts, enabling it to obtain real-time data.', 300),
+('future', 2, 1, 'Which statement regarding AGI (Artificial General Intelligence) is the most accurate?', '["AGI refers to expert systems capable of only a single task", "AGI can reach or exceed human levels in any intellectual task", "Current ChatGPT is already a perfect AGI", "AGI just refers to a significant increase in computer power"]', 1, 'AGI is a hypothetical artificial intelligence that can demonstrate abilities comparable to or exceeding humans in a wide range of cognitive tasks.', 350)
 ON CONFLICT (rollup, level_number, question_number) DO UPDATE SET
     question_text = EXCLUDED.question_text,
     options = EXCLUDED.options,
@@ -357,9 +357,9 @@ ON CONFLICT (rollup, level_number, question_number) DO UPDATE SET
 
 -- Arena Challenges
 INSERT INTO arena_challenges (challenge_id, title, description, difficulty, example_prompts) VALUES
-('a1', '詩意烹飪師', '用 Prompt 讓 AI 以詩意的方式描述「番茄炒蛋」食譜', 'easy', '["加入押韻要求", "指定詩歌風格", "限制字數"]'),
-('a2', '科學解釋家', '讓 AI 用 5 歲小孩能理解的語言解釋「黑洞是什麼」', 'medium', '["類比日常物品", "避免專業術語", "加入趣味比喻"]'),
-('a3', '智慧辯手', '設計 Prompt 讓 AI 同時提供贊成和反對「AI 取代工程師」的理由', 'hard', '["平衡雙方觀點", "引用具體例子", "提供結論建議"]')
+('a1', 'Poetic Chef', 'Use a Prompt to make the AI describe a "Scrambled Eggs with Tomato" recipe in a poetic way', 'easy', '["Add rhyming requirements", "Specify poetic style", "Limit word count"]'),
+('a2', 'Science Explainer', 'Have the AI explain "what a black hole is" in language a 5-year-old can understand', 'medium', '["Analogize to everyday objects", "Avoid technical jargon", "Add fun metaphors"]'),
+('a3', 'Wise Debater', 'Design a Prompt to make the AI provide arguments both for and against "AI replacing engineers"', 'hard', '["Balance both perspectives", "Cite specific examples", "Provide concluding suggestions"]')
 ON CONFLICT (challenge_id) DO UPDATE SET
     title = EXCLUDED.title,
     description = EXCLUDED.description,
@@ -369,13 +369,13 @@ ON CONFLICT (challenge_id) DO UPDATE SET
 -- Profile Options (Background + Interest choices with scores)
 INSERT INTO profile_options (category, option_key, label, icon, description, score, sort_order) VALUES
 -- Backgrounds (score reflects AI/tech familiarity)
-('background', 'student',     '學生',       '🎓', '正在就學中，對 AI 感興趣的學生', 20, 1),
-('background', 'creative',    '創作者',     '🎨', '設計師、藝術家或內容創作者', 30, 2),
-('background', 'business',    '商業人士',   '💼', '管理者、行銷或業務專業人士', 35, 3),
-('background', 'educator',    '教育工作者', '📚', '老師、講師或教育從業者', 45, 4),
-('background', 'developer',   '開發者',     '💻', '軟體工程師或開發人員', 70, 5),
-('background', 'data_pro',    '資料專家',   '📊', '資料科學家、分析師或 ML 工程師', 80, 6),
-('background', 'researcher',  'AI 研究者',  '🔬', '從事 AI/ML 相關學術研究', 90, 7)
+('background', 'student',     'Student',    '🎓', 'A student currently studying and interested in AI', 20, 1),
+('background', 'creative',    'Creator',    '🎨', 'Designer, artist, or content creator', 30, 2),
+('background', 'business',    'Professional','💼', 'Manager, marketing, or business professional', 35, 3),
+('background', 'educator',    'Educator',   '📚', 'Teacher, lecturer, or education practitioner', 45, 4),
+('background', 'developer',   'Developer',  '💻', 'Software engineer or developer', 70, 5),
+('background', 'data_pro',    'Data Pro',   '📊', 'Data scientist, analyst, or ML engineer', 80, 6),
+('background', 'researcher',  'AI Researcher','🔬', 'Engaged in AI/ML-related academic research', 90, 7)
 ON CONFLICT (category, option_key) DO UPDATE SET
     label = EXCLUDED.label,
     icon = EXCLUDED.icon,
@@ -385,16 +385,16 @@ ON CONFLICT (category, option_key) DO UPDATE SET
 
 INSERT INTO profile_options (category, option_key, label, icon, description, score, sort_order) VALUES
 -- Interests (score reflects topic complexity)
-('interest', 'ai_art',           'AI 繪圖與創作',     '🖼️', '用 AI 生成圖片、音樂和影片', 15, 1),
-('interest', 'chatbot',          '聊天機器人應用',     '💬', 'ChatGPT、Claude 等對話 AI 的日常應用', 20, 2),
-('interest', 'ai_productivity',  'AI 生產力工具',      '⚡', 'AI 寫作助手、程式輔助、自動化工具', 30, 3),
-('interest', 'ai_ethics',        'AI 倫理與社會影響',  '⚖️', 'AI 偏見、隱私、版權等議題', 35, 4),
-('interest', 'prompt_eng',       'Prompt 工程',        '✍️', '如何撰寫有效的 AI 提示詞', 40, 5),
-('interest', 'ai_business',      'AI 商業應用',        '📈', '企業導入 AI、商業策略與產業趨勢', 45, 6),
-('interest', 'computer_vision',  '電腦視覺',           '👁️', '圖像辨識、影像分析與多模態 AI', 60, 7),
-('interest', 'nlp',              '自然語言處理',       '📝', '文字理解、翻譯與語意分析', 65, 8),
-('interest', 'llm_fundamentals', 'LLM 原理與架構',    '🧠', 'Transformer、微調、Token 等核心概念', 80, 9),
-('interest', 'ai_agents',        'AI Agents 與自動化', '🤖', '自主 AI 系統、Tool Use、ReAct 等前沿技術', 90, 10)
+('interest', 'ai_art',           'AI Art & Creation',  '🖼️', 'Generate images, music, and videos with AI', 15, 1),
+('interest', 'chatbot',          'Chatbot Apps',       '💬', 'Daily use of AI like ChatGPT and Claude', 20, 2),
+('interest', 'ai_productivity',  'AI Productivity',    '⚡', 'AI writing assistants, coding aids, and automation tools', 30, 3),
+('interest', 'ai_ethics',        'AI Ethics & Society','⚖️', 'Issues like AI bias, privacy, and copyright', 35, 4),
+('interest', 'prompt_eng',       'Prompt Engineering', '✍️', 'How to write effective AI prompts', 40, 5),
+('interest', 'ai_business',      'AI Business',        '📈', 'Enterprise AI, business strategies, and industry trends', 45, 6),
+('interest', 'computer_vision',  'Computer Vision',    '👁️', 'Image recognition, video analysis, and multimodality', 60, 7),
+('interest', 'nlp',              'NLP',                '📝', 'Text understanding, translation, and semantic analysis', 65, 8),
+('interest', 'llm_fundamentals', 'LLM Fundamentals',   '🧠', 'Core concepts like Transformer and fine-tuning', 80, 9),
+('interest', 'ai_agents',        'AI Agents & Automation', '🤖', 'Autonomous systems, Tool Use, and ReAct technology', 90, 10)
 ON CONFLICT (category, option_key) DO UPDATE SET
     label = EXCLUDED.label,
     icon = EXCLUDED.icon,
@@ -413,7 +413,7 @@ INSERT INTO players (username, xp, streak_days, guild_name) VALUES
 ('RAGRunner', 22100, 12, 'Prompt Lords'),
 ('AttentionAce', 19800, 3, NULL),
 ('AgentAlpha', 17200, 9, 'AI Pioneers'),
-('YouPlayer', 14500, 4, '新手村')
+('YouPlayer', 14500, 4, 'Beginner Village')
 ON CONFLICT (username) DO NOTHING;
 
 -- Initial Progress for YouPlayer
