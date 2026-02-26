@@ -91,34 +91,27 @@ No test runner is configured yet.
 **NeuroQuest AI** is a gamified GenAI learning platform built as a Next.js 16 app with React 19, TypeScript, Tailwind CSS 4, and Zustand for state management.
 
 ### Frontend-Backend Status
-- **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), database-backed persistence with `fetchUser` initialization.
-- **Backend:** Next.js API Routes (`src/app/api/...`) act as the controller layer, fetching/updating data in PostgreSQL using `Prisma` (`src/lib/db.ts`).
-- **Database:** Local PostgreSQL instance managed via `docker-compose.yml`. Schema defined in `db/schema.sql` and `prisma/schema.prisma`.
-- **Frontend Integration:** All main pages (World Map, Arena, Lab, Leaderboard, Quiz, News) now fetch real-time data from the backend APIs. User profile and progress are synced with the `players` and `player_progress` tables. The News page (`/news`) fetches from `/api/news/selections` which joins `news_selections → news_articles → rss_feeds + news_questions`. Article full_text is temporarily replaced by an embedded iframe using the article URL.
+- **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), database-backed persistence.
+- **Backend:** Next.js API Routes act as microservices. News system is powered by LLM ranking and generation.
+- **Frontend Integration:** All main pages fetch real-time data. The News page (`/news`) has been redesigned with a **Duolingo-style** approachable interface, focused on singlend-task-at-a-time flows and English-only content.
+- **News Entry Point:** The news page is now accessed via a **Flame button** on the Map page (immediately below the level list), featuring a custom transition animation (planet rotation, spaceship flight).
+- **Profile Integration:** The `ProfileSetupModal` handles operative calibration (background/interests) to set the `difficulty_score`.
 
 ### Key Layers
 
-**`src/app/api/`** — Backend API routes. Handlers here (e.g., `src/app/api/user/route.ts` for profile, `src/app/api/planets/route.ts` which dynamically calculates levels) acts as our backend microservices ensuring clean separation from the UI.
-**`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS feeds and retains articles from yesterday + today, (2) sends all headlines to a ranker LLM (`google/gemini-2.5-flash`) which assigns 3 articles to each of 5 difficulty tiers (1–5) by returning exact titles, (3) **backfill step** — if fewer than 15 articles were selected (e.g. low-scan day), `backfillFromUnselected()` in `src/lib/news/ranker.ts` fills remaining tier slots with previously-unselected articles from the database, prioritising the most recent, (4) sequentially sends each selected article's content to an examiner LLM (`minimax/minimax-m2.5`) to generate 3 multiple-choice questions per article. It acts as the backbone for the News capability.
+**`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS, (2) ranks articles via Gemini, (3) generates questions via Minimax.
 
-**`src/lib/db.ts`** — PostgreSQL connection utility using the `postgres` JS library. It uses environment variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) for configuration, which should be set in a `.env` file.
-
-**`src/lib/gameData.ts`** — TypeScript interfaces and shared game logic. Static data has been migrated to the database.
-
-**`src/app/`** — Five pages using Next.js App Router:
-- `/` — AI Universe Map (Vertical, Duolingo-style path layout, progressive level unlock)
-- `/arena` — Prompt Arena (competitive prompt design + voting)
-- `/lab` — Personal AI Lab (profile, AI pet, achievements gallery)
-- `/leaderboard` — Global leaderboard with guilds
-- `/news` — GenAI news with comprehension quizzes for XP
-
-**`src/components/`** — Shared components: `NavBar` (player stats, XP bar, mobile bottom nav), `StarField` (canvas-based 200-star animated background), `DailyRewardModal`, `LevelModal` (quiz with confetti on completion), `ProfileSetupModal` (two-step background/interests wizard with animated score reveal, shown on first `/news` visit).
+**`src/app/news/page.tsx`** — Completely redesigned as an **Approachable Learning Hub**:
+- **Hub View**: Large, friendly cards for daily stories.
+- **Reading Phase**: Clean, distraction-free summary briefing.
+- **Quiz Phase**: Duolingo-style one-question assessment with immediate feedback.
+- **Completion Phase**: Reward display and level-up progress.
 
 ### Design System
 
 CSS custom properties and utilities are defined in `src/app/globals.css`:
-- Color palette: neon blue `#00D4FF`, purple `#8B5CF6`, gold `#FFB800`, green `#10B981`, deep space bg `#0D0D2B`
-- Fonts: Orbitron (headings) + Inter (body) via Google Fonts in `layout.tsx`
-- Utility classes: `.glass-card`, `.neon-glow-*`, `.gradient-text`, `.btn-primary`, `.rarity-*`
+- Color palette: NASA Blue `#1cb0f6`, Nuclear Green `#58cc02`, Terminal Black `#02040a`, Amber `#ffc800`
+- Aesthetic: Glassmorphism, grid-lines, high-impact typography (Inter/Orbitron).
+- Interaction: Single-task focus, "Subtraction" principle.
 
 Path alias `@/*` maps to `./src/*`.

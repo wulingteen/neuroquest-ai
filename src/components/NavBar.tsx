@@ -7,11 +7,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-    { href: "/", label: "宇宙地圖", icon: Map },
-    { href: "/arena", label: "競技場", icon: Swords },
-    { href: "/leaderboard", label: "排行榜", icon: Trophy },
-    { href: "/news", label: "AI 快訊", icon: Newspaper },
-    { href: "/lab", label: "我的實驗室", icon: Brain },
+    { href: "/", label: "Map", icon: Map },
+    { href: "/arena", label: "Arena", icon: Swords },
+    { href: "/leaderboard", label: "Ranking", icon: Trophy },
+    { href: "/lab", label: "Lab", icon: Brain },
 ];
 
 export default function NavBar() {

@@ -3,8 +3,9 @@ import { motion } from "framer-motion";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { type Planet, type Level } from "@/types/game";
-import { Lock, Star, CheckCircle2, Sword, ChevronDown, ChevronUp, Building } from "lucide-react";
+import { Lock, Star, CheckCircle2, Sword, ChevronDown, ChevronUp, Building, Flame, Rocket, Globe } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import DailyRewardModal from "@/components/DailyRewardModal";
 import LevelModal from "@/components/LevelModal";
@@ -57,6 +58,7 @@ const BackgroundGraphics = ({ colorPreset }: { colorPreset: number }) => {
 };
 
 export default function WorldMapPage() {
+  const router = useRouter();
   const { level, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, setCurrentLevel, currentLevel, levelProgress } = useGameStore();
 
   const [showLevelModal, setShowLevelModal] = useState(false);
@@ -64,6 +66,7 @@ export default function WorldMapPage() {
   const [planets, setPlanets] = useState<Planet[]>([]);
   const [levels, setLevels] = useState<Level[]>([]);
   const [loading, setLoading] = useState(true);
+
 
   const [viewIndex, setViewIndex] = useState(-1);
   const initialized = useRef(false);
@@ -161,6 +164,10 @@ export default function WorldMapPage() {
     if (viewIndex > 0) setViewIndex(v => v - 1);
   };
 
+  const handleNewsClick = () => {
+    router.push('/news');
+  };
+
   // Swipe handling
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -196,6 +203,20 @@ export default function WorldMapPage() {
             </div>
           </div>
         </div>
+
+        {/* News Button (Flame icon) in Top-Right */}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleNewsClick}
+          className="relative rounded-full w-12 h-12 bg-[#ff4b4b] border-b-4 border-[#ea2b2b] text-white flex items-center justify-center transition-all shadow-lg overflow-visible"
+        >
+          <Flame className="w-6 h-6 fill-current" />
+          {/* Subtle notification dot or tooltip could go here if needed, but keeping it clean for now */}
+          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center border-2 border-[#ff4b4b]">
+            <div className="w-1.5 h-1.5 bg-[#ff4b4b] rounded-full animate-pulse" />
+          </div>
+        </motion.button>
       </div>
 
       {showDailyReward && <DailyRewardModal />}
@@ -290,6 +311,8 @@ export default function WorldMapPage() {
               </div>
             );
           })}
+
+
         </div>
 
         {/* Down arrow for next planet */}
@@ -315,8 +338,6 @@ export default function WorldMapPage() {
           rollup={selectedPlanetForModal.id}
         />
       )}
-
-
 
     </div>
   );

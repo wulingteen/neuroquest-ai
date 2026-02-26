@@ -2,41 +2,47 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import {
-    User,
     Sparkles,
-    ChevronRight,
-    ChevronLeft,
-    Check,
     Loader2,
+    Check,
+    ArrowRight,
+    Compass,
     Target,
+    ShieldAlert
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type ProfileOption } from "@/types/game";
+
+/**
+ * REDESIGNED PROFILE SETUP
+ * Focusing on "Only English" and "Subtraction" Principle.
+ * One clear step at a time.
+ */
 
 interface ProfileSetupModalProps {
     open: boolean;
     onComplete: (score: number) => void;
 }
 
-type Step = "background" | "interests" | "result";
+type SetupStep = "backgrounds" | "sectors" | "calibration";
 
 export default function ProfileSetupModal({
     open,
     onComplete,
 }: ProfileSetupModalProps) {
-    const [step, setStep] = useState<Step>("background");
-    const [backgrounds, setBackgrounds] = useState<ProfileOption[]>([]);
-    const [interests, setInterests] = useState<ProfileOption[]>([]);
+    const [step, setStep] = useState<SetupStep>("backgrounds");
+    const [bgOptions, setBgOptions] = useState<ProfileOption[]>([]);
+    const [sectorOptions, setSectorOptions] = useState<ProfileOption[]>([]);
+
+    // Selection state
     const [selectedBg, setSelectedBg] = useState<string | null>(null);
-    const [selectedInterests, setSelectedInterests] = useState<Set<string>>(
-        new Set()
-    );
+    const [selectedSectors, setSelectedSectors] = useState<Set<string>>(new Set());
+
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [resultScore, setResultScore] = useState<number | null>(null);
+    const [finalScore, setFinalScore] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch options from API
     useEffect(() => {
         if (!open) return;
         (async () => {
@@ -45,32 +51,33 @@ export default function ProfileSetupModal({
                 const res = await fetch("/api/user/profile/options");
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error);
-                setBackgrounds(data.backgrounds);
-                setInterests(data.interests);
+                setBgOptions(data.backgrounds);
+                setSectorOptions(data.interests);
             } catch (err) {
-                setError(
-                    err instanceof Error ? err.message : "Failed to load options"
-                );
+                setError("System link failure. Unable to retrieve operative profiles.");
             } finally {
                 setLoading(false);
             }
         })();
     }, [open]);
 
-    const toggleInterest = (key: string) => {
-        setSelectedInterests((prev) => {
+    const handleBgClick = (key: string) => {
+        setSelectedBg(key);
+        // Clean snap to next step
+        setTimeout(() => setStep("sectors"), 350);
+    };
+
+    const toggleSector = (key: string) => {
+        setSelectedSectors((prev) => {
             const next = new Set(prev);
-            if (next.has(key)) {
-                next.delete(key);
-            } else {
-                next.add(key);
-            }
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
             return next;
         });
     };
 
-    const handleSubmit = async () => {
-        if (!selectedBg || selectedInterests.size === 0) return;
+    const runCalibration = async () => {
+        if (!selectedBg || selectedSectors.size === 0) return;
         setSubmitting(true);
         try {
             const res = await fetch("/api/user/profile", {
@@ -78,33 +85,25 @@ export default function ProfileSetupModal({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     background: selectedBg,
-                    interests: Array.from(selectedInterests),
+                    interests: Array.from(selectedSectors),
                 }),
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error);
-            setResultScore(data.difficulty_score);
-            setStep("result");
+            setFinalScore(data.difficulty_score);
+            setStep("calibration");
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to save profile");
-        } finally {
+            setError("Critical calibration failure. Try again.");
             setSubmitting(false);
         }
     };
 
-    const handleFinish = () => {
-        if (resultScore !== null) {
-            onComplete(resultScore);
-        }
-    };
-
-    // Score level label
-    const getScoreLabel = (score: number) => {
-        if (score <= 20) return { label: "入門", color: "#10B981", tier: 1 };
-        if (score <= 40) return { label: "基礎", color: "#3B82F6", tier: 2 };
-        if (score <= 60) return { label: "進階", color: "#8B5CF6", tier: 3 };
-        if (score <= 80) return { label: "高階", color: "#F97316", tier: 4 };
-        return { label: "專家", color: "#EF4444", tier: 5 };
+    const getRank = (score: number) => {
+        if (score <= 20) return { label: "NOVICE", color: "#58cc02", tier: 1 };
+        if (score <= 40) return { label: "BASIC", color: "#1cb0f6", tier: 2 };
+        if (score <= 60) return { label: "ADEPT", color: "#ce82ff", tier: 3 };
+        if (score <= 80) return { label: "EXPERT", color: "#ff9600", tier: 4 };
+        return { label: "MASTER", color: "#ea2b2b", tier: 5 };
     };
 
     if (!open) return null;
@@ -115,432 +114,173 @@ export default function ProfileSetupModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+                className="fixed inset-0 z-[60] flex flex-col bg-[#02040a] text-white font-['Inter'] overflow-hidden"
             >
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-2xl border border-white/10"
-                    style={{
-                        background:
-                            "linear-gradient(145deg, rgba(13,13,43,0.97) 0%, rgba(20,10,50,0.97) 100%)",
-                        boxShadow:
-                            "0 0 60px rgba(139,92,246,0.15), 0 0 20px rgba(0,212,255,0.1)",
-                    }}
-                >
-                    {/* Header */}
-                    <div className="sticky top-0 z-10 px-6 pt-6 pb-4 border-b border-white/5 bg-inherit">
-                        <div className="flex items-center gap-3 mb-1">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
-                                {step === "result" ? (
-                                    <Target className="w-5 h-5 text-white" />
-                                ) : (
-                                    <User className="w-5 h-5 text-white" />
-                                )}
-                            </div>
-                            <div>
-                                <h2
-                                    className="text-lg font-black text-white"
-                                    style={{ fontFamily: "Orbitron, sans-serif" }}
-                                >
-                                    {step === "background" && "你的背景"}
-                                    {step === "interests" && "興趣領域"}
-                                    {step === "result" && "設定完成！"}
-                                </h2>
-                                <p className="text-xs text-slate-400">
-                                    {step === "background" &&
-                                        "告訴我們你的身份，以推薦最適合的內容"}
-                                    {step === "interests" &&
-                                        "選擇你感興趣的 AI 領域（至少 1 個）"}
-                                    {step === "result" &&
-                                        "系統已為你計算個人化難度"}
-                                </p>
-                            </div>
-                        </div>
+                {/* Visual Background */}
+                <div className="absolute inset-0 pointer-events-none opacity-20">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(28,176,246,0.1),transparent_70%)]" />
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] [background-size:100px_100px]" />
+                </div>
 
-                        {/* Step indicator */}
-                        {step !== "result" && (
-                            <div className="flex gap-2 mt-3">
-                                {(["background", "interests"] as const).map(
-                                    (s, i) => (
-                                        <div
-                                            key={s}
-                                            className="flex-1 h-1 rounded-full transition-all duration-300"
-                                            style={{
-                                                background:
-                                                    step === s ||
-                                                        (s === "background" &&
-                                                            step === "interests")
-                                                        ? "linear-gradient(90deg, #8B5CF6, #00D4FF)"
-                                                        : "rgba(255,255,255,0.08)",
-                                            }}
-                                        >
-                                            <span className="sr-only">
-                                                Step {i + 1}
-                                            </span>
-                                        </div>
-                                    )
-                                )}
-                            </div>
+                {/* Progress Node */}
+                <div className="w-full flex justify-center py-10 px-8 relative z-10 shrink-0">
+                    <div className="w-full max-w-5xl flex gap-3 h-1">
+                        {step !== "calibration" && (
+                            <>
+                                <div className={cn("flex-1 rounded-full transition-all duration-700", (step === "backgrounds" || step === "sectors") ? "bg-[#1cb0f6]" : "bg-white/5")} />
+                                <div className={cn("flex-1 rounded-full transition-all duration-700", step === "sectors" ? "bg-[#1cb0f6]" : "bg-white/5")} />
+                            </>
                         )}
                     </div>
+                </div>
 
-                    {/* Body */}
-                    <div className="px-6 py-4 overflow-y-auto max-h-[60vh]">
+                <div className="flex-1 overflow-y-auto px-8 pb-32 relative z-10 flex flex-col">
+                    <div className="w-full max-w-5xl mx-auto flex-1 flex flex-col justify-center min-h-0">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center py-12 gap-3">
-                                <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
-                                <p className="text-slate-400 text-sm">
-                                    載入選項中…
-                                </p>
+                            <div className="flex flex-col items-center gap-8 animate-pulse">
+                                <Loader2 className="w-20 h-20 text-[#1cb0f6] animate-spin" />
+                                <p className="text-gray-500 font-black tracking-[0.5em] text-sm uppercase">Accessing Filesystems...</p>
                             </div>
                         ) : error ? (
-                            <div className="text-center py-12">
-                                <p className="text-red-400 text-sm">{error}</p>
+                            <div className="text-center space-y-8 max-w-md mx-auto">
+                                <ShieldAlert className="w-24 h-24 text-red-500 mx-auto opacity-50" />
+                                <h2 className="text-5xl font-black tracking-tighter">ACCESS DENIED</h2>
+                                <p className="text-gray-500 font-bold text-lg leading-relaxed">{error}</p>
+                                <button onClick={() => window.location.reload()} className="w-full py-5 bg-white text-black font-black rounded-3xl">RETRY ACCESS</button>
                             </div>
                         ) : (
                             <AnimatePresence mode="wait">
-                                {/* Step 1: Background */}
-                                {step === "background" && (
+                                {step === "backgrounds" && (
                                     <motion.div
-                                        key="bg"
-                                        initial={{ opacity: 0, x: 40 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -40 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="space-y-2"
+                                        key="step-bg"
+                                        initial={{ opacity: 0, scale: 0.95 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 1.05 }}
+                                        className="space-y-16"
                                     >
-                                        {backgrounds.map((opt) => (
-                                            <button
-                                                key={opt.key}
-                                                onClick={() =>
-                                                    setSelectedBg(opt.key)
-                                                }
-                                                className={cn(
-                                                    "w-full text-left px-4 py-3.5 rounded-xl border transition-all cursor-pointer group",
-                                                    selectedBg === opt.key
-                                                        ? "border-purple-500/50 bg-purple-500/10"
-                                                        : "border-white/8 bg-white/3 hover:border-white/20 hover:bg-white/5"
-                                                )}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-2xl shrink-0">
-                                                        {opt.icon}
-                                                    </span>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-white text-sm">
-                                                                {opt.label}
-                                                            </span>
-                                                            {selectedBg ===
-                                                                opt.key && (
-                                                                    <Check className="w-4 h-4 text-purple-400 shrink-0" />
-                                                                )}
-                                                        </div>
-                                                        {opt.description && (
-                                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                                {opt.description}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </motion.div>
-                                )}
+                                        <div className="text-center space-y-4">
+                                            <Compass className="w-16 h-16 text-[#1cb0f6] mx-auto opacity-40" />
+                                            <h2 className="text-7xl font-black tracking-tighter leading-none">Identify Your Profile</h2>
+                                            <p className="text-gray-500 font-black tracking-widest text-xs uppercase">Select your operative expertise level.</p>
+                                        </div>
 
-                                {/* Step 2: Interests */}
-                                {step === "interests" && (
-                                    <motion.div
-                                        key="int"
-                                        initial={{ opacity: 0, x: 40 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -40 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="space-y-2"
-                                    >
-                                        {interests.map((opt) => {
-                                            const selected =
-                                                selectedInterests.has(opt.key);
-                                            return (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {bgOptions.map((opt) => (
                                                 <button
                                                     key={opt.key}
-                                                    onClick={() =>
-                                                        toggleInterest(opt.key)
-                                                    }
+                                                    onClick={() => handleBgClick(opt.key)}
                                                     className={cn(
-                                                        "w-full text-left px-4 py-3 rounded-xl border transition-all cursor-pointer",
-                                                        selected
-                                                            ? "border-cyan-500/50 bg-cyan-500/10"
-                                                            : "border-white/8 bg-white/3 hover:border-white/20 hover:bg-white/5"
+                                                        "group p-10 rounded-[48px] border-2 transition-all flex flex-col items-center gap-8 relative overflow-hidden h-full",
+                                                        selectedBg === opt.key
+                                                            ? "bg-[#1cb0f6] border-[#1cb0f6] text-white shadow-[0_0_50px_rgba(28,176,246,0.3)] scale-105"
+                                                            : "bg-white/5 border-white/5 hover:bg-white/[0.08] hover:border-white/10"
                                                     )}
                                                 >
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-xl shrink-0">
-                                                            {opt.icon}
-                                                        </span>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-bold text-white text-sm">
-                                                                    {opt.label}
-                                                                </span>
-                                                                {selected && (
-                                                                    <Check className="w-4 h-4 text-cyan-400 shrink-0" />
-                                                                )}
-                                                            </div>
-                                                            {opt.description && (
-                                                                <p className="text-xs text-slate-500 mt-0.5">
-                                                                    {
-                                                                        opt.description
-                                                                    }
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                                    <span className="text-7xl group-hover:scale-110 transition-transform">{opt.icon}</span>
+                                                    <span className="font-black text-2xl tracking-tighter uppercase">{opt.label}</span>
+                                                    <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 </button>
-                                            );
-                                        })}
+                                            ))}
+                                        </div>
                                     </motion.div>
                                 )}
 
-                                {/* Step 3: Result */}
-                                {step === "result" && resultScore !== null && (
+                                {step === "sectors" && (
                                     <motion.div
-                                        key="result"
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        className="flex flex-col items-center py-8 gap-5"
+                                        key="step-sectors"
+                                        initial={{ opacity: 0, y: 40 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="space-y-16"
                                     >
-                                        {/* Animated score circle */}
-                                        <div className="relative w-36 h-36">
-                                            <svg
-                                                viewBox="0 0 120 120"
-                                                className="w-full h-full -rotate-90"
-                                            >
-                                                <circle
-                                                    cx="60"
-                                                    cy="60"
-                                                    r="52"
-                                                    fill="none"
-                                                    stroke="rgba(255,255,255,0.06)"
-                                                    strokeWidth="8"
-                                                />
-                                                <motion.circle
-                                                    cx="60"
-                                                    cy="60"
-                                                    r="52"
-                                                    fill="none"
-                                                    stroke={`url(#scoreGrad)`}
-                                                    strokeWidth="8"
-                                                    strokeLinecap="round"
-                                                    strokeDasharray={`${2 * Math.PI * 52
-                                                        }`}
-                                                    initial={{
-                                                        strokeDashoffset:
-                                                            2 * Math.PI * 52,
-                                                    }}
-                                                    animate={{
-                                                        strokeDashoffset:
-                                                            2 *
-                                                            Math.PI *
-                                                            52 *
-                                                            (1 -
-                                                                resultScore /
-                                                                100),
-                                                    }}
-                                                    transition={{
-                                                        duration: 1.2,
-                                                        ease: "easeOut",
-                                                        delay: 0.3,
-                                                    }}
-                                                />
-                                                <defs>
-                                                    <linearGradient
-                                                        id="scoreGrad"
-                                                        x1="0"
-                                                        y1="0"
-                                                        x2="1"
-                                                        y2="1"
+                                        <div className="text-center space-y-4">
+                                            <Target className="w-16 h-16 text-[#1cb0f6] mx-auto opacity-40" />
+                                            <h2 className="text-7xl font-black tracking-tighter leading-none">Clearance Focus</h2>
+                                            <p className="text-gray-500 font-black tracking-widest text-xs uppercase">Sector targeting required (Multiple selection enabled).</p>
+                                        </div>
+
+                                        <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
+                                            {sectorOptions.map((opt) => {
+                                                const isActive = selectedSectors.has(opt.key);
+                                                return (
+                                                    <button
+                                                        key={opt.key}
+                                                        onClick={() => toggleSector(opt.key)}
+                                                        className={cn(
+                                                            "px-10 py-6 rounded-full border-2 font-black text-xl transition-all flex items-center gap-4",
+                                                            isActive
+                                                                ? "bg-[#1cb0f6] border-[#1cb0f6] text-white shadow-[0_0_30px_rgba(28,176,246,0.2)]"
+                                                                : "bg-white/5 border-white/5 text-gray-500 hover:text-white"
+                                                        )}
                                                     >
-                                                        <stop
-                                                            offset="0%"
-                                                            stopColor={
-                                                                getScoreLabel(
-                                                                    resultScore
-                                                                ).color
-                                                            }
-                                                        />
-                                                        <stop
-                                                            offset="100%"
-                                                            stopColor="#00D4FF"
-                                                        />
-                                                    </linearGradient>
-                                                </defs>
-                                            </svg>
-                                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                                <motion.span
-                                                    initial={{ opacity: 0 }}
-                                                    animate={{ opacity: 1 }}
-                                                    transition={{ delay: 0.5 }}
-                                                    className="text-3xl font-black text-white"
-                                                    style={{
-                                                        fontFamily:
-                                                            "Orbitron, sans-serif",
-                                                    }}
-                                                >
-                                                    {resultScore}
-                                                </motion.span>
-                                                <span className="text-[10px] text-slate-400 uppercase tracking-widest">
-                                                    分數
-                                                </span>
+                                                        <span className="text-3xl">{opt.icon}</span>
+                                                        {opt.label}
+                                                        {isActive && <Check className="w-6 h-6 ml-2" />}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {step === "calibration" && finalScore !== null && (
+                                    <motion.div
+                                        key="step-calibration"
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        className="text-center space-y-16 py-12"
+                                    >
+                                        <div className="space-y-4">
+                                            <h2 className="text-8xl font-black tracking-tighter bg-gradient-to-b from-white to-gray-600 bg-clip-text text-transparent">Calibration Hit</h2>
+                                            <p className="text-[#1cb0f6] font-black tracking-[0.6em] text-xs uppercase">Operative index verified</p>
+                                        </div>
+
+                                        <div className="inline-block p-20 rounded-[80px] border-2 border-dashed border-white/10 bg-white/5 relative">
+                                            <div className="absolute inset-0 bg-[#1cb0f6]/5 blur-[120px]" />
+                                            <div className="text-[12rem] font-black tracking-tighter leading-none relative z-10" style={{ color: getRank(finalScore).color }}>
+                                                {finalScore}
+                                            </div>
+                                            <div className="text-4xl font-black tracking-widest uppercase mt-4 text-white relative z-10 flex items-center justify-center gap-4">
+                                                {getRank(finalScore).label} <Sparkles className="w-10 h-10" />
                                             </div>
                                         </div>
 
-                                        {/* Tier badge */}
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: 0.6 }}
-                                            className="flex items-center gap-2 px-4 py-2 rounded-full border"
-                                            style={{
-                                                borderColor: `${getScoreLabel(resultScore).color}44`,
-                                                background: `${getScoreLabel(resultScore).color}15`,
-                                            }}
-                                        >
-                                            <Sparkles
-                                                className="w-4 h-4"
-                                                style={{
-                                                    color: getScoreLabel(
-                                                        resultScore
-                                                    ).color,
-                                                }}
-                                            />
-                                            <span
-                                                className="text-sm font-bold"
-                                                style={{
-                                                    color: getScoreLabel(
-                                                        resultScore
-                                                    ).color,
-                                                }}
-                                            >
-                                                推薦難度：
-                                                {
-                                                    getScoreLabel(resultScore)
-                                                        .label
-                                                }
-                                            </span>
-                                        </motion.div>
-
-                                        <motion.p
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ delay: 0.8 }}
-                                            className="text-sm text-slate-400 text-center max-w-xs leading-relaxed"
-                                        >
-                                            系統將根據你的分數，優先推薦
-                                            <span
-                                                className="font-bold"
-                                                style={{
-                                                    color: getScoreLabel(
-                                                        resultScore
-                                                    ).color,
-                                                }}
-                                            >
-                                                {" "}
-                                                Tier{" "}
-                                                {
-                                                    getScoreLabel(resultScore)
-                                                        .tier
-                                                }{" "}
-                                            </span>
-                                            難度的新聞文章給你閱讀
-                                        </motion.p>
+                                        <p className="max-w-md mx-auto text-xl text-gray-500 font-medium leading-relaxed">
+                                            Global Mission Radar has been calibrated to Tier {getRank(finalScore).tier}. You are ready for deployment.
+                                        </p>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
                         )}
                     </div>
+                </div>
 
-                    {/* Footer */}
-                    {!loading && !error && (
-                        <div className="sticky bottom-0 px-6 py-4 border-t border-white/5 bg-inherit flex items-center justify-between gap-3">
-                            {step === "background" && (
+                {/* Simplified Sticky Actions */}
+                {!loading && !error && (step === "sectors" || step === "calibration") && (
+                    <div className="fixed bottom-0 left-0 right-0 p-12 flex justify-center bg-gradient-to-t from-[#02040a] via-[#02040a] to-transparent relative z-20">
+                        <div className="w-full max-w-5xl flex gap-6">
+                            {step === "sectors" && (
                                 <>
-                                    <div />
+                                    <button onClick={() => setStep("backgrounds")} className="px-12 py-8 bg-white/5 hover:bg-white/10 rounded-[32px] font-black tracking-widest text-sm uppercase transition-all">Back</button>
                                     <button
-                                        onClick={() => setStep("interests")}
-                                        disabled={!selectedBg}
-                                        className={cn(
-                                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer",
-                                            selectedBg
-                                                ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white hover:shadow-lg hover:shadow-purple-500/20"
-                                                : "bg-white/5 text-slate-500 cursor-not-allowed"
-                                        )}
+                                        disabled={selectedSectors.size === 0 || submitting}
+                                        onClick={runCalibration}
+                                        className="flex-1 bg-[#58cc02] hover:bg-[#46a302] border-b-[12px] border-[#3d8c11] active:border-b-0 active:translate-y-2 rounded-[40px] font-black text-3xl tracking-widest flex items-center justify-center gap-6 transition-all shadow-[0_0_60px_rgba(88,204,2,0.3)] disabled:opacity-30 disabled:pointer-events-none"
                                     >
-                                        下一步
-                                        <ChevronRight className="w-4 h-4" />
+                                        {submitting ? <Loader2 className="w-10 h-10 animate-spin" /> : <>RUN CALIBRATION <ArrowRight /></>}
                                     </button>
                                 </>
                             )}
-
-                            {step === "interests" && (
-                                <>
-                                    <button
-                                        onClick={() => setStep("background")}
-                                        className="flex items-center gap-1 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
-                                    >
-                                        <ChevronLeft className="w-4 h-4" />
-                                        返回
-                                    </button>
-                                    <button
-                                        onClick={handleSubmit}
-                                        disabled={
-                                            selectedInterests.size === 0 ||
-                                            submitting
-                                        }
-                                        className={cn(
-                                            "flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all cursor-pointer",
-                                            selectedInterests.size > 0 &&
-                                                !submitting
-                                                ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white hover:shadow-lg hover:shadow-purple-500/20"
-                                                : "bg-white/5 text-slate-500 cursor-not-allowed"
-                                        )}
-                                    >
-                                        {submitting ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                計算中…
-                                            </>
-                                        ) : (
-                                            <>
-                                                確認
-                                                <Check className="w-4 h-4" />
-                                            </>
-                                        )}
-                                    </button>
-                                </>
-                            )}
-
-                            {step === "result" && (
-                                <>
-                                    <div />
-                                    <motion.button
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{ delay: 1.0 }}
-                                        onClick={handleFinish}
-                                        className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-purple-600 to-cyan-500 text-white hover:shadow-lg hover:shadow-purple-500/20 transition-all cursor-pointer"
-                                    >
-                                        開始閱讀
-                                        <Sparkles className="w-4 h-4" />
-                                    </motion.button>
-                                </>
+                            {step === "calibration" && (
+                                <button
+                                    onClick={() => onComplete(finalScore!)}
+                                    className="w-full py-10 bg-[#1cb0f6] hover:bg-[#1498d5] border-b-[16px] border-[#1899d6] active:border-b-0 active:translate-y-3 rounded-[56px] font-black text-5xl tracking-tighter flex items-center justify-center gap-6 transition-all shadow-[0_0_100px_rgba(28,176,246,0.4)]"
+                                >
+                                    ENTER INTELLIGENCE HUB
+                                </button>
                             )}
                         </div>
-                    )}
-                </motion.div>
+                    </div>
+                )}
             </motion.div>
         </AnimatePresence>
     );
