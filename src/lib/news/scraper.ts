@@ -84,9 +84,16 @@ async function fetchTier2(url: string, browser: Browser): Promise<string | null>
     try {
         page = await browser.newPage();
         await page.setUserAgent(USER_AGENT);
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+        // Hide webdriver flag to reduce bot detection
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, "webdriver", { get: () => false });
+        });
+        await page.goto(url, { waitUntil: "networkidle2", timeout: 45000 });
         const html = await page.content();
-        return await extractWithReadability(html, url);
+        // Try full extraction first, then meta fallback
+        const text = await extractWithReadability(html, url);
+        if (text) return text;
+        return extractMetaContent(html);
     } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         console.warn(`Tier2 Puppeteer failed for ${url}: ${msg}`);
@@ -107,14 +114,14 @@ export async function fetchFullText(url: string, browser?: Browser): Promise<str
     const t1 = await fetchTier1(url);
     if (t1.text) return t1.text;
 
-    // Tier 2 — Puppeteer (only if browser instance provided and tier 1 suggests it's needed)
-    if (browser && t1.needsBrowser) {
+    // Tier 2 — Puppeteer (if browser available and plain fetch didn't extract text)
+    if (browser) {
         console.log(`Tier2 Puppeteer for ${url}`);
         const t2 = await fetchTier2(url, browser);
         if (t2) return t2;
     }
 
-    // Tier 3 — meta tag fallback from whatever HTML we got
+    // Tier 3 — meta tag fallback from whatever HTML we got in tier 1
     if (t1.html) {
         const meta = extractMetaContent(t1.html);
         if (meta) return meta;
