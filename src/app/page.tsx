@@ -27,32 +27,87 @@ const BackgroundGraphics = ({ colorPreset }: { colorPreset: number }) => {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
       <svg width="100%" height="100%" className="absolute inset-0">
-        <circle cx="15%" cy="15%" r="6" fill="white" opacity="0.3" />
-        <circle cx="85%" cy="25%" r="4" fill="white" opacity="0.2" />
-        <circle cx="20%" cy="75%" r="8" fill="white" opacity="0.15" />
-        <circle cx="80%" cy="85%" r="5" fill="white" opacity="0.4" />
-        <circle cx="50%" cy="50%" r="3" fill="white" opacity="0.5" />
-        <circle cx="10%" cy="90%" r="4" fill="white" opacity="0.6" />
+        {/* Kurzgesagt Starfield - crisp solid white dots */}
+        <circle cx="15%" cy="15%" r="3" fill="#ffffff" />
+        <circle cx="25%" cy="5%" r="1.5" fill="#ffffff" />
+        <circle cx="45%" cy="20%" r="4" fill="#ffffff" />
+        <circle cx="80%" cy="12%" r="2" fill="#ffffff" />
+        <circle cx="95%" cy="50%" r="3.5" fill="#ffffff" />
+        <circle cx="8%" cy="65%" r="2" fill="#ffffff" />
+        <circle cx="30%" cy="85%" r="4" fill="#ffffff" />
+        <circle cx="65%" cy="85%" r="2.5" fill="#ffffff" />
+        <circle cx="85%" cy="65%" r="3" fill="#ffffff" />
+        <circle cx="50%" cy="55%" r="1.5" fill="#ffffff" />
+        <circle cx="40%" cy="40%" r="3" fill="#ffffff" />
+        <circle cx="20%" cy="45%" r="2" fill="#ffffff" />
+        <circle cx="60%" cy="30%" r="2.5" fill="#ffffff" />
 
-        {colorPreset % 3 === 0 && (
-          <>
-            <circle cx="90%" cy="10%" r="150" fill="white" opacity="0.05" />
-            <path d="M-50,200 Q150,50 350,250 T700,150" fill="none" stroke="white" strokeWidth="30" opacity="0.05" />
-          </>
-        )}
-        {colorPreset % 3 === 1 && (
-          <>
-            <polygon points="100,20 200,150 0,150" fill="white" opacity="0.05" transform="translate(200, 50) rotate(25) scale(1.2)" />
-            <circle cx="5%" cy="85%" r="200" fill="white" opacity="0.03" />
-          </>
-        )}
-        {colorPreset % 3 === 2 && (
-          <>
-            <rect x="70%" y="30%" width="200" height="200" rx="40" fill="white" opacity="0.05" transform="rotate(15)" />
-            <circle cx="50%" cy="95%" r="250" fill="white" opacity="0.03" />
-          </>
-        )}
+        <path
+          d="M-50,200 Q150,50 350,250 T700,150"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="4"
+          strokeDasharray="10 20"
+          opacity="0.15"
+        />
       </svg>
+
+      <AnimatePresence>
+        <motion.div
+          key={colorPreset}
+          initial={{ opacity: 0, scale: 0.9, rotate: -5 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          exit={{ opacity: 0, scale: 1.1, rotate: 5 }}
+          transition={{ duration: 1.5, ease: "easeInOut" }}
+          className="absolute inset-0"
+        >
+          <svg width="100%" height="100%" className="absolute inset-0">
+            {colorPreset % 3 === 0 && (
+              <>
+                {/* Red Planet */}
+                <circle cx="10%" cy="20%" r="80" fill="#FF1E56" opacity="0.8" />
+                <circle cx="13%" cy="17%" r="35" fill="#FF4E78" opacity="0.9" />
+                <circle cx="5%" cy="25%" r="15" fill="#D90036" opacity="0.8" />
+              </>
+            )}
+            {colorPreset % 3 === 1 && (
+              <>
+                {/* Blue Planet */}
+                <circle cx="90%" cy="85%" r="140" fill="#00D4FF" opacity="0.8" />
+                <circle cx="93%" cy="80%" r="40" fill="#5CE1E6" opacity="0.9" />
+                <circle cx="85%" cy="90%" r="20" fill="#00B0D9" opacity="0.8" />
+                <circle
+                  cx="90%"
+                  cy="85%"
+                  r="170"
+                  fill="none"
+                  stroke="#FFFFFF"
+                  strokeWidth="4"
+                  strokeDasharray="12 18"
+                  opacity="0.3"
+                />
+              </>
+            )}
+            {colorPreset % 3 === 2 && (
+              <>
+                {/* Yellow Ringed Planet */}
+                <circle cx="80%" cy="25%" r="100" fill="#FFB800" opacity="0.8" />
+                <circle cx="83%" cy="22%" r="25" fill="#FFD166" opacity="0.9" />
+                <ellipse
+                  cx="80%"
+                  cy="25%"
+                  rx="160"
+                  ry="40"
+                  fill="none"
+                  stroke="#FFD166"
+                  strokeWidth="12"
+                  opacity="0.8"
+                />
+              </>
+            )}
+          </svg>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
@@ -210,11 +265,18 @@ export default function WorldMapPage() {
 
   return (
     <div
-      className="min-h-screen w-full text-white font-sans overflow-x-hidden font-['Inter',sans-serif] transition-colors duration-700 ease-in-out relative flex flex-col pt-16 pb-32"
-      style={{ backgroundColor: isPlanetLocked ? '#1e293b' : bgColor }}
+      className="min-h-screen w-full text-white font-sans overflow-x-hidden font-['Inter',sans-serif] relative flex flex-col pt-16 pb-32 bg-[#090812]"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Seamless cosmic aura transition */}
+      <div
+        className="absolute inset-0 transition-colors duration-[1500ms] ease-in-out opacity-25 pointer-events-none mix-blend-screen"
+        style={{ backgroundColor: isPlanetLocked ? '#1e293b' : bgColor }}
+      />
+      {/* Deep space radial vignette */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#090812_90%)] pointer-events-none opacity-90" />
+
       <BackgroundGraphics colorPreset={viewIndex} />
 
       {/* Top Bar - Simplified Duolingo Style */}
@@ -223,14 +285,14 @@ export default function WorldMapPage() {
           {/* Level & XP Link to Lab */}
           <Link
             href="/lab"
-            className="flex flex-col gap-1.5 bg-[#ffc800] border-b-4 border-[#e5a900] px-4 py-2 rounded-2xl shadow-lg min-w-[120px] active:translate-y-1 active:border-b-0 transition-all group"
+            className="flex flex-col gap-1.5 bg-[#18102e]/60 backdrop-blur-md border-[3px] border-[#0c0817] px-4 py-2 rounded-[20px] shadow-lg min-w-[120px] active:translate-y-1 hover:bg-[#18102e]/80 transition-all"
           >
             <div className="flex items-center justify-center gap-1.5">
-              <span className="font-black text-white text-[11px] tracking-widest whitespace-nowrap uppercase">Level {level}</span>
+              <span className="font-black text-white/90 text-[11px] tracking-widest whitespace-nowrap uppercase">Level {level}</span>
             </div>
-            <div className="w-full h-1.5 bg-black/20 rounded-full overflow-hidden border border-white/5">
+            <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
               <div
-                className="h-full bg-white rounded-full transition-all duration-1000 ease-out"
+                className="h-full bg-[#05d9e8] rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_#05d9e8]"
                 style={{ width: `${levelProgress || 0}%` }}
               />
             </div>
@@ -306,27 +368,28 @@ export default function WorldMapPage() {
                 const xOffset = pattern[lIndex % pattern.length] * amplitude;
                 const isCurrent = isAvailable && !isCompleted && !isPlanetLocked;
 
-                let btnBg = "bg-[#e5e5e5] border-[#b3b3b3] text-[#afafaf]";
-                let iconColor = "text-[#afafaf]";
+                // 3D Sphere styling with Gray, Blue, Yellow color scheme
+                let btnBg = "bg-[#9ca3af] shadow-[inset_-8px_-10px_0_rgba(0,0,0,0.15),0_6px_0_rgba(0,0,0,0.15)] text-[#4b5563]";
+                let iconColor = "text-[#4b5563]";
                 let Icon = Star;
 
                 if (isPlanetLocked) {
-                  btnBg = "bg-white/20 border-white/10 text-white/40";
-                  iconColor = "text-white/40";
+                  btnBg = "bg-[#4b5563] shadow-[inset_-8px_-10px_0_rgba(0,0,0,0.25),0_6px_0_rgba(0,0,0,0.15)] text-[#1f2937]";
+                  iconColor = "text-[#1f2937]";
                   Icon = Lock;
                 } else if (isCompleted) {
-                  btnBg = "bg-[#ffc800] border-[#e5a900] text-white";
-                  iconColor = "text-white";
+                  btnBg = "bg-[#1cb0f6] shadow-[inset_-8px_-10px_0_rgba(0,0,0,0.2),0_6px_0_rgba(0,0,0,0.15)] text-[#ffffff]";
+                  iconColor = "text-[#ffffff]";
                   Icon = CheckCircle2;
                 } else if (isCurrent) {
-                  btnBg = "bg-[#1cb0f6] border-[#1899d6] text-white";
-                  iconColor = "text-white";
+                  btnBg = "bg-[#ffc800] shadow-[inset_-8px_-10px_0_rgba(0,0,0,0.15),0_6px_0_rgba(0,0,0,0.15)] text-[#5c4700]";
+                  iconColor = "text-[#5c4700]";
                   Icon = Star;
                 } else if (lvl.type === 'boss') {
                   Icon = Sword;
                   if (isAvailable && !isCompleted) {
-                    btnBg = "bg-[#ff4b4b] border-[#ea2b2b] text-white";
-                    iconColor = "text-white";
+                    btnBg = "bg-[#ffc800] shadow-[inset_-8px_-10px_0_rgba(0,0,0,0.15),0_6px_0_rgba(0,0,0,0.15)] text-[#5c4700]";
+                    iconColor = "text-[#5c4700]";
                   }
                 }
 
@@ -337,7 +400,7 @@ export default function WorldMapPage() {
                       whileTap={isAvailable && !isPlanetLocked ? { scale: 0.95 } : {}}
                       onClick={() => handleClickLevel(lvl, currentPlanetInfo, isAvailable && !isPlanetLocked)}
                       className={cn(
-                        "relative rounded-full w-[76px] h-[76px] border-b-[8px] flex items-center justify-center transition-all z-10 shadow-lg",
+                        "relative rounded-full w-[76px] h-[76px] flex items-center justify-center transition-all z-10",
                         btnBg,
                         (!isAvailable || isPlanetLocked) && "opacity-80 cursor-not-allowed",
                         isCurrent && "animate-bounce mt-2"
@@ -345,10 +408,9 @@ export default function WorldMapPage() {
                       style={{ left: `${xOffset}px` }}
                     >
                       {isCurrent && (
-                        <div className="absolute -top-12 bg-white text-[#1cb0f6] text-sm font-black px-4 py-2 rounded-2xl border-[3px] border-[#1cb0f6] shadow-md animate-pulse whitespace-nowrap">
+                        <div className="absolute -top-12 bg-[#ffc800] text-[#5c4700] text-sm font-black px-4 py-2 rounded-2xl shadow-[0_4px_0_rgba(0,0,0,0.15)] animate-pulse whitespace-nowrap">
                           START
-                          <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-[#1cb0f6]"></div>
-                          <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white"></div>
+                          <div className="absolute -bottom-[8px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-[#ffc800]"></div>
                         </div>
                       )}
                       <Icon className={cn("w-9 h-9", iconColor, isCompleted && "fill-current")} />
