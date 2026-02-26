@@ -69,7 +69,7 @@ No test runner is configured yet.
 ### Key Layers
 
 **`src/app/api/`** — Backend API routes. Handlers here (e.g., `src/app/api/user/route.ts` for profile, `src/app/api/planets/route.ts` which dynamically calculates levels) acts as our backend microservices ensuring clean separation from the UI.
-**`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS feeds and retains articles from yesterday + today, (2) sends all headlines to a ranker LLM (`google/gemini-2.5-flash`) which assigns 3 articles to each of 5 difficulty tiers (1–5) by returning exact titles, (3) sequentially sends each selected article's content to an examiner LLM (`minimax/minimax-m2.5`) to generate 3 multiple-choice questions per article. It acts as the backbone for the News capability.
+**`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS feeds and retains articles from yesterday + today, (2) sends all headlines to a ranker LLM (`google/gemini-2.5-flash`) which assigns 3 articles to each of 5 difficulty tiers (1–5) by returning exact titles, (3) **backfill step** — if fewer than 15 articles were selected (e.g. low-scan day), `backfillFromUnselected()` in `src/lib/news/ranker.ts` fills remaining tier slots with previously-unselected articles from the database, prioritising the most recent, (4) sequentially sends each selected article's content to an examiner LLM (`minimax/minimax-m2.5`) to generate 3 multiple-choice questions per article. It acts as the backbone for the News capability.
 
 **`src/lib/db.ts`** — PostgreSQL connection utility using the `postgres` JS library. It uses environment variables (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`) for configuration, which should be set in a `.env` file.
 

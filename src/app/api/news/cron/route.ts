@@ -3,7 +3,7 @@ import db from "@/lib/db";
 import { RSS_FEEDS_LIST } from "@/lib/news/constants";
 import { getDateRange } from "@/lib/news/utils";
 import { syncFeeds, fetchFeedArticles } from "@/lib/news/feeds";
-import { rankArticles } from "@/lib/news/ranker";
+import { rankArticles, backfillFromUnselected } from "@/lib/news/ranker";
 import { generateAndSaveQuestions } from "@/lib/news/examiner";
 import { backfillFullText } from "@/lib/news/scraper";
 
@@ -61,7 +61,13 @@ export async function GET() {
             return NextResponse.json({ message: "No new articles to rank.", run_id: scanRun.run_id.toString() });
         }
 
-        const selectedArticles = await rankArticles(recentArticles);
+        let selectedArticles = await rankArticles(recentArticles);
+
+        // STEP 3.5 — Backfill: if fewer than 15 articles selected, use unselected DB articles
+        if (selectedArticles.length < 15) {
+            console.log(`Only ${selectedArticles.length}/15 articles selected, attempting backfill...`);
+            selectedArticles = await backfillFromUnselected(selectedArticles);
+        }
 
         if (selectedArticles.length === 0) {
             await db.cron_scan_runs.update({
