@@ -68,12 +68,13 @@ export interface NewsItem {
     id: string;
     title: string;
     summary: string;
+    url: string;
     date: string;
     source: string;
+    tier: number;
     category: string;
     categoryColor: string;
     reward: number;
-    read: boolean;
     questions?: QuizQuestion[];
 }
 

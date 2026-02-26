@@ -18,6 +18,16 @@ curl http://localhost:3000/api/news/scan-logs
 curl http://localhost:3000/api/news/scan-logs?run_id=1
 ```
 
+## Get news selections for the frontend
+
+```bash
+# Latest cycle_date (used by /news page)
+curl http://localhost:3000/api/news/selections
+
+# Specific date
+curl http://localhost:3000/api/news/selections?date=2026-02-25
+```
+
 ## Test test-rss-feeds
 
 ```
@@ -64,7 +74,7 @@ No test runner is configured yet.
 - **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), database-backed persistence with `fetchUser` initialization.
 - **Backend:** Next.js API Routes (`src/app/api/...`) act as the controller layer, fetching/updating data in PostgreSQL using `Prisma` (`src/lib/db.ts`).
 - **Database:** Local PostgreSQL instance managed via `docker-compose.yml`. Schema defined in `db/schema.sql` and `prisma/schema.prisma`.
-- **Frontend Integration:** All main pages (World Map, Arena, Lab, Leaderboard, Quiz) now fetch real-time data from the backend APIs. User profile and progress are synced with the `players` and `player_progress` tables.
+- **Frontend Integration:** All main pages (World Map, Arena, Lab, Leaderboard, Quiz, News) now fetch real-time data from the backend APIs. User profile and progress are synced with the `players` and `player_progress` tables. The News page (`/news`) fetches from `/api/news/selections` which joins `news_selections → news_articles → rss_feeds + news_questions`. Article full_text is temporarily replaced by an embedded iframe using the article URL.
 
 ### Key Layers
 
