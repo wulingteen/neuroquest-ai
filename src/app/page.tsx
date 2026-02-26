@@ -2,8 +2,8 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
-import { type Planet, type Level } from "@/lib/gameData";
-import { Lock, Star, Zap, CheckCircle2, Sword, ChevronDown, ChevronUp, Building } from "lucide-react";
+import { type Planet, type Level } from "@/types/game";
+import { Lock, Star, CheckCircle2, Sword, ChevronDown, ChevronUp, Building } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import DailyRewardModal from "@/components/DailyRewardModal";
@@ -57,7 +57,7 @@ const BackgroundGraphics = ({ colorPreset }: { colorPreset: number }) => {
 };
 
 export default function WorldMapPage() {
-  const { level, xp, streak, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, setCurrentLevel, currentLevel, levelProgress } = useGameStore();
+  const { level, completedLevels, checkDailyLogin, showDailyReward, setCurrentPlanet, setCurrentLevel, currentLevel, levelProgress } = useGameStore();
 
   const [showLevelModal, setShowLevelModal] = useState(false);
   const [selectedPlanetForModal, setSelectedPlanetForModal] = useState<Planet | null>(null);
@@ -67,7 +67,7 @@ export default function WorldMapPage() {
 
   const [viewIndex, setViewIndex] = useState(-1);
   const initialized = useRef(false);
-
+  const touchStartY = useRef(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -95,15 +95,15 @@ export default function WorldMapPage() {
     checkDailyLogin();
   }, [checkDailyLogin]);
 
-  const sortedPlanets = useMemo(() => [...planets], [planets]);
+  const orderedPlanets = useMemo(() => [...planets], [planets]);
 
   // Pre-compute unlocks
   const { planetLockedState, levelAvailability } = useMemo(() => {
     const planetLockedState = new Map<string, boolean>();
-    const levelAvailability = new Map<string, { isAvailable: boolean, isCompleted: boolean }>();
+    const levelAvailability = new Map<string | number, { isAvailable: boolean, isCompleted: boolean }>();
     let isPreviousLevelCompleted = true;
 
-    sortedPlanets.forEach((p, pIndex) => {
+    orderedPlanets.forEach((p, pIndex) => {
       const pLevels = levels.filter(l => l.planetId === p.id).sort((a, b) => a.number - b.number);
       planetLockedState.set(p.id, pIndex > 0 ? !isPreviousLevelCompleted : false);
 
@@ -116,21 +116,21 @@ export default function WorldMapPage() {
     });
 
     return { planetLockedState, levelAvailability };
-  }, [sortedPlanets, levels, completedLevels]);
+  }, [orderedPlanets, levels, completedLevels]);
 
   // Init view index
   useEffect(() => {
-    if (!loading && !initialized.current && sortedPlanets.length > 0 && completedLevels !== undefined) {
+    if (!loading && !initialized.current && orderedPlanets.length > 0 && completedLevels !== undefined) {
       let activeIdx = 0;
-      for (let i = 0; i < sortedPlanets.length; i++) {
-        if (!planetLockedState.get(sortedPlanets[i].id)) {
+      for (let i = 0; i < orderedPlanets.length; i++) {
+        if (!planetLockedState.get(orderedPlanets[i].id)) {
           activeIdx = i;
         }
       }
       setViewIndex(activeIdx);
       initialized.current = true;
     }
-  }, [loading, sortedPlanets, planetLockedState, completedLevels]);
+  }, [loading, orderedPlanets, planetLockedState, completedLevels]);
 
   if (loading || viewIndex === -1) {
     return (
@@ -140,7 +140,7 @@ export default function WorldMapPage() {
     );
   }
 
-  const currentPlanetInfo = sortedPlanets[viewIndex];
+  const currentPlanetInfo = orderedPlanets[viewIndex];
   const planetLevels = levels.filter(l => l.planetId === currentPlanetInfo.id).sort((a, b) => a.number - b.number);
   const isPlanetLocked = planetLockedState.get(currentPlanetInfo.id);
   const bgColor = PLANET_COLORS[viewIndex % PLANET_COLORS.length];
@@ -154,7 +154,7 @@ export default function WorldMapPage() {
   };
 
   const handleNextPlanet = () => {
-    if (viewIndex < sortedPlanets.length - 1) setViewIndex(v => v + 1);
+    if (viewIndex < orderedPlanets.length - 1) setViewIndex(v => v + 1);
   };
 
   const handlePrevPlanet = () => {
@@ -162,13 +162,12 @@ export default function WorldMapPage() {
   };
 
   // Swipe handling
-  let touchStartY = 0;
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY = e.touches[0].clientY;
+    touchStartY.current = e.touches[0].clientY;
   };
   const handleTouchEnd = (e: React.TouchEvent) => {
     const touchEndY = e.changedTouches[0].clientY;
-    const diff = touchStartY - touchEndY;
+    const diff = touchStartY.current - touchEndY;
     if (diff > 80) handleNextPlanet(); // swipe up to go forward down map
     else if (diff < -80) handlePrevPlanet(); // swipe down to go back up map
   };
@@ -294,7 +293,7 @@ export default function WorldMapPage() {
         </div>
 
         {/* Down arrow for next planet */}
-        {viewIndex < sortedPlanets.length - 1 && (
+        {viewIndex < orderedPlanets.length - 1 && (
           <div className="flex justify-center mt-6 mb-6">
             <button
               onClick={handleNextPlanet}

@@ -1,7 +1,7 @@
 // Shared types between Backend and Frontend to enforce data consistency
 
 export interface Planet {
-    id: string;
+    id: string; // Map to 'rollup' in DB
     name: string;
     subtitle: string;
     icon: string;
@@ -12,13 +12,13 @@ export interface Planet {
     y: number;
     totalLevels: number;
     description: string;
-    locked: boolean;
     requiredPlanet?: string;
+    locked?: boolean;
 }
 
 export interface Level {
-    id: string;
-    planetId: string;
+    id: string | number;
+    planetId: string; // Map to 'rollup' in DB
     number: number;
     title: string;
     type: "teach" | "quiz" | "boss";
@@ -36,6 +36,24 @@ export interface Achievement {
     xpReward: number;
 }
 
+export interface ArenaChallenge {
+    id: string;
+    title: string;
+    description: string;
+    difficulty: "easy" | "medium" | "hard";
+    examples: string[];
+}
+
+export interface QuizQuestion {
+    id: number;
+    number: number;
+    question: string;
+    options: string[];
+    correct: number;
+    explanation: string;
+    xp: number;
+}
+
 export interface LeaderboardEntry {
     rank: number;
     name: string;
@@ -44,4 +62,31 @@ export interface LeaderboardEntry {
     xp: number;
     streak: number;
     guild?: string;
+}
+
+export interface NewsItem {
+    id: string;
+    title: string;
+    summary: string;
+    date: string;
+    source: string;
+    category: string;
+    categoryColor: string;
+    reward: number;
+    read: boolean;
+    questions?: QuizQuestion[];
+}
+
+export interface UserProfile {
+    player_id: string;
+    playerName: string;
+    playerAvatar: string;
+    xp: number;
+    streak: number;
+    level: number;
+    lastLogin: string | Date | null;
+    lastRewardClaimed: string | Date | null;
+    showDailyReward: boolean;
+    completedLevels: number[];
+    unlockedAchievements: string[];
 }

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { Newspaper, Zap, ChevronRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { type NewsItem } from "@/types/game";
 
-const NEWS_ITEMS = [
+const NEWS_ITEMS: NewsItem[] = [
     {
         id: "n1",
         title: "GPT-5 正式發布：多模態理解大幅提升，程式生成準確率達 92%",
@@ -15,12 +16,18 @@ const NEWS_ITEMS = [
         category: "模型更新",
         categoryColor: "#8B5CF6",
         reward: 75,
-        quiz: {
-            q: "GPT-5 在哪個任務上有特別顯著的突破？",
-            options: ["圖像生成", "語音識別", "程式生成與數學推理", "影片剪輯"],
-            correct: 2,
-        },
         read: false,
+        questions: [
+            {
+                id: 1,
+                number: 1,
+                question: "GPT-5 在哪個任務上有特別顯著的突破？",
+                options: ["圖像生成", "語音識別", "程式生成與數學推理", "影片剪輯"],
+                correct: 2,
+                explanation: "GPT-5 在程式生成和數學推理方面展現了 92% 的準確率。",
+                xp: 75
+            }
+        ]
     },
     {
         id: "n2",
@@ -31,12 +38,18 @@ const NEWS_ITEMS = [
         category: "研究突破",
         categoryColor: "#10B981",
         reward: 100,
-        quiz: {
-            q: "Gemini Ultra 2.0 的主要突破是什麼？",
-            options: ["最快的推理速度", "在科學基準超越人類專家", "最低廉的使用成本", "最大的訓練資料集"],
-            correct: 1,
-        },
         read: false,
+        questions: [
+            {
+                id: 2,
+                number: 1,
+                question: "Gemini Ultra 2.0 的主要突破是什麼？",
+                options: ["最快的推理速度", "在科學基準超越人類專家", "最低廉的使用成本", "最大的訓練資料集"],
+                correct: 1,
+                explanation: "Gemini Ultra 2.0 是首個在多個科學領域基準測試中全面超越人類專家的模型。",
+                xp: 100
+            }
+        ]
     },
     {
         id: "n3",
@@ -47,12 +60,18 @@ const NEWS_ITEMS = [
         category: "AI Agent",
         categoryColor: "#F97316",
         reward: 90,
-        quiz: {
-            q: "Claude 3.7 的 Extended Thinking 模式有什麼特點？",
-            options: ["更快的回應速度", "更便宜的價格", "支援超長時間自主工作", "支援圖像生成"],
-            correct: 2,
-        },
         read: false,
+        questions: [
+            {
+                id: 3,
+                number: 1,
+                question: "Claude 3.7 的 Extended Thinking 模式有什麼特點？",
+                options: ["更快的回應速度", "更便宜的價格", "支援超長時間自主工作", "支援圖像生成"],
+                correct: 2,
+                explanation: "Extended Thinking 模式允許模型持續處理複雜任務超過 24 小時。",
+                xp: 90
+            }
+        ]
     },
     {
         id: "n4",
@@ -63,12 +82,18 @@ const NEWS_ITEMS = [
         category: "AI 倫理法規",
         categoryColor: "#EF4444",
         reward: 80,
-        quiz: {
-            q: "歐盟 AI Act 對高風險 AI 系統的要求是什麼？",
-            options: ["禁止使用", "強制公開原始碼", "需要第三方審計", "必須使用歐洲伺服器"],
-            correct: 2,
-        },
         read: false,
+        questions: [
+            {
+                id: 4,
+                number: 1,
+                question: "歐盟 AI Act 對高風險 AI 系統的要求是什麼？",
+                options: ["禁止使用", "強制公開原始碼", "需要第三方審計", "必須使用歐洲伺服器"],
+                correct: 2,
+                explanation: "法案規定高風險 AI 系統在部署前必須通過第三方強制審計。",
+                xp: 80
+            }
+        ]
     },
 ];
 
@@ -91,10 +116,10 @@ export default function NewsPage() {
     const handleQuizAnswer = (newsId: string, idx: number) => {
         if (quizAnswered) return;
         const news = NEWS_ITEMS.find((n) => n.id === newsId);
-        if (!news) return;
+        if (!news || !news.questions?.[0]) return;
         setQuizAnswer(idx);
         setQuizAnswered(true);
-        if (idx === news.quiz.correct) {
+        if (idx === news.questions[0].correct) {
             addXP(news.reward);
         }
     };
@@ -133,6 +158,7 @@ export default function NewsPage() {
                 {NEWS_ITEMS.map((news, idx) => {
                     const isRead = readItems.has(news.id);
                     const isActive = activeQuiz === news.id;
+                    const question = news.questions?.[0];
 
                     return (
                         <motion.div
@@ -186,53 +212,55 @@ export default function NewsPage() {
                                 ) : (
                                     /* Quiz */
                                     <AnimatePresence>
-                                        <motion.div
-                                            initial={{ opacity: 0, height: 0 }}
-                                            animate={{ opacity: 1, height: "auto" }}
-                                            className="border-t border-white/10 pt-4 mt-2"
-                                        >
-                                            <p className="text-sm font-bold text-white mb-3">
-                                                🧠 知識小測驗
-                                            </p>
-                                            <p className="text-sm text-slate-300 mb-3">{news.quiz.q}</p>
-                                            <div className="space-y-2">
-                                                {news.quiz.options.map((opt, i) => {
-                                                    const isCorrect = i === news.quiz.correct;
-                                                    const isSelected = i === quizAnswer;
-                                                    return (
-                                                        <button
-                                                            key={i}
-                                                            onClick={() => handleQuizAnswer(news.id, i)}
-                                                            className={cn(
-                                                                "w-full text-left px-4 py-2.5 rounded-xl border text-sm transition-all",
-                                                                !quizAnswered && "hover:border-purple-500/30 hover:bg-purple-500/5 border-white/10 glass-card",
-                                                                quizAnswered && isCorrect && "border-green-500/50 bg-green-500/10 text-green-300",
-                                                                quizAnswered && isSelected && !isCorrect && "border-red-500/50 bg-red-500/10 text-red-300",
-                                                                quizAnswered && !isSelected && !isCorrect && "opacity-30 border-white/5"
-                                                            )}
-                                                        >
-                                                            {opt}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                            {quizAnswered && (
-                                                <motion.p
-                                                    initial={{ opacity: 0, y: 5 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    className={cn(
-                                                        "mt-3 text-sm font-bold flex items-center gap-2",
-                                                        quizAnswer === news.quiz.correct ? "text-green-400" : "text-slate-400"
-                                                    )}
-                                                >
-                                                    {quizAnswer === news.quiz.correct ? (
-                                                        <><Zap className="w-4 h-4 text-yellow-400" />答對了！+{news.reward} XP 入帳 🎉</>
-                                                    ) : (
-                                                        "答錯了，但沒關係！繼續閱讀其他新聞 💪"
-                                                    )}
-                                                </motion.p>
-                                            )}
-                                        </motion.div>
+                                        {question && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: "auto" }}
+                                                className="border-t border-white/10 pt-4 mt-2"
+                                            >
+                                                <p className="text-sm font-bold text-white mb-3">
+                                                    🧠 知識小測驗
+                                                </p>
+                                                <p className="text-sm text-slate-300 mb-3">{question.question}</p>
+                                                <div className="space-y-2">
+                                                    {question.options.map((opt, i) => {
+                                                        const isCorrect = i === question.correct;
+                                                        const isSelected = i === quizAnswer;
+                                                        return (
+                                                            <button
+                                                                key={i}
+                                                                onClick={() => handleQuizAnswer(news.id, i)}
+                                                                className={cn(
+                                                                    "w-full text-left px-4 py-2.5 rounded-xl border text-sm transition-all",
+                                                                    !quizAnswered && "hover:border-purple-500/30 hover:bg-purple-500/5 border-white/10 glass-card",
+                                                                    quizAnswered && isCorrect && "border-green-500/50 bg-green-500/10 text-green-300",
+                                                                    quizAnswered && isSelected && !isCorrect && "border-red-500/50 bg-red-500/10 text-red-300",
+                                                                    quizAnswered && !isSelected && !isCorrect && "opacity-30 border-white/5"
+                                                                )}
+                                                            >
+                                                                {opt}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                                {quizAnswered && (
+                                                    <motion.p
+                                                        initial={{ opacity: 0, y: 5 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        className={cn(
+                                                            "mt-3 text-sm font-bold flex items-center gap-2",
+                                                            quizAnswer === question.correct ? "text-green-400" : "text-slate-400"
+                                                        )}
+                                                    >
+                                                        {quizAnswer === question.correct ? (
+                                                            <><Zap className="w-4 h-4 text-yellow-400" />答對了！+{news.reward} XP 入帳 🎉</>
+                                                        ) : (
+                                                            "答錯了，但沒關係！繼續閱讀其他新聞 💪"
+                                                        )}
+                                                    </motion.p>
+                                                )}
+                                            </motion.div>
+                                        )}
                                     </AnimatePresence>
                                 )}
                             </div>

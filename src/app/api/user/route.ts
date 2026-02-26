@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { calculateStreak } from '@/lib/playerUtils';
 
 export async function GET() {
     try {
@@ -11,49 +12,16 @@ export async function GET() {
             return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
         }
 
-        const now = new Date();
-        const lastLoginAt = player.last_login_at;
-        const lastClaimedAt = player.last_reward_claimed_at;
+        const { currentStreak, showDailyReward, shouldUpdateLogin } = calculateStreak(player);
 
-        let currentStreak = player.streak_days;
-        let showDailyReward = false;
-
-        if (!lastLoginAt) {
-            currentStreak = 1;
-            showDailyReward = true;
+        if (shouldUpdateLogin) {
             await prisma.players.update({
                 where: { username: 'YouPlayer' },
-                data: { last_login_at: now, streak_days: 1 }
-            });
-        } else {
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const lastLoginDay = new Date(lastLoginAt.getFullYear(), lastLoginAt.getMonth(), lastLoginAt.getDate());
-            const diffDays = Math.floor((today.getTime() - lastLoginDay.getTime()) / (1000 * 60 * 60 * 24));
-
-            if (diffDays === 1) {
-                currentStreak += 1;
-                showDailyReward = true;
-                await prisma.players.update({
-                    where: { username: 'YouPlayer' },
-                    data: { last_login_at: now, streak_days: currentStreak }
-                });
-            } else if (diffDays > 1) {
-                currentStreak = 1;
-                showDailyReward = true;
-                await prisma.players.update({
-                    where: { username: 'YouPlayer' },
-                    data: { last_login_at: now, streak_days: 1 }
-                });
-            } else if (diffDays === 0) {
-                if (!lastClaimedAt) {
-                    showDailyReward = true;
-                } else {
-                    const lastClaimDay = new Date(lastClaimedAt.getFullYear(), lastClaimedAt.getMonth(), lastClaimedAt.getDate());
-                    if (lastClaimDay.getTime() < today.getTime()) {
-                        showDailyReward = true;
-                    }
+                data: {
+                    last_login_at: new Date(),
+                    streak_days: currentStreak
                 }
-            }
+            });
         }
 
         const progress = await prisma.player_progress.findMany({

@@ -75,7 +75,7 @@ ${textForLLM.substring(0, 10000)}`;
 
             try {
                 questionsParsed = parseLLMJson(qContent);
-            } catch (_err) {
+            } catch {
                 console.warn("Failed to parse questions for article", article.article_id.toString());
                 continue;
             }
@@ -95,8 +95,8 @@ ${textForLLM.substring(0, 10000)}`;
                     },
                 });
             }
-        } catch (_e) {
-            const selErrMsg = _e instanceof Error ? _e.message : String(_e);
+        } catch (e) {
+            const selErrMsg = e instanceof Error ? e.message : String(e);
             console.warn(
                 `Error processing article "${sel.title}" (tier ${sel.tier}):`,
                 selErrMsg

@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
-import { type QuizQuestion } from "@/lib/gameData";
+import { type QuizQuestion } from "@/types/game";
 import { CheckCircle2, XCircle, Zap, ChevronRight, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -93,9 +93,6 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
         }
     };
 
-
-    const finalScore = score;
-    const finalXP = totalXP;
 
     return (
         <AnimatePresence>
@@ -272,28 +269,28 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                 className="text-center py-6"
                             >
                                 <div className="text-7xl mb-4">
-                                    {finalScore === questions.length ? "🏆" : finalScore >= questions.length / 2 ? "⭐" : "💪"}
+                                    {score === questions.length ? "🏆" : score >= questions.length / 2 ? "⭐" : "💪"}
                                 </div>
                                 <h3 className="text-2xl font-black text-white mb-2">
-                                    {finalScore === questions.length ? "完美！滿分！" : "挑戰完成！"}
+                                    {score === questions.length ? "完美！滿分！" : "挑戰完成！"}
                                 </h3>
                                 <p className="text-slate-400 mb-6">
-                                    答對 {finalScore} / {questions.length} 題
+                                    答對 {score} / {questions.length} 題
                                 </p>
 
                                 <div className="glass-card p-6 mb-8 w-full max-w-sm mx-auto">
                                     <div className="flex justify-around">
                                         <div className="text-center flex flex-col items-center">
-                                            <p className="text-3xl font-black text-purple-400">{finalScore}/{questions.length}</p>
+                                            <p className="text-3xl font-black text-purple-400">{score}/{questions.length}</p>
                                             <p className="text-xs text-slate-500 mt-1">正確題數</p>
                                         </div>
                                         <div className="text-center flex flex-col items-center">
-                                            <p className="text-3xl font-black text-yellow-400">+{finalXP}</p>
+                                            <p className="text-3xl font-black text-yellow-400">+{totalXP}</p>
                                             <p className="text-xs text-slate-500 mt-1">獲得 XP</p>
                                         </div>
                                         <div className="text-center flex flex-col items-center">
                                             <p className="text-3xl font-black text-cyan-400">
-                                                {Math.round((finalScore / questions.length) * 100)}%
+                                                {Math.round((score / questions.length) * 100)}%
                                             </p>
                                             <p className="text-xs text-slate-500 mt-1">準確率</p>
                                         </div>

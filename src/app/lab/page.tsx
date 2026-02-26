@@ -1,7 +1,8 @@
 "use client";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { getLevelTitle, type Achievement } from "@/lib/gameData";
+import { getLevelTitle } from "@/lib/gameData";
+import { type Achievement } from "@/types/game";
 import { useGameStore } from "@/store/gameStore";
 import { cn } from "@/lib/utils";
 import { Star, Zap, Flame, Trophy, ArrowLeft } from "lucide-react";

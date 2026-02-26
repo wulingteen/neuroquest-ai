@@ -17,7 +17,7 @@ export async function fetchFullText(url: string): Promise<string | null> {
         const textContent = mainText.trim() ? mainText : $("body").text();
         const cleaned = textContent.replace(/\s+/g, " ").trim();
         return cleaned || null;
-    } catch (_e) {
+    } catch {
         console.warn("Could not fetch full text for", url);
         return null;
     }

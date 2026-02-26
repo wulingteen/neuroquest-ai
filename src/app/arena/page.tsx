@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
-import { type ArenaChallenge } from "@/lib/gameData";
+import { type ArenaChallenge } from "@/types/game";
 import { useGameStore } from "@/store/gameStore";
 import { Swords, Send, ThumbsUp, Star, Zap, Bot, Users, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";

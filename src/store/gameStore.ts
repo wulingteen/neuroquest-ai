@@ -16,7 +16,7 @@ interface GameState {
 
     // UI state
     currentPlanet: string | null;
-    currentLevel: string | null;
+    currentLevel: string | number | null;
     showDailyReward: boolean;
 
     // Computed
@@ -30,7 +30,7 @@ interface GameState {
     completeLevel: (levelId: string | number) => Promise<void>;
     unlockAchievement: (achievementId: string) => void;
     setCurrentPlanet: (planetId: string | null) => void;
-    setCurrentLevel: (levelId: string | null) => void;
+    setCurrentLevel: (levelId: string | number | null) => void;
     checkDailyLogin: () => void;
     dismissDailyReward: () => void;
 }
