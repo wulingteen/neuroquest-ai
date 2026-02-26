@@ -34,6 +34,21 @@ curl http://localhost:3000/api/news/selections?date=2026-02-25
 node scripts/test-rss-feeds.mjs
 ```
 
+## Player Profile Setup
+
+```bash
+# Check if player has a profile
+curl http://localhost:3000/api/user/profile
+
+# Get all background/interest options
+curl http://localhost:3000/api/user/profile/options
+
+# Create/update player profile (computes difficulty_score 0-100)
+curl -X POST http://localhost:3000/api/user/profile \
+  -H 'Content-Type: application/json' \
+  -d '{"background":"developer","interests":["prompt_eng","llm_fundamentals"]}'
+```
+
 ## Database Schema Overview
 
 The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a concise overview of each table and its columns:
@@ -50,6 +65,8 @@ The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a co
 - **news_selections**: AI-chosen articles split into 5 difficulty tiers (1–5, 3 articles each) per cycle date.
 - **news_questions**: AI-generated reading comprehension questions based on `news_selections`.
 - **player_news_answers**: Tracks player answers for news questions for rewards.
+- **profile_options**: `option_id` (BIGINT PK), `category` (TEXT: 'background'|'interest'), `option_key` (TEXT), `label` (TEXT), `icon` (TEXT), `description` (TEXT), `score` (INTEGER 0-100), `sort_order` (INTEGER). Seed data: 7 backgrounds + 10 interests.
+- **player_profiles**: `player_id` (UUID PK FK→players), `background` (TEXT), `interests` (TEXT[]), `difficulty_score` (INTEGER 0-100), `created_at`, `updated_at`. Score = 40% background_score + 60% avg(interest_scores).
 - **cron_scan_runs**: `run_id` (BIGINT PK), `status` (TEXT: running/completed/failed), `total_feeds`, `feeds_ok`, `feeds_failed`, `articles_found`, `articles_selected`, `error_message`, `started_at`, `finished_at`. One row per cron invocation.
 - **cron_scan_feed_logs**: `log_id` (BIGINT PK), `run_id` (FK), `feed_id` (FK), `feed_url`, `feed_name`, `status` (success/failed/skipped), `articles_found`, `error_message`, `duration_ms`, `created_at`. One row per feed per run.
 
@@ -92,7 +109,7 @@ No test runner is configured yet.
 - `/leaderboard` — Global leaderboard with guilds
 - `/news` — GenAI news with comprehension quizzes for XP
 
-**`src/components/`** — Shared components: `NavBar` (player stats, XP bar, mobile bottom nav), `StarField` (canvas-based 200-star animated background), `DailyRewardModal`, `LevelModal` (quiz with confetti on completion).
+**`src/components/`** — Shared components: `NavBar` (player stats, XP bar, mobile bottom nav), `StarField` (canvas-based 200-star animated background), `DailyRewardModal`, `LevelModal` (quiz with confetti on completion), `ProfileSetupModal` (two-step background/interests wizard with animated score reveal, shown on first `/news` visit).
 
 ### Design System
 

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type NewsItem, type QuizQuestion } from "@/types/game";
+import ProfileSetupModal from "@/components/ProfileSetupModal";
 
 // Tier labels for filter pills
 const TIER_META: Record<
@@ -45,7 +46,32 @@ export default function NewsPage() {
     const [expandedArticle, setExpandedArticle] = useState<string | null>(null);
     const [filterTier, setFilterTier] = useState<number | null>(null);
 
-    // Fetch news from API
+    // Profile setup state
+    const [showProfileSetup, setShowProfileSetup] = useState(false);
+    const [profileChecked, setProfileChecked] = useState(false);
+    const [difficultyScore, setDifficultyScore] = useState<number | null>(null);
+
+    // Check if user has a profile
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await fetch("/api/user/profile");
+                const data = await res.json();
+                if (data.success && data.exists) {
+                    setDifficultyScore(data.profile.difficulty_score);
+                    setProfileChecked(true);
+                } else {
+                    // No profile — show setup modal
+                    setShowProfileSetup(true);
+                }
+            } catch {
+                // On error, skip the modal and just load news
+                setProfileChecked(true);
+            }
+        })();
+    }, []);
+
+    // Fetch news from API (only after profile is checked)
     const fetchNews = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -64,8 +90,10 @@ export default function NewsPage() {
     }, []);
 
     useEffect(() => {
-        fetchNews();
-    }, [fetchNews]);
+        if (profileChecked) {
+            fetchNews();
+        }
+    }, [profileChecked, fetchNews]);
 
     const filteredItems = filterTier
         ? newsItems.filter((n) => n.tier === filterTier)
@@ -101,6 +129,39 @@ export default function NewsPage() {
     const toggleArticle = (id: string) => {
         setExpandedArticle((prev) => (prev === id ? null : id));
     };
+
+    // Handle profile setup completion
+    const handleProfileComplete = (score: number) => {
+        setDifficultyScore(score);
+        setShowProfileSetup(false);
+        setProfileChecked(true);
+    };
+
+    // Show profile setup modal (blocks everything else)
+    if (showProfileSetup) {
+        return (
+            <ProfileSetupModal
+                open={showProfileSetup}
+                onComplete={handleProfileComplete}
+            />
+        );
+    }
+
+    // Still checking profile
+    if (!profileChecked) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center gap-4"
+                >
+                    <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
+                    <p className="text-slate-400 text-sm">檢查個人設定…</p>
+                </motion.div>
+            </div>
+        );
+    }
 
     // Loading state
     if (loading) {

@@ -116,14 +116,27 @@ CREATE TABLE IF NOT EXISTS player_progress (
     PRIMARY KEY (player_id, level_id)
 );
 
--- 8. Player Profiles Table
+-- 8. Profile Options Table
+-- Predefined background and interest choices with difficulty scores
+CREATE TABLE IF NOT EXISTS profile_options (
+    option_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    category TEXT NOT NULL CHECK (category IN ('background', 'interest')),
+    option_key TEXT NOT NULL,
+    label TEXT NOT NULL,
+    icon TEXT NOT NULL DEFAULT '📌',
+    description TEXT,
+    score INTEGER NOT NULL CHECK (score BETWEEN 0 AND 100),
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (category, option_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_profile_options_category ON profile_options(category);
+
+-- 9. Player Profiles Table
 -- Stores background, interests, and computed difficulty score
 CREATE TABLE IF NOT EXISTS player_profiles (
     player_id UUID PRIMARY KEY REFERENCES players(player_id) ON DELETE CASCADE,
-    background TEXT NOT NULL CHECK (background IN (
-        'student', 'developer', 'designer', 'manager',
-        'researcher', 'educator', 'other'
-    )),
+    background TEXT NOT NULL,
     interests TEXT[] NOT NULL DEFAULT '{}',
     difficulty_score INTEGER NOT NULL DEFAULT 50 CHECK (difficulty_score BETWEEN 0 AND 100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -352,6 +365,42 @@ ON CONFLICT (challenge_id) DO UPDATE SET
     description = EXCLUDED.description,
     difficulty = EXCLUDED.difficulty,
     example_prompts = EXCLUDED.example_prompts;
+
+-- Profile Options (Background + Interest choices with scores)
+INSERT INTO profile_options (category, option_key, label, icon, description, score, sort_order) VALUES
+-- Backgrounds (score reflects AI/tech familiarity)
+('background', 'student',     '學生',       '🎓', '正在就學中，對 AI 感興趣的學生', 20, 1),
+('background', 'creative',    '創作者',     '🎨', '設計師、藝術家或內容創作者', 30, 2),
+('background', 'business',    '商業人士',   '💼', '管理者、行銷或業務專業人士', 35, 3),
+('background', 'educator',    '教育工作者', '📚', '老師、講師或教育從業者', 45, 4),
+('background', 'developer',   '開發者',     '💻', '軟體工程師或開發人員', 70, 5),
+('background', 'data_pro',    '資料專家',   '📊', '資料科學家、分析師或 ML 工程師', 80, 6),
+('background', 'researcher',  'AI 研究者',  '🔬', '從事 AI/ML 相關學術研究', 90, 7)
+ON CONFLICT (category, option_key) DO UPDATE SET
+    label = EXCLUDED.label,
+    icon = EXCLUDED.icon,
+    description = EXCLUDED.description,
+    score = EXCLUDED.score,
+    sort_order = EXCLUDED.sort_order;
+
+INSERT INTO profile_options (category, option_key, label, icon, description, score, sort_order) VALUES
+-- Interests (score reflects topic complexity)
+('interest', 'ai_art',           'AI 繪圖與創作',     '🖼️', '用 AI 生成圖片、音樂和影片', 15, 1),
+('interest', 'chatbot',          '聊天機器人應用',     '💬', 'ChatGPT、Claude 等對話 AI 的日常應用', 20, 2),
+('interest', 'ai_productivity',  'AI 生產力工具',      '⚡', 'AI 寫作助手、程式輔助、自動化工具', 30, 3),
+('interest', 'ai_ethics',        'AI 倫理與社會影響',  '⚖️', 'AI 偏見、隱私、版權等議題', 35, 4),
+('interest', 'prompt_eng',       'Prompt 工程',        '✍️', '如何撰寫有效的 AI 提示詞', 40, 5),
+('interest', 'ai_business',      'AI 商業應用',        '📈', '企業導入 AI、商業策略與產業趨勢', 45, 6),
+('interest', 'computer_vision',  '電腦視覺',           '👁️', '圖像辨識、影像分析與多模態 AI', 60, 7),
+('interest', 'nlp',              '自然語言處理',       '📝', '文字理解、翻譯與語意分析', 65, 8),
+('interest', 'llm_fundamentals', 'LLM 原理與架構',    '🧠', 'Transformer、微調、Token 等核心概念', 80, 9),
+('interest', 'ai_agents',        'AI Agents 與自動化', '🤖', '自主 AI 系統、Tool Use、ReAct 等前沿技術', 90, 10)
+ON CONFLICT (category, option_key) DO UPDATE SET
+    label = EXCLUDED.label,
+    icon = EXCLUDED.icon,
+    description = EXCLUDED.description,
+    score = EXCLUDED.score,
+    sort_order = EXCLUDED.sort_order;
 
 -- Dummy Players and Progress for Testing
 INSERT INTO players (username, xp, streak_days, guild_name) VALUES

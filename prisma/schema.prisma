@@ -102,6 +102,21 @@ model players {
   @@index([xp(sort: Desc)], map: "idx_players_xp")
 }
 
+/// Profile option choices for background and interests with scores
+model profile_options {
+  option_id   BigInt  @id @default(autoincrement())
+  category    String
+  option_key  String
+  label       String
+  icon        String  @default("📌")
+  description String?
+  score       Int
+  sort_order  Int     @default(0)
+
+  @@unique([category, option_key])
+  @@index([category], map: "idx_profile_options_category")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model player_profiles {
   player_id        String   @id @db.Uuid

@@ -91,3 +91,19 @@ export interface UserProfile {
     completedLevels: number[];
     unlockedAchievements: string[];
 }
+
+export interface ProfileOption {
+    key: string;
+    label: string;
+    icon: string;
+    description: string | null;
+    score: number;
+}
+
+export interface PlayerProfile {
+    background: string;
+    interests: string[];
+    difficulty_score: number;
+    created_at?: string;
+}
+
