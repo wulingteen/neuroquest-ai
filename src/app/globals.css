@@ -7,8 +7,8 @@
   --color-neon-green: #10B981;
   --color-deep-space: #0D0D2B;
   --color-space-mid: #0F0F3A;
-  --color-space-card: rgba(255,255,255,0.04);
-  --color-space-border: rgba(255,255,255,0.08);
+  --color-space-card: rgba(255, 255, 255, 0.04);
+  --color-space-border: rgba(255, 255, 255, 0.08);
 
   --font-orbitron: "Orbitron", sans-serif;
   --font-inter: "Inter", sans-serif;
@@ -33,9 +33,11 @@
   ::-webkit-scrollbar {
     width: 6px;
   }
+
   ::-webkit-scrollbar-track {
     background: #0D0D2B;
   }
+
   ::-webkit-scrollbar-thumb {
     background: rgba(139, 92, 246, 0.5);
     border-radius: 3px;
@@ -43,6 +45,7 @@
 }
 
 @layer utilities {
+
   /* Glassmorphism cards */
   .glass-card {
     background: rgba(255, 255, 255, 0.04);
@@ -168,7 +171,7 @@
 
   /* XP bar */
   .xp-bar-track {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 999px;
     overflow: hidden;
     height: 8px;
@@ -191,15 +194,41 @@
   }
 
   /* Rarity colors */
-  .rarity-common { color: #9CA3AF; border-color: #9CA3AF; }
-  .rarity-rare { color: #3B82F6; border-color: #3B82F6; }
-  .rarity-epic { color: #8B5CF6; border-color: #8B5CF6; }
-  .rarity-legendary { color: #FFB800; border-color: #FFB800; }
+  .rarity-common {
+    color: #9CA3AF;
+    border-color: #9CA3AF;
+  }
 
-  .rarity-bg-common { background: rgba(156,163,175,0.1); }
-  .rarity-bg-rare { background: rgba(59,130,246,0.1); }
-  .rarity-bg-epic { background: rgba(139,92,246,0.1); }
-  .rarity-bg-legendary { background: rgba(255,184,0,0.1); }
+  .rarity-rare {
+    color: #3B82F6;
+    border-color: #3B82F6;
+  }
+
+  .rarity-epic {
+    color: #8B5CF6;
+    border-color: #8B5CF6;
+  }
+
+  .rarity-legendary {
+    color: #FFB800;
+    border-color: #FFB800;
+  }
+
+  .rarity-bg-common {
+    background: rgba(156, 163, 175, 0.1);
+  }
+
+  .rarity-bg-rare {
+    background: rgba(59, 130, 246, 0.1);
+  }
+
+  .rarity-bg-epic {
+    background: rgba(139, 92, 246, 0.1);
+  }
+
+  .rarity-bg-legendary {
+    background: rgba(255, 184, 0, 0.1);
+  }
 
   /* Planet pulse animation */
   .planet-pulse {
@@ -211,48 +240,99 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.03) 2px,
-      rgba(0, 0, 0, 0.03) 4px
-    );
+    background: repeating-linear-gradient(0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px);
     pointer-events: none;
     border-radius: inherit;
   }
 }
 
 @keyframes twinkle {
-  0%, 100% { opacity: 0.2; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.5); }
+
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
 }
 
 @keyframes planet-pulse {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.05); filter: brightness(1.2); }
+
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
 }
 
 @keyframes glow-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 @keyframes slide-in-up {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes neon-flicker {
-  0%, 95%, 100% { opacity: 1; }
-  96% { opacity: 0.8; }
-  97% { opacity: 1; }
-  98% { opacity: 0.6; }
+
+  0%,
+  95%,
+  100% {
+    opacity: 1;
+  }
+
+  96% {
+    opacity: 0.8;
+  }
+
+  97% {
+    opacity: 1;
+  }
+
+  98% {
+    opacity: 0.6;
+  }
 }
 
 .animate-float {

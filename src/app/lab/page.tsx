@@ -39,12 +39,8 @@ export default function LabPage() {
 
     return (
         <div className="min-h-screen px-4 py-6 max-w-5xl mx-auto">
-            {/* Header / Back Button */}
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex">
-                <Link href="/" className="bg-white/15 backdrop-blur-xl border border-white/10 p-2 sm:p-2.5 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-white/20 shadow-md">
-                    <ArrowLeft className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                </Link>
-            </motion.div>
+            {/* Spacer for consistent top spacing */}
+            <div className="h-6" />
 
             <div className="grid md:grid-cols-3 gap-5">
                 {/* Player card */}

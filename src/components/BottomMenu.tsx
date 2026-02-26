@@ -14,7 +14,8 @@ const NAV_ITEMS = [
 export default function BottomMenu() {
   const pathname = usePathname();
 
-  if (pathname === "/lab") return null;
+  // Hide on certain pages if needed
+  // if (pathname === "/lab") return null;
 
   return (
     <div className={cn(

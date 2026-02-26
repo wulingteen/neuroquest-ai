@@ -48,7 +48,7 @@ type Phase = 'hub' | 'read' | 'quiz' | 'completed';
 
 export default function NewsPage() {
     const router = useRouter();
-    const { xp, level, levelProgress, addXP } = useGameStore();
+    const { xp, level, levelProgress, addXP, streak } = useGameStore();
     const [news, setNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -172,26 +172,30 @@ export default function NewsPage() {
         <div className="min-h-screen w-full relative text-white font-['Inter',sans-serif] flex flex-col pt-24 pb-32 transition-colors duration-700 ease-in-out" style={{ backgroundColor: "#1cb0f6" }}>
             <BackgroundGraphics />
 
-            {/* Top Bar - Recycled from Home Page for Consistency */}
-            <div className="fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between pointer-events-none">
-                <div className="flex items-center gap-3 bg-black/30 p-2 pr-4 rounded-full shadow-sm min-w-[180px] max-w-[220px] backdrop-blur-md pointer-events-auto">
-                    <Link href="/" className="bg-white/15 backdrop-blur-xl border border-white/10 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-white/20 shadow-md flex-shrink-0">
-                        <ArrowLeft className="w-5 h-5 text-white" />
+            {/* Top Bar - Consistent Simplified Style */}
+            <div className="fixed top-0 left-0 right-0 z-40 px-4 pt-4 pb-2 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    {/* Level & XP Link to Lab */}
+                    <Link
+                        href="/lab"
+                        className="flex flex-col gap-1.5 bg-[#ffc800] border-b-4 border-[#e5a900] px-4 py-2 rounded-2xl shadow-lg min-w-[120px] active:translate-y-1 active:border-b-0 transition-all font-sans"
+                    >
+                        <div className="flex items-center justify-center">
+                            <span className="font-black text-white text-[11px] tracking-widest whitespace-nowrap uppercase">Level {level}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-black/20 rounded-full overflow-hidden border border-white/5">
+                            <div
+                                className="h-full bg-white rounded-full transition-all duration-1000 ease-out"
+                                style={{ width: `${levelProgress || 0}%` }}
+                            />
+                        </div>
                     </Link>
-                    <div className="flex flex-col flex-1 w-full gap-1">
-                        <div className="flex justify-between items-center text-[10px] sm:text-xs font-bold px-1">
-                            <span className="text-[#cccccc] font-bold tracking-wide">Lv. {level}</span>
-                        </div>
-                        <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden border border-white/5">
-                            <div className="h-full bg-gradient-to-r from-[#999999] to-[#ffc800] rounded-full transition-all duration-800" style={{ width: `${levelProgress || 0}%` }} />
-                        </div>
-                    </div>
                 </div>
 
                 {/* Status Badge */}
                 <div className="pointer-events-auto bg-black/30 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-2">
                     <div className="w-2 h-2 bg-[#58cc02] rounded-full animate-pulse" />
-                    <span className="text-[10px] font-black tracking-widest uppercase text-[#cccccc]">Intelligence Hub</span>
+                    <span className="text-[10px] font-black tracking-widest uppercase text-[#cccccc]">Intel Hub</span>
                 </div>
             </div>
 
