@@ -291,36 +291,51 @@ export default function NewsPage() {
         <div className="min-h-screen w-full relative text-white font-['Inter',sans-serif] flex flex-col pt-24 pb-32 transition-colors duration-700 ease-in-out bg-[#110a24]">
             <BackgroundGraphics />
 
-            {/* Top Bar - Consistent Simplified Style */}
-            <div className="fixed top-0 left-0 right-0 z-40 px-4 pt-4 pb-2 flex items-center justify-between pointer-events-none">
-                <div className="flex items-center gap-2 pointer-events-auto">
-                    {/* Level & XP Link to Lab */}
-                    <Link
-                        href="/lab"
-                        className="flex flex-col gap-1.5 bg-[#18102e]/60 backdrop-blur-md border-[3px] border-[#0c0817] px-4 py-2 rounded-[20px] shadow-lg min-w-[120px] hover:bg-[#18102e]/80 active:translate-y-1 transition-all font-sans"
-                    >
-                        <div className="flex items-center justify-center">
-                            <span className="font-black text-white/90 text-[11px] tracking-widest whitespace-nowrap uppercase">
-                                Level {level}
+            {(() => {
+                const remainingXP = news.reduce((acc, item) => {
+                    return acc + (completedIds.has(item.id) ? 0 : item.reward);
+                }, 0);
+                const isFullyAcquired = remainingXP === 0 && news.length > 0;
+
+                return (
+                    <div className="fixed top-0 left-0 right-0 z-40 px-4 pt-4 pb-2 flex items-center justify-between pointer-events-none text-white">
+                        <div className="flex items-center gap-2 pointer-events-auto">
+                            {/* Level & XP Link to Lab */}
+                            <Link
+                                href="/lab"
+                                className="flex flex-col gap-1.5 bg-[#18102e]/60 backdrop-blur-md border-[3px] border-[#0c0817] px-4 py-2 rounded-[20px] shadow-lg min-w-[120px] hover:bg-[#18102e]/80 active:translate-y-1 transition-all font-sans"
+                            >
+                                <div className="flex items-center justify-center">
+                                    <span className="font-black text-white/90 text-[11px] tracking-widest whitespace-nowrap uppercase">
+                                        Level {level}
+                                    </span>
+                                </div>
+                                <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                                    <div
+                                        className="h-full bg-[#05d9e8] rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_#05d9e8]"
+                                        style={{ width: `${levelProgress || 0}%` }}
+                                    />
+                                </div>
+                            </Link>
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="pointer-events-auto bg-[#18102e] border-[3px] border-[#0c0817] px-4 py-2 rounded-[20px] shadow-lg flex items-center gap-2 min-w-[140px] justify-center">
+                            <div
+                                className={cn(
+                                    "w-3 h-3 rounded-full animate-pulse transition-colors duration-500",
+                                    isFullyAcquired
+                                        ? "bg-[#05d9e8] shadow-[0_0_8px_#05d9e8]"
+                                        : "bg-[#FF1E56] shadow-[0_0_8px_#FF1E56]",
+                                )}
+                            />
+                            <span className="text-[11px] font-black tracking-widest uppercase text-white/80">
+                                {isFullyAcquired ? "SECURED" : `${remainingXP} XP LEFT`}
                             </span>
                         </div>
-                        <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden border border-white/5">
-                            <div
-                                className="h-full bg-[#05d9e8] rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_#05d9e8]"
-                                style={{ width: `${levelProgress || 0}%` }}
-                            />
-                        </div>
-                    </Link>
-                </div>
-
-                {/* Status Badge */}
-                <div className="pointer-events-auto bg-[#18102e] border-[3px] border-[#0c0817] px-4 py-2 rounded-[20px] shadow-lg flex items-center gap-2">
-                    <div className="w-3 h-3 bg-[#05d9e8] rounded-full animate-pulse shadow-[0_0_8px_#05d9e8]" />
-                    <span className="text-[11px] font-black tracking-widest uppercase text-white/80">
-                        Intel Hub
-                    </span>
-                </div>
-            </div>
+                    </div>
+                );
+            })()}
 
             <div className="max-w-xl mx-auto w-full px-6 flex-grow relative z-10 flex flex-col">
                 <AnimatePresence mode="wait">
