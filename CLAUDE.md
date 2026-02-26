@@ -93,18 +93,19 @@ No test runner is configured yet.
 ### Frontend-Backend Status
 - **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), database-backed persistence.
 - **Backend:** Next.js API Routes act as microservices. News system is powered by LLM ranking and generation.
-- **Frontend Integration:** All main pages fetch real-time data. The News page (`/news`) has been redesigned as an **Intelligence Hub** with a mission-based, single-task-at-a-time flow (English-only) to maximize focus.
+- **Frontend Integration:** All main pages fetch real-time data. The News page (`/news`) has been redesigned with a **Duolingo-style** approachable interface, focused on singlend-task-at-a-time flows and English-only content.
+- **News Entry Point:** The news page is now accessed via the **Flame button** in the bottom navigation menu (next to the Map button).
 - **Profile Integration:** The `ProfileSetupModal` handles operative calibration (background/interests) to set the `difficulty_score`.
 
 ### Key Layers
 
 **`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS, (2) ranks articles via Gemini, (3) generates questions via Minimax.
 
-**`src/app/news/page.tsx`** — Completely redesigned as a **Mission Command Center**:
-- **Hub View**: Operatives browse encrypted briefings.
-- **Briefing Phase**: Focus on a single summary/report.
-- **Assessment Phase**: One-question-at-a-time interface for zero distraction.
-- **Debriefing Phase**: XP and clearance verification.
+**`src/app/news/page.tsx`** — Completely redesigned as an **Approachable Learning Hub**:
+- **Hub View**: Large, friendly cards for daily stories.
+- **Reading Phase**: Clean, distraction-free summary briefing.
+- **Quiz Phase**: Duolingo-style one-question assessment with immediate feedback.
+- **Completion Phase**: Reward display and level-up progress.
 
 ### Design System
 

@@ -94,7 +94,7 @@ No test runner is configured yet.
 - **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), database-backed persistence.
 - **Backend:** Next.js API Routes act as microservices. News system is powered by LLM ranking and generation.
 - **Frontend Integration:** All main pages fetch real-time data. The News page (`/news`) has been redesigned with a **Duolingo-style** approachable interface, focused on singlend-task-at-a-time flows and English-only content.
-- **News Entry Point:** The news page is now accessed via a **Flame button** on the Map page (immediately below the level list), featuring a custom transition animation (planet rotation, spaceship flight).
+- **News Entry Point:** The news page is now accessed via the **Flame button** in the bottom navigation menu (next to the Map button).
 - **Profile Integration:** The `ProfileSetupModal` handles operative calibration (background/interests) to set the `difficulty_score`.
 
 ### Key Layers

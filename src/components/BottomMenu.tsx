@@ -1,11 +1,12 @@
 "use client";
-import { Map as MapIcon, Swords, Trophy, Newspaper } from "lucide-react";
+import { Map as MapIcon, Swords, Trophy, Flame } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/", label: "Map", icon: MapIcon },
+  { href: "/news", label: "News", icon: Flame },
   { href: "/arena", label: "Arena", icon: Swords },
   { href: "/leaderboard", label: "Ranking", icon: Trophy },
 ];
