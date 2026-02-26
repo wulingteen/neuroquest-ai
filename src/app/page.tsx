@@ -1,9 +1,9 @@
 "use client";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { type Planet, type Level } from "@/types/game";
-import { Lock, Star, CheckCircle2, Sword, ChevronDown, ChevronUp, Building, Rocket, Globe, Flame } from "lucide-react";
+import { Lock, Star, CheckCircle2, Sword, ChevronLeft, ChevronRight, Building, Rocket, Globe, Flame } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -69,8 +69,9 @@ export default function WorldMapPage() {
 
 
   const [viewIndex, setViewIndex] = useState(-1);
+  const [direction, setDirection] = useState(0);
   const initialized = useRef(false);
-  const touchStartY = useRef(0);
+  const touchStartX = useRef(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -157,24 +158,54 @@ export default function WorldMapPage() {
   };
 
   const handleNextPlanet = () => {
-    if (viewIndex < orderedPlanets.length - 1) setViewIndex(v => v + 1);
+    if (viewIndex < orderedPlanets.length - 1) {
+      setDirection(1);
+      setViewIndex(v => v + 1);
+    }
   };
 
   const handlePrevPlanet = () => {
-    if (viewIndex > 0) setViewIndex(v => v - 1);
+    if (viewIndex > 0) {
+      setDirection(-1);
+      setViewIndex(v => v - 1);
+    }
   };
 
 
 
   // Swipe handling
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
+    touchStartX.current = e.touches[0].clientX;
   };
   const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndY = e.changedTouches[0].clientY;
-    const diff = touchStartY.current - touchEndY;
-    if (diff > 80) handleNextPlanet(); // swipe up to go forward down map
-    else if (diff < -80) handlePrevPlanet(); // swipe down to go back up map
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX.current - touchEndX;
+    if (diff > 80) handleNextPlanet(); // swipe left to go forward
+    else if (diff < -80) handlePrevPlanet(); // swipe right to go back
+  };
+
+  const variants = {
+    enter: (direction: number) => {
+      return {
+        x: direction > 0 ? 1000 : -1000,
+        opacity: 0,
+        scale: 0.9,
+      };
+    },
+    center: {
+      zIndex: 1,
+      x: 0,
+      opacity: 1,
+      scale: 1,
+    },
+    exit: (direction: number) => {
+      return {
+        zIndex: 0,
+        x: direction < 0 ? 1000 : -1000,
+        opacity: 0,
+        scale: 0.9,
+      };
+    }
   };
 
   return (
@@ -209,112 +240,146 @@ export default function WorldMapPage() {
 
       {showDailyReward && <DailyRewardModal />}
 
-      <div className="max-w-md mx-auto w-full px-4 flex-1 flex flex-col relative z-20">
+      {/* Left arrow for previous planet */}
+      {viewIndex > 0 && (
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 z-30 hidden sm:block">
+          <button
+            onClick={handlePrevPlanet}
+            className="bg-white/20 hover:bg-white/30 p-3 rounded-full backdrop-blur-sm transition shadow-lg active:scale-95"
+          >
+            <ChevronLeft className="w-10 h-10 text-white drop-shadow-md" />
+          </button>
+        </div>
+      )}
 
-        {/* Top-left internal text */}
-        <div className="mt-6 mb-8">
-          <h2 className="text-4xl font-black tracking-widest uppercase drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
-            {currentPlanetInfo.name}
-          </h2>
-          <p className="font-bold opacity-90 text-lg drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
-            {currentPlanetInfo.subtitle}
-          </p>
-          {isPlanetLocked && (
-            <div className="mt-2 flex items-center gap-2 text-white/50 bg-black/20 self-start px-3 py-1 rounded-full w-max">
-              <Lock className="w-4 h-4" />
-              <span className="text-sm font-bold">LOCKED</span>
+      {/* Right arrow for next planet */}
+      {viewIndex < orderedPlanets.length - 1 && (
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 z-30 hidden sm:block">
+          <button
+            onClick={handleNextPlanet}
+            className="bg-white/20 hover:bg-white/30 p-3 rounded-full backdrop-blur-sm transition shadow-lg active:scale-95 animate-pulse"
+          >
+            <ChevronRight className="w-10 h-10 text-white drop-shadow-md" />
+          </button>
+        </div>
+      )}
+
+      <div className="max-w-md mx-auto w-full flex-1 flex flex-col relative z-20 overflow-visible">
+        <AnimatePresence initial={false} custom={direction} mode="wait">
+          <motion.div
+            key={viewIndex}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.2 },
+              scale: { duration: 0.4 },
+            }}
+            className="flex flex-col flex-1 px-4 h-full"
+          >
+            {/* Top-left internal text */}
+            <div className="mt-8 mb-4 text-center">
+              <h2 className="text-4xl font-black tracking-widest uppercase drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
+                {currentPlanetInfo.name}
+              </h2>
+              <p className="font-bold opacity-90 text-lg drop-shadow-[0_2px_2px_rgba(0,0,0,0.25)]">
+                {currentPlanetInfo.subtitle}
+              </p>
+              {isPlanetLocked && (
+                <div className="mt-2 flex justify-center text-white/50 bg-black/20 self-center px-3 py-1 rounded-full w-max mx-auto">
+                  <Lock className="w-4 h-4 mr-2" />
+                  <span className="text-sm font-bold">LOCKED</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Up arrow for previous planet */}
-        {viewIndex > 0 && (
-          <div className="flex justify-center mb-6">
-            <button
-              onClick={handlePrevPlanet}
-              className="bg-white/20 hover:bg-white/30 p-3 rounded-full backdrop-blur-sm transition shadow-lg active:scale-95"
-            >
-              <ChevronUp className="w-8 h-8 text-white drop-shadow-md" />
-            </button>
-          </div>
-        )}
+            {/* Path of Levels */}
+            <div className="flex flex-col items-center relative py-4 flex-1 justify-center">
+              {planetLevels.map((lvl, lIndex) => {
+                const { isAvailable, isCompleted } = levelAvailability.get(lvl.id) || { isAvailable: false, isCompleted: false };
 
-        {/* Path of Levels */}
-        <div className="flex flex-col items-center relative py-4 flex-1">
-          {planetLevels.map((lvl, lIndex) => {
-            const { isAvailable, isCompleted } = levelAvailability.get(lvl.id) || { isAvailable: false, isCompleted: false };
+                const amplitude = 80;
+                const pattern = [0, 0.7, 1, 0.7, 0, -0.7, -1, -0.7];
+                const xOffset = pattern[lIndex % pattern.length] * amplitude;
+                const isCurrent = isAvailable && !isCompleted && !isPlanetLocked;
 
-            const amplitude = 80;
-            const pattern = [0, 0.7, 1, 0.7, 0, -0.7, -1, -0.7];
-            const xOffset = pattern[lIndex % pattern.length] * amplitude;
-            const isCurrent = isAvailable && !isCompleted && !isPlanetLocked;
+                let btnBg = "bg-[#e5e5e5] border-[#b3b3b3] text-[#afafaf]";
+                let iconColor = "text-[#afafaf]";
+                let Icon = Star;
 
-            let btnBg = "bg-[#e5e5e5] border-[#b3b3b3] text-[#afafaf]";
-            let iconColor = "text-[#afafaf]";
-            let Icon = Star;
+                if (isPlanetLocked) {
+                  btnBg = "bg-white/20 border-white/10 text-white/40";
+                  iconColor = "text-white/40";
+                  Icon = Lock;
+                } else if (isCompleted) {
+                  btnBg = "bg-[#ffc800] border-[#e5a900] text-white";
+                  iconColor = "text-white";
+                  Icon = CheckCircle2;
+                } else if (isCurrent) {
+                  btnBg = "bg-[#1cb0f6] border-[#1899d6] text-white";
+                  iconColor = "text-white";
+                  Icon = Star;
+                } else if (lvl.type === 'boss') {
+                  Icon = Sword;
+                  if (isAvailable && !isCompleted) {
+                    btnBg = "bg-[#ff4b4b] border-[#ea2b2b] text-white";
+                    iconColor = "text-white";
+                  }
+                }
 
-            if (isPlanetLocked) {
-              btnBg = "bg-white/20 border-white/10 text-white/40";
-              iconColor = "text-white/40";
-              Icon = Lock;
-            } else if (isCompleted) {
-              btnBg = "bg-[#ffc800] border-[#e5a900] text-white";
-              iconColor = "text-white";
-              Icon = CheckCircle2;
-            } else if (isCurrent) {
-              btnBg = "bg-[#1cb0f6] border-[#1899d6] text-white";
-              iconColor = "text-white";
-              Icon = Star;
-            } else if (lvl.type === 'boss') {
-              Icon = Sword;
-              if (isAvailable && !isCompleted) {
-                btnBg = "bg-[#ff4b4b] border-[#ea2b2b] text-white";
-                iconColor = "text-white";
-              }
-            }
+                return (
+                  <div key={lvl.id} className="relative flex justify-center items-center w-full" style={{ height: "90px" }}>
+                    <motion.button
+                      whileHover={isAvailable && !isPlanetLocked ? { scale: 1.05 } : {}}
+                      whileTap={isAvailable && !isPlanetLocked ? { scale: 0.95 } : {}}
+                      onClick={() => handleClickLevel(lvl, currentPlanetInfo, isAvailable && !isPlanetLocked)}
+                      className={cn(
+                        "relative rounded-full w-[76px] h-[76px] border-b-[8px] flex items-center justify-center transition-all z-10 shadow-lg",
+                        btnBg,
+                        (!isAvailable || isPlanetLocked) && "opacity-80 cursor-not-allowed",
+                        isCurrent && "animate-bounce mt-2"
+                      )}
+                      style={{ left: `${xOffset}px` }}
+                    >
+                      {isCurrent && (
+                        <div className="absolute -top-12 bg-white text-[#1cb0f6] text-sm font-black px-4 py-2 rounded-2xl border-[3px] border-[#1cb0f6] shadow-md animate-pulse whitespace-nowrap">
+                          START
+                          <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-[#1cb0f6]"></div>
+                          <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white"></div>
+                        </div>
+                      )}
+                      <Icon className={cn("w-9 h-9", iconColor, isCompleted && "fill-current")} />
+                    </motion.button>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-            return (
-              <div key={lvl.id} className="relative flex justify-center items-center w-full" style={{ height: "90px" }}>
-                <motion.button
-                  whileHover={isAvailable && !isPlanetLocked ? { scale: 1.05 } : {}}
-                  whileTap={isAvailable && !isPlanetLocked ? { scale: 0.95 } : {}}
-                  onClick={() => handleClickLevel(lvl, currentPlanetInfo, isAvailable && !isPlanetLocked)}
-                  className={cn(
-                    "relative rounded-full w-[76px] h-[76px] border-b-[8px] flex items-center justify-center transition-all z-10 shadow-lg",
-                    btnBg,
-                    (!isAvailable || isPlanetLocked) && "opacity-80 cursor-not-allowed",
-                    isCurrent && "animate-bounce mt-2"
-                  )}
-                  style={{ left: `${xOffset}px` }}
-                >
-                  {isCurrent && (
-                    <div className="absolute -top-12 bg-white text-[#1cb0f6] text-sm font-black px-4 py-2 rounded-2xl border-[3px] border-[#1cb0f6] shadow-md animate-pulse whitespace-nowrap">
-                      START
-                      <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[10px] border-t-[#1cb0f6]"></div>
-                      <div className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-white"></div>
-                    </div>
-                  )}
-                  <Icon className={cn("w-9 h-9", iconColor, isCompleted && "fill-current")} />
-                </motion.button>
-              </div>
-            );
-          })}
+      {/* Mobile nav controls (visible only on small screens) */}
+      <div className="sm:hidden fixed bottom-6 left-0 right-0 z-30 flex justify-between px-6 pointer-events-none">
+        {viewIndex > 0 ? (
+          <button
+            onClick={handlePrevPlanet}
+            className="pointer-events-auto bg-black/30 hover:bg-black/40 p-3 rounded-full backdrop-blur-sm transition shadow-lg active:scale-95 border border-white/10"
+          >
+            <ChevronLeft className="w-8 h-8 text-white drop-shadow-md" />
+          </button>
+        ) : <div className="w-14" />}
 
-
-        </div>
-
-        {/* Down arrow for next planet */}
-        {viewIndex < orderedPlanets.length - 1 && (
-          <div className="flex justify-center mt-6 mb-6">
-            <button
-              onClick={handleNextPlanet}
-              className="bg-white/20 hover:bg-white/30 p-4 rounded-full backdrop-blur-sm transition shadow-lg active:scale-95 animate-bounce"
-            >
-              <ChevronDown className="w-10 h-10 text-white drop-shadow-md" />
-            </button>
-          </div>
-        )}
-
+        {viewIndex < orderedPlanets.length - 1 ? (
+          <button
+            onClick={handleNextPlanet}
+            className="pointer-events-auto bg-black/30 hover:bg-black/40 p-3 rounded-full backdrop-blur-sm transition shadow-lg active:scale-95 border border-white/10 animate-pulse"
+          >
+            <ChevronRight className="w-8 h-8 text-white drop-shadow-md" />
+          </button>
+        ) : <div className="w-14" />}
       </div>
 
       {showLevelModal && selectedPlanetForModal && (
@@ -326,7 +391,6 @@ export default function WorldMapPage() {
           rollup={selectedPlanetForModal.id}
         />
       )}
-
     </div>
   );
 }
