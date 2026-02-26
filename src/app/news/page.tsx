@@ -12,28 +12,43 @@ import {
     RefreshCw,
     ExternalLink,
     BookOpen,
-    Trophy
+    Trophy,
+    Building,
+    ArrowLeft
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { type NewsItem } from "@/types/game";
 import ProfileSetupModal from "@/components/ProfileSetupModal";
 
 /**
- * DUOLINGO STYLE NEWS PAGE
- * Clean, approachable, focused.
+ * CONSISTENT NASA BLUE / DUOLINGO STYLE NEWS PAGE
+ * Replicates the home page's background graphics and top bar.
  */
 
-const Background = () => (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-[#0a0f1a]">
-        <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(90deg,white_1px,transparent_1px),linear-gradient(180deg,white_1px,transparent_1px)] [background-size:100px_100px]" />
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#1cb0f6]/10 to-transparent" />
-    </div>
-);
+const BackgroundGraphics = () => {
+    return (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <svg width="100%" height="100%" className="absolute inset-0">
+                <circle cx="15%" cy="15%" r="6" fill="white" opacity="0.3" />
+                <circle cx="85%" cy="25%" r="4" fill="white" opacity="0.2" />
+                <circle cx="20%" cy="75%" r="8" fill="white" opacity="0.15" />
+                <circle cx="80%" cy="85%" r="5" fill="white" opacity="0.4" />
+                <circle cx="50%" cy="50%" r="3" fill="white" opacity="0.5" />
+                <circle cx="10%" cy="90%" r="4" fill="white" opacity="0.6" />
+                <circle cx="90%" cy="10%" r="150" fill="white" opacity="0.05" />
+                <path d="M-50,200 Q150,50 350,250 T700,150" fill="none" stroke="white" strokeWidth="30" opacity="0.05" />
+            </svg>
+        </div>
+    );
+};
 
 type Phase = 'hub' | 'read' | 'quiz' | 'completed';
 
 export default function NewsPage() {
-    const { addXP } = useGameStore();
+    const router = useRouter();
+    const { xp, level, levelProgress, addXP } = useGameStore();
     const [news, setNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -131,78 +146,107 @@ export default function NewsPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen relative flex flex-col items-center justify-center p-6 gap-6 bg-[#0a0f1a]">
-                <CircleDashed className="w-16 h-16 text-[#1cb0f6] animate-spin" />
-                <p className="text-[#1cb0f6] font-bold text-xl">Loading your stories...</p>
+            <div className="min-h-screen bg-[#1cb0f6] relative flex flex-col items-center justify-center p-6 gap-6">
+                <BackgroundGraphics />
+                <CircleDashed className="w-16 h-16 text-white animate-spin opacity-50" />
+                <p className="text-white font-black text-xl tracking-widest uppercase">Initializing Intelligence...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="min-h-screen relative flex flex-col items-center justify-center p-6 gap-6 bg-[#0a0f1a] text-center">
-                <RefreshCw className="w-16 h-16 text-red-500 mb-4" />
-                <h1 className="text-3xl font-bold text-white">Oops!</h1>
-                <p className="text-gray-400">{error}</p>
-                <button onClick={() => window.location.reload()} className="px-8 py-3 bg-[#1cb0f6] text-white font-bold rounded-2xl shadow-[0_5px_0_#1498d5] active:translate-y-1 active:shadow-none transition-all">
-                    Try Again
+            <div className="min-h-screen bg-[#ea2b2b] relative flex flex-col items-center justify-center p-6 gap-6 text-center">
+                <BackgroundGraphics />
+                <RefreshCw className="w-16 h-16 text-white mb-4" />
+                <h1 className="text-4xl font-black text-white uppercase">Link Failure</h1>
+                <p className="text-white/80 font-bold">{error}</p>
+                <button onClick={() => window.location.reload()} className="px-10 py-4 bg-white text-[#ea2b2b] font-black rounded-2xl shadow-[0_6px_0_#cccccc] active:translate-y-1 active:shadow-none transition-all uppercase">
+                    Reconnect
                 </button>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen relative text-white font-['Inter'] flex flex-col pt-20 pb-20">
-            <Background />
+        <div className="min-h-screen w-full relative text-white font-['Inter',sans-serif] flex flex-col pt-24 pb-32 transition-colors duration-700 ease-in-out" style={{ backgroundColor: "#1cb0f6" }}>
+            <BackgroundGraphics />
+
+            {/* Top Bar - Recycled from Home Page for Consistency */}
+            <div className="fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-3 bg-black/30 p-2 pr-4 rounded-full shadow-sm min-w-[180px] max-w-[220px] backdrop-blur-md pointer-events-auto">
+                    <Link href="/" className="bg-white/15 backdrop-blur-xl border border-white/10 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 hover:bg-white/20 shadow-md flex-shrink-0">
+                        <ArrowLeft className="w-5 h-5 text-white" />
+                    </Link>
+                    <div className="flex flex-col flex-1 w-full gap-1">
+                        <div className="flex justify-between items-center text-[10px] sm:text-xs font-bold px-1">
+                            <span className="text-[#cccccc] font-bold tracking-wide">Lv. {level}</span>
+                        </div>
+                        <div className="w-full h-2 bg-black/50 rounded-full overflow-hidden border border-white/5">
+                            <div className="h-full bg-gradient-to-r from-[#999999] to-[#ffc800] rounded-full transition-all duration-800" style={{ width: `${levelProgress || 0}%` }} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="pointer-events-auto bg-black/30 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-[#58cc02] rounded-full animate-pulse" />
+                    <span className="text-[10px] font-black tracking-widest uppercase text-[#cccccc]">Intelligence Hub</span>
+                </div>
+            </div>
 
             <div className="max-w-xl mx-auto w-full px-6 flex-grow relative z-10 flex flex-col">
                 <AnimatePresence mode="wait">
                     {phase === 'hub' && (
                         <motion.div
                             key="hub"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="space-y-8"
                         >
-                            <div className="text-center space-y-2 mb-12">
-                                <h1 className="text-4xl font-black text-white">Daily News</h1>
-                                <p className="text-gray-400 font-bold">Pick a story to start learning!</p>
+                            <div className="mb-10">
+                                <h1 className="text-4xl font-black text-white uppercase tracking-widest drop-shadow-lg">Daily Intel</h1>
+                                <p className="text-white/80 font-bold text-lg">Acquire new knowledge from the sector.</p>
                             </div>
 
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 {news.map((item, idx) => {
                                     const isDone = completedIds.has(item.id);
+                                    let btnBg = isDone ? "bg-white/10 border-white/5 opacity-60" : "bg-white/20 border-white/10 hover:bg-white/30";
+                                    let shadowColor = isDone ? "transparent" : "rgba(0,0,0,0.2)";
+
                                     return (
                                         <motion.button
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: idx * 0.1 }}
+                                            transition={{ delay: idx * 0.05 }}
                                             key={item.id}
                                             onClick={() => handleSelectNews(item)}
                                             className={cn(
-                                                "w-full text-left p-6 rounded-3xl border-2 transition-all flex items-center gap-6",
+                                                "w-full text-left p-6 rounded-[32px] border-b-8 transition-all flex items-center gap-6 relative overflow-hidden",
                                                 isDone
-                                                    ? "bg-[#111827]/40 border-white/5 opacity-60"
-                                                    : "bg-[#111827] border-white/10 hover:border-[#1cb0f6] hover:bg-[#111827]/80 shadow-[0_4px_0_rgba(255,255,255,0.05)]"
+                                                    ? "bg-black/20 border-black/40 text-white/40"
+                                                    : "bg-white/15 border-white/10 hover:bg-white/20 active:translate-y-1 active:border-b-4",
                                             )}
+                                            style={{ borderColor: isDone ? undefined : 'rgba(255,255,255,0.1)' }}
                                         >
                                             <div className={cn(
-                                                "w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl",
-                                                isDone ? "bg-gray-800" : "bg-[#1cb0f6]/20 text-[#1cb0f6]"
+                                                "w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 text-3xl shadow-inner",
+                                                isDone ? "bg-white/5" : "bg-[#1cb0f6] text-white"
                                             )}>
-                                                {isDone ? "✅" : "🔥"}
+                                                {isDone ? <CheckCircle2 className="w-8 h-8" /> : <Flame className="w-8 h-8 fill-current" />}
                                             </div>
                                             <div className="flex-grow">
-                                                <h3 className="text-xl font-black mb-1 line-clamp-1">{item.title}</h3>
+                                                <h3 className="text-xl font-black mb-1 line-clamp-1 uppercase tracking-tight">{item.title}</h3>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-amber-500 font-bold text-sm uppercase flex items-center gap-1">
-                                                        <Zap className="w-4 h-4 fill-amber-500" /> +{item.reward} XP
+                                                    <span className="text-amber-400 font-bold text-xs uppercase flex items-center gap-1">
+                                                        <Zap className="w-4 h-4 fill-amber-400" /> +{item.reward} XP
                                                     </span>
-                                                    <span className="text-gray-500 text-xs font-bold uppercase">Level {item.tier}</span>
+                                                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest">Sector {item.tier}</span>
                                                 </div>
                                             </div>
-                                            <ArrowRight className="w-6 h-6 text-gray-600" />
+                                            <ArrowRight className="w-6 h-6 text-white/30" />
                                         </motion.button>
                                     );
                                 })}
@@ -218,15 +262,16 @@ export default function NewsPage() {
                             exit={{ opacity: 0, x: -20 }}
                             className="flex flex-col h-full"
                         >
-                            <button onClick={() => setPhase('hub')} className="mb-8 flex items-center gap-2 text-gray-400 font-bold hover:text-white transition-colors">
-                                <ChevronLeft className="w-6 h-6" /> Back to List
+                            <button onClick={() => setPhase('hub')} className="mb-8 flex items-center gap-2 text-white/60 font-black uppercase tracking-widest text-xs hover:text-white transition-colors">
+                                <ChevronLeft className="w-5 h-5" /> Back to List
                             </button>
 
-                            <div className="flex-grow space-y-8">
-                                <h1 className="text-3xl font-black leading-tight text-white">{selectedNews.title}</h1>
+                            <div className="flex-grow space-y-10">
+                                <h1 className="text-3xl font-black leading-tight text-white uppercase tracking-tight drop-shadow-md">{selectedNews.title}</h1>
 
-                                <div className="bg-[#111827] border-2 border-white/10 p-8 rounded-[40px] shadow-xl">
-                                    <p className="text-xl text-gray-300 leading-relaxed font-medium">
+                                <div className="bg-black/30 backdrop-blur-xl border-2 border-white/10 p-8 rounded-[48px] shadow-2xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+                                    <p className="text-xl text-white/90 leading-relaxed font-medium relative z-10">
                                         {selectedNews.summary}
                                     </p>
                                 </div>
@@ -235,15 +280,15 @@ export default function NewsPage() {
                                     <a
                                         href={selectedNews.url}
                                         target="_blank"
-                                        className="w-full py-4 bg-white/5 border-2 border-white/10 rounded-2xl font-bold flex items-center justify-center gap-2 text-gray-400 hover:bg-white/10 transition-all"
+                                        className="w-full py-4 bg-white/5 border-2 border-white/10 rounded-2xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 text-white/60 hover:bg-white/10 transition-all"
                                     >
-                                        <ExternalLink className="w-5 h-5" /> Read Full Story
+                                        <ExternalLink className="w-4 h-4" /> Full Transmission
                                     </a>
                                     <button
                                         onClick={handleStartQuiz}
-                                        className="w-full py-6 bg-[#1cb0f6] text-white rounded-2xl font-black text-2xl shadow-[0_8px_0_#1498d5] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-3"
+                                        className="w-full py-6 bg-[#1cb0f6] text-white rounded-3xl font-black text-2xl border-b-8 border-[#1498d5] active:translate-y-1 active:border-b-4 transition-all flex items-center justify-center gap-4 uppercase tracking-tighter"
                                     >
-                                        I'M READY <ArrowRight className="w-8 h-8" />
+                                        VERIFY INTEL <ArrowRight className="w-8 h-8" />
                                     </button>
                                 </div>
                             </div>
@@ -253,20 +298,21 @@ export default function NewsPage() {
                     {phase === 'quiz' && selectedNews && selectedNews.questions && (
                         <motion.div
                             key={`quiz-${quizIndex}`}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, x: -20 }}
                             className="flex flex-col h-full"
                         >
-                            <div className="w-full h-4 bg-gray-800 rounded-full mb-12 overflow-hidden">
+                            <div className="w-full h-3 bg-black/30 backdrop-blur-sm rounded-full mb-12 overflow-hidden border border-white/10">
                                 <motion.div
                                     className="h-full bg-[#58cc02]"
                                     initial={{ width: 0 }}
                                     animate={{ width: `${((quizIndex + 1) / selectedNews.questions.length) * 100}%` }}
+                                    transition={{ duration: 0.5 }}
                                 />
                             </div>
 
-                            <h2 className="text-2xl font-black mb-8 text-center text-white">
+                            <h2 className="text-2xl font-black mb-10 text-center text-white uppercase tracking-tight leading-snug">
                                 {selectedNews.questions[quizIndex].question}
                             </h2>
 
@@ -276,13 +322,13 @@ export default function NewsPage() {
                                     const correctIdx = selectedNews.questions![quizIndex].correct;
                                     const showResult = selectedAnswer !== null;
 
-                                    let style = "bg-[#111827] border-white/10 text-white hover:bg-[#111827]/80";
+                                    let style = "bg-white/10 border-white/10 text-white hover:bg-white/20";
                                     if (showResult) {
-                                        if (i === correctIdx) style = "bg-[#58cc02]/20 border-[#58cc02] text-[#58cc02]";
-                                        else if (isSelected) style = "bg-red-500/20 border-red-500 text-red-500";
-                                        else style = "bg-[#111827] border-white/5 text-gray-600 opacity-50";
+                                        if (i === correctIdx) style = "bg-[#58cc02] border-[#46a302] text-white shadow-[0_4px_0_#3d8c11]";
+                                        else if (isSelected) style = "bg-[#ea2b2b] border-[#ba2222] text-white shadow-[0_4px_0_#961b1b]";
+                                        else style = "bg-black/20 border-white/5 text-white/20 opacity-40";
                                     } else if (isSelected) {
-                                        style = "bg-[#1cb0f6]/20 border-[#1cb0f6] text-[#1cb0f6]";
+                                        style = "bg-[#1cb0f6] border-[#1498d5] text-white shadow-[0_4px_0_#107db0]";
                                     }
 
                                     return (
@@ -291,8 +337,9 @@ export default function NewsPage() {
                                             disabled={showResult}
                                             onClick={() => handleAnswer(i)}
                                             className={cn(
-                                                "w-full p-6 rounded-3xl border-2 font-bold text-lg text-left transition-all shadow-[0_4px_0_rgba(255,255,255,0.05)]",
-                                                style
+                                                "w-full p-6 rounded-[28px] border-b-6 font-black text-lg text-left transition-all uppercase tracking-tight",
+                                                style,
+                                                !showResult && isSelected && "translate-y-1 border-b-2"
                                             )}
                                         >
                                             {opt}
@@ -303,34 +350,36 @@ export default function NewsPage() {
 
                             {selectedAnswer !== null && (
                                 <motion.div
-                                    initial={{ opacity: 0, y: 50 }}
+                                    initial={{ opacity: 0, y: 100 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     className={cn(
-                                        "fixed bottom-0 left-0 right-0 p-8 flex flex-col items-center gap-6 z-50",
-                                        isCorrect ? "bg-[#d7ffb8] text-[#58cc02]" : "bg-[#ffd7d7] text-[#ea2b2b]"
+                                        "fixed bottom-0 left-0 right-0 p-8 flex flex-col items-center gap-6 z-50 backdrop-blur-2xl border-t-4",
+                                        isCorrect
+                                            ? "bg-[#d7ffb8]/95 border-[#58cc02] text-[#1e4601]"
+                                            : "bg-[#ffd7d7]/95 border-[#ea2b2b] text-[#5e1212]"
                                     )}
                                 >
                                     <div className="max-w-xl w-full flex items-center justify-between gap-6">
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-5">
                                             <div className={cn(
-                                                "w-12 h-12 rounded-full flex items-center justify-center text-white",
+                                                "w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl shadow-lg",
                                                 isCorrect ? "bg-[#58cc02]" : "bg-[#ea2b2b]"
                                             )}>
                                                 {isCorrect ? "✓" : "×"}
                                             </div>
                                             <div>
-                                                <h3 className="text-2xl font-black uppercase">{isCorrect ? "Excellent!" : "Not quite"}</h3>
-                                                <p className="text-sm font-bold opacity-80">{selectedNews.questions[quizIndex].explanation}</p>
+                                                <h3 className="text-3xl font-black uppercase tracking-tighter">{isCorrect ? "Verified" : "Data Mismatch"}</h3>
+                                                <p className="text-sm font-bold opacity-80 line-clamp-2">{selectedNews.questions[quizIndex].explanation}</p>
                                             </div>
                                         </div>
                                         <button
                                             onClick={handleNextQuiz}
                                             className={cn(
-                                                "px-10 py-4 text-white font-black rounded-2xl shadow-lg uppercase transition-all whitespace-nowrap",
-                                                isCorrect ? "bg-[#58cc02] shadow-[0_5px_0_#46a302]" : "bg-[#ea2b2b] shadow-[0_5px_0_#ba2222]"
+                                                "px-10 py-5 text-white font-black rounded-2xl shadow-xl uppercase tracking-widest transition-all whitespace-nowrap border-b-8 active:translate-y-1 active:border-b-2",
+                                                isCorrect ? "bg-[#58cc02] border-[#46a302]" : "bg-[#ea2b2b] border-[#ba2222]"
                                             )}
                                         >
-                                            Continue
+                                            Next
                                         </button>
                                     </div>
                                 </motion.div>
@@ -346,41 +395,41 @@ export default function NewsPage() {
                             className="text-center space-y-12 py-12"
                         >
                             <div className="relative">
-                                <div className="w-32 h-32 bg-[#ffc800] rounded-full flex items-center justify-center mx-auto shadow-[0_10px_0_#e5a900] text-6xl">
+                                <div className="w-32 h-32 bg-[#ffc800] rounded-full flex items-center justify-center mx-auto shadow-[0_12px_0_#e5a900] text-6xl active:scale-95 transition-transform cursor-default">
                                     🏆
                                 </div>
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.5 }}
-                                    className="absolute inset-0 bg-yellow-400/20 blur-3xl rounded-full"
+                                    transition={{ delay: 0.5, duration: 1 }}
+                                    className="absolute inset-0 bg-yellow-400/30 blur-[60px] rounded-full -z-10"
                                 />
                             </div>
 
                             <div className="space-y-4">
-                                <h1 className="text-5xl font-black text-white">Story Complete!</h1>
-                                <p className="text-[#1cb0f6] font-bold text-xl uppercase tracking-widest">You learned something new!</p>
+                                <h1 className="text-5xl font-black text-white uppercase tracking-tighter">Mission Success</h1>
+                                <p className="text-white/80 font-black text-xl uppercase tracking-[0.2em]">Intel Assimilated</p>
                             </div>
 
-                            <div className="bg-[#111827] p-8 rounded-[40px] border-2 border-white/10 flex items-center justify-around">
+                            <div className="bg-black/30 backdrop-blur-xl p-8 rounded-[48px] border-2 border-white/10 flex items-center justify-around shadow-2xl">
                                 <div className="text-center">
-                                    <p className="text-gray-500 font-bold uppercase text-xs mb-1">XP EARNED</p>
-                                    <div className="text-4xl font-black text-amber-500 flex items-center gap-2">
-                                        <Zap className="w-8 h-8 fill-amber-500" /> +{selectedNews.reward}
+                                    <p className="text-white/40 font-black uppercase text-[10px] tracking-widest mb-2">XP GAIN</p>
+                                    <div className="text-4xl font-black text-amber-400 flex items-center gap-2">
+                                        <Zap className="w-8 h-8 fill-amber-400" /> +{selectedNews.reward}
                                     </div>
                                 </div>
-                                <div className="w-px h-12 bg-white/10" />
+                                <div className="w-px h-16 bg-white/10" />
                                 <div className="text-center">
-                                    <p className="text-gray-500 font-bold uppercase text-xs mb-1">LEVEL UP</p>
+                                    <p className="text-white/40 font-black uppercase text-[10px] tracking-widest mb-2">CAPACITY</p>
                                     <div className="text-4xl font-black text-white">+{Math.ceil(selectedNews.reward / 10)}%</div>
                                 </div>
                             </div>
 
                             <button
                                 onClick={() => setPhase('hub')}
-                                className="w-full py-6 bg-white text-black rounded-3xl font-black text-2xl shadow-[0_8px_0_#cccccc] active:translate-y-2 active:shadow-none transition-all uppercase tracking-tighter"
+                                className="w-full py-7 bg-white text-[#3b82f6] rounded-[32px] font-black text-3xl shadow-[0_12px_0_#dddddd] active:translate-y-2 active:shadow-none transition-all uppercase tracking-tighter"
                             >
-                                Great Job!
+                                Excellent
                             </button>
                         </motion.div>
                     )}
