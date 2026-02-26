@@ -14,6 +14,8 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const dateParam = searchParams.get("date");
+        const maxTierParam = searchParams.get("maxTier");
+        const maxTier = maxTierParam ? Math.min(5, Math.max(1, Number(maxTierParam))) : null;
 
         // Determine the target cycle_date
         let cycleDate: Date;
@@ -33,7 +35,10 @@ export async function GET(req: Request) {
 
         // Fetch all selections for the cycle_date, joined with article + questions
         const selections = await db.news_selections.findMany({
-            where: { cycle_date: cycleDate },
+            where: {
+                cycle_date: cycleDate,
+                ...(maxTier ? { tier: { lte: maxTier } } : {}),
+            },
             orderBy: [{ tier: "asc" }, { selection_id: "asc" }],
             include: {
                 news_articles: {

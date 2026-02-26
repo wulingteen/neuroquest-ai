@@ -31,6 +31,15 @@ const TIER_META: Record<
     5: { label: "專家", color: "#EF4444" },
 };
 
+/** Map difficulty_score (0-100) → user tier (1-5) */
+function scoreToTier(score: number): number {
+    if (score <= 20) return 1;
+    if (score <= 40) return 2;
+    if (score <= 60) return 3;
+    if (score <= 80) return 4;
+    return 5;
+}
+
 export default function NewsPage() {
     const { addXP } = useGameStore();
     const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
@@ -50,6 +59,9 @@ export default function NewsPage() {
     const [showProfileSetup, setShowProfileSetup] = useState(false);
     const [profileChecked, setProfileChecked] = useState(false);
     const [difficultyScore, setDifficultyScore] = useState<number | null>(null);
+
+    // Derive the user's maximum visible tier from their difficulty score
+    const userTier = difficultyScore !== null ? scoreToTier(difficultyScore) : 5;
 
     // Check if user has a profile
     useEffect(() => {
@@ -76,7 +88,10 @@ export default function NewsPage() {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch("/api/news/selections");
+            const params = new URLSearchParams();
+            if (userTier < 5) params.set("maxTier", String(userTier));
+            const qs = params.toString();
+            const res = await fetch(`/api/news/selections${qs ? `?${qs}` : ""}`);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             if (data.error) throw new Error(data.error);
@@ -87,7 +102,7 @@ export default function NewsPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [userTier]);
 
     useEffect(() => {
         if (profileChecked) {
@@ -262,7 +277,23 @@ export default function NewsPage() {
                     </div>
                 </div>
 
-                {/* Tier filter pills */}
+                {/* User tier badge */}
+                {difficultyScore !== null && (
+                    <div className="glass-card px-4 py-2 flex items-center gap-2 text-sm">
+                        <BookOpen className="w-4 h-4" style={{ color: TIER_META[userTier]?.color }} />
+                        <span className="text-slate-300">
+                            你的等級：
+                            <span
+                                className="font-bold ml-1"
+                                style={{ color: TIER_META[userTier]?.color }}
+                            >
+                                Tier {userTier} · {TIER_META[userTier]?.label}
+                            </span>
+                        </span>
+                    </div>
+                )}
+
+                {/* Tier filter pills — only show tiers ≤ userTier */}
                 <div className="flex gap-2 mt-4 flex-wrap">
                     <button
                         onClick={() => setFilterTier(null)}
@@ -275,34 +306,36 @@ export default function NewsPage() {
                     >
                         全部
                     </button>
-                    {Object.entries(TIER_META).map(([tier, meta]) => (
-                        <button
-                            key={tier}
-                            onClick={() => setFilterTier(Number(tier))}
-                            className={cn(
-                                "px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border",
-                                filterTier === Number(tier)
-                                    ? "text-white"
-                                    : "text-slate-400 hover:opacity-80"
-                            )}
-                            style={{
-                                borderColor:
+                    {Object.entries(TIER_META)
+                        .filter(([tier]) => Number(tier) <= userTier)
+                        .map(([tier, meta]) => (
+                            <button
+                                key={tier}
+                                onClick={() => setFilterTier(Number(tier))}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer border",
                                     filterTier === Number(tier)
-                                        ? meta.color
-                                        : "rgba(255,255,255,0.1)",
-                                background:
-                                    filterTier === Number(tier)
-                                        ? `${meta.color}22`
-                                        : "rgba(255,255,255,0.03)",
-                                color:
-                                    filterTier === Number(tier)
-                                        ? meta.color
-                                        : undefined,
-                            }}
-                        >
-                            {meta.label}
-                        </button>
-                    ))}
+                                        ? "text-white"
+                                        : "text-slate-400 hover:opacity-80"
+                                )}
+                                style={{
+                                    borderColor:
+                                        filterTier === Number(tier)
+                                            ? meta.color
+                                            : "rgba(255,255,255,0.1)",
+                                    background:
+                                        filterTier === Number(tier)
+                                            ? `${meta.color}22`
+                                            : "rgba(255,255,255,0.03)",
+                                    color:
+                                        filterTier === Number(tier)
+                                            ? meta.color
+                                            : undefined,
+                                }}
+                            >
+                                {meta.label}
+                            </button>
+                        ))}
                 </div>
             </motion.div>
 

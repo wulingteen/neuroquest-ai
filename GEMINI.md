@@ -26,6 +26,9 @@ curl http://localhost:3000/api/news/selections
 
 # Specific date
 curl http://localhost:3000/api/news/selections?date=2026-02-25
+
+# Filter by max tier (user sees only tier ≤ maxTier)
+curl http://localhost:3000/api/news/selections?maxTier=3
 ```
 
 ## Test test-rss-feeds
