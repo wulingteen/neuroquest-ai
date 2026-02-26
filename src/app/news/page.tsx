@@ -23,9 +23,59 @@ import { type NewsItem } from "@/types/game";
 import ProfileSetupModal from "@/components/ProfileSetupModal";
 
 /**
- * CONSISTENT NASA BLUE / DUOLINGO STYLE NEWS PAGE
- * Replicates the home page's background graphics and top bar.
+ * KURZGESAGT STYLE NEWS PAGE
+ * Vibrant colors, bold typography, and smooth shapes.
  */
+
+const TIER_STYLES: Record<number, {
+    card: string;
+    iconBg: string;
+    title: string;
+    xp: string;
+    sector: string;
+    border: string;
+}> = {
+    1: {
+        card: "bg-[#f0f9ff]",
+        iconBg: "bg-[#00D4FF]",
+        title: "text-[#0369a1]",
+        xp: "text-[#0284c7]",
+        sector: "text-[#00D4FF]/60",
+        border: "border-[#00D4FF]"
+    },
+    2: {
+        card: "bg-[#f7fee7]",
+        iconBg: "bg-[#58cc02]",
+        title: "text-[#3f6212]",
+        xp: "text-[#65a30d]",
+        sector: "text-[#58cc02]/60",
+        border: "border-[#58cc02]"
+    },
+    3: {
+        card: "bg-[#fffbeb]",
+        iconBg: "bg-[#FFB800]",
+        title: "text-[#92400e]",
+        xp: "text-[#d97706]",
+        sector: "text-[#FFB800]/60",
+        border: "border-[#FFB800]"
+    },
+    4: {
+        card: "bg-[#fff7ed]",
+        iconBg: "bg-[#ff9600]",
+        title: "text-[#9a3412]",
+        xp: "text-[#ea580c]",
+        sector: "text-[#ff9600]/60",
+        border: "border-[#ff9600]"
+    },
+    5: {
+        card: "bg-[#fff1f2]",
+        iconBg: "bg-[#FF1E56]",
+        title: "text-[#9f1239]",
+        xp: "text-[#e11d48]",
+        sector: "text-[#FF1E56]/60",
+        border: "border-[#FF1E56]"
+    },
+};
 
 const BackgroundGraphics = () => {
     return (
@@ -283,7 +333,7 @@ export default function NewsPage() {
                             className="space-y-8"
                         >
                             <div className="mb-10">
-                                <h1 className="text-4xl font-black text-white uppercase tracking-widest drop-shadow-lg">
+                                <h1 className="text-4xl font-black text-white tracking-widest drop-shadow-lg">
                                     Daily Intel
                                 </h1>
                                 <p className="text-white/80 font-bold text-lg">
@@ -292,60 +342,83 @@ export default function NewsPage() {
                             </div>
 
                             <div className="space-y-4">
-                                {news.map((item, idx) => {
-                                    const isDone = completedIds.has(item.id);
+                                {(() => {
+                                    // Identify the top 3 items by reward XP
+                                    const top3Ids = [...news]
+                                        .sort((a, b) => b.reward - a.reward)
+                                        .slice(0, 3)
+                                        .map((n) => n.id);
 
-                                    return (
-                                        <motion.button
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: idx * 0.05 }}
-                                            key={item.id}
-                                            onClick={() => handleSelectNews(item)}
-                                            className={cn(
-                                                "w-full text-left p-5 rounded-[32px] border-b-[8px] transition-all flex items-center gap-5 relative overflow-hidden",
-                                                isDone
-                                                    ? "bg-[#181129] border-[#0f0b1a] text-[#4d3d75]"
-                                                    : "bg-[#2b1b54] border-[#1d123a] hover:bg-[#342166] active:translate-y-2 active:border-b-0 active:mt-[8px]",
-                                            )}
-                                        >
-                                            <div
+                                    return news.map((item, idx) => {
+                                        const isDone = completedIds.has(item.id);
+                                        const styles = TIER_STYLES[item.tier] || TIER_STYLES[3];
+                                        const isTopReward = top3Ids.includes(item.id);
+
+                                        return (
+                                            <motion.button
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: idx * 0.05 }}
+                                                key={item.id}
+                                                onClick={() => handleSelectNews(item)}
                                                 className={cn(
-                                                    "w-16 h-16 rounded-[24px] flex items-center justify-center flex-shrink-0 text-3xl border-b-4",
+                                                    "w-full text-left p-5 rounded-[32px] border-b-[8px] transition-all flex items-center gap-5 relative overflow-visible",
                                                     isDone
-                                                        ? "bg-[#1f1635] text-[#4d3d75] border-[#181129]"
-                                                        : "bg-[#ff2262] text-white border-[#cc184c]",
+                                                        ? "bg-[#181129] border-[#0f0b1a] text-[#4d3d75]"
+                                                        : `${styles.card} ${styles.border} hover:scale-[1.02] active:translate-y-2 active:border-b-0 active:mt-[8px]`,
                                                 )}
                                             >
-                                                {isDone ? (
-                                                    <CheckCircle2 className="w-8 h-8" />
-                                                ) : (
-                                                    <Flame className="w-8 h-8 fill-current" />
+                                                {/* Top Reward Fire Icon */}
+                                                {!isDone && isTopReward && (
+                                                    <div className="absolute -top-3 -left-3 z-20 bg-[#FF1E56] text-white p-2 rounded-full shadow-lg border-2 border-white scale-110 animate-pulse">
+                                                        <Flame className="w-5 h-5 fill-current" />
+                                                    </div>
                                                 )}
-                                            </div>
-                                            <div className="flex-grow">
-                                                <h3 className="text-xl font-black mb-1 line-clamp-1 uppercase tracking-tight">
-                                                    {item.title}
-                                                </h3>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-amber-400 font-bold text-xs uppercase flex items-center gap-1">
-                                                        <Zap className="w-4 h-4 fill-amber-400" /> +
-                                                        {item.reward} XP
-                                                    </span>
-                                                    <span className="text-white/40 text-[10px] font-black uppercase tracking-widest">
-                                                        Sector {item.tier}
-                                                    </span>
+
+                                                <div
+                                                    className={cn(
+                                                        "w-16 h-16 rounded-[24px] flex items-center justify-center flex-shrink-0 border-b-4 text-2xl font-black",
+                                                        isDone
+                                                            ? "bg-[#1f1635] text-[#4d3d75] border-[#181129]"
+                                                            : `${styles.iconBg} text-white border-black/10`,
+                                                    )}
+                                                >
+                                                    {idx + 1}
                                                 </div>
-                                            </div>
-                                            <ArrowRight
-                                                className={cn(
-                                                    "w-6 h-6",
-                                                    isDone ? "text-[#4d3d75]" : "text-[#05d9e8]",
-                                                )}
-                                            />
-                                        </motion.button>
-                                    );
-                                })}
+                                                <div className="flex-grow">
+                                                    <h3
+                                                        className={cn(
+                                                            "text-xl font-black mb-1 line-clamp-2 tracking-tight",
+                                                            isDone ? "text-[#4d3d75]" : styles.title,
+                                                        )}
+                                                    >
+                                                        {item.title}
+                                                    </h3>
+                                                    <div className="flex items-center gap-3">
+                                                        <span
+                                                            className={cn(
+                                                                "font-bold text-xs uppercase flex items-center gap-1",
+                                                                isDone ? "text-[#4d3d75]/60" : styles.xp,
+                                                            )}
+                                                        >
+                                                            <Zap className="w-4 h-4 fill-current" /> +
+                                                            {item.reward} XP
+                                                        </span>
+                                                        <span
+                                                            className={cn(
+                                                                "text-[10px] font-black uppercase tracking-widest",
+                                                                isDone ? "text-[#4d3d75]/40" : styles.sector,
+                                                            )}
+                                                        >
+                                                            Sector {item.tier}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {/* Right arrow removed as per request */}
+                                            </motion.button>
+                                        );
+                                    });
+                                })()}
                             </div>
                         </motion.div>
                     )}
@@ -366,7 +439,7 @@ export default function NewsPage() {
                             </button>
 
                             <div className="flex-grow space-y-10">
-                                <h1 className="text-3xl font-black leading-tight text-white uppercase tracking-tight drop-shadow-md">
+                                <h1 className="text-3xl font-black leading-tight text-white tracking-tight drop-shadow-md">
                                     {selectedNews.title}
                                 </h1>
 
@@ -415,7 +488,7 @@ export default function NewsPage() {
                                 />
                             </div>
 
-                            <h2 className="text-2xl font-black mb-10 text-center text-white uppercase tracking-tight leading-snug">
+                            <h2 className="text-2xl font-black mb-10 text-center text-white tracking-tight leading-snug">
                                 {selectedNews.questions[quizIndex].question}
                             </h2>
 
@@ -483,7 +556,7 @@ export default function NewsPage() {
                                                 {isCorrect ? "✓" : "×"}
                                             </div>
                                             <div>
-                                                <h3 className="text-3xl font-black uppercase tracking-tighter">
+                                                <h3 className="text-3xl font-black tracking-tighter">
                                                     {isCorrect ? "Verified" : "Data Mismatch"}
                                                 </h3>
                                                 <p className="text-sm font-bold opacity-80 line-clamp-2">
@@ -528,7 +601,7 @@ export default function NewsPage() {
                             </div>
 
                             <div className="space-y-4">
-                                <h1 className="text-5xl font-black text-white uppercase tracking-tighter">
+                                <h1 className="text-5xl font-black text-white tracking-tighter">
                                     Mission Success
                                 </h1>
                                 <p className="text-white/80 font-black text-xl uppercase tracking-[0.2em]">

@@ -34,7 +34,7 @@ const Saturn = (props: any) => (
 
 
 const NAV_ITEMS = [
-  { href: "/", label: "Map", icon: Saturn, activeBg: "bg-[#FFB800]", activeText: "text-[#4c1d95]" }, // Yellow bg, Deep Purple text
+  { href: "/", label: "Map", icon: Saturn, activeBg: "bg-[#FFB800]", activeText: "text-white" }, // Yellow bg, White text
   { href: "/news", label: "News", icon: Rocket, activeBg: "bg-[#FF1E56]", activeText: "text-white" },
   { href: "/arena", label: "Arena", icon: Swords, activeBg: "bg-[#00D4FF]", activeText: "text-white" },
   { href: "/leaderboard", label: "Ranking", icon: Trophy, activeBg: "bg-[#22c55e]", activeText: "text-white" },
