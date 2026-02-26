@@ -57,6 +57,15 @@ async function processOneArticle(sel: RankedArticle, cycleDate: Date): Promise<b
 
     const textForLLM = fullText || article.summary || article.title;
 
+    // Guard: skip articles without meaningful content for the examiner
+    if (!textForLLM || textForLLM.trim().length < 100) {
+        console.warn(
+            `Skipping article ${sel.articleId} ("${article.title?.substring(0, 60)}"): ` +
+            `full_text is empty/too short (${textForLLM?.trim().length ?? 0} chars)`
+        );
+        return false;
+    }
+
     // Check for existing selection to prevent duplicates from parallel/retry runs
     const existingSelection = await db.news_selections.findFirst({
         where: { article_id: article.article_id, cycle_date: cycleDate },
@@ -123,7 +132,7 @@ async function processOneArticle(sel: RankedArticle, cycleDate: Date): Promise<b
         return true;
     } catch (e) {
         // Clean up the selection if anything fails after creation
-        await db.news_selections.delete({ where: { selection_id: selectionObj.selection_id } }).catch(() => {});
+        await db.news_selections.delete({ where: { selection_id: selectionObj.selection_id } }).catch(() => { });
         throw e;
     }
 }
