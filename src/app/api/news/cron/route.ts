@@ -77,7 +77,7 @@ export async function GET() {
         // STEP 4 — Generate questions for each selected article
         const today = new Date();
         const cycleDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        await generateAndSaveQuestions(selectedArticles, cycleDate);
+        const examinerStats = await generateAndSaveQuestions(selectedArticles, cycleDate);
 
         // STEP 5 — Finalize scan run
         await db.cron_scan_runs.update({
@@ -94,6 +94,8 @@ export async function GET() {
             run_id: scanRun.run_id.toString(),
             newArticlesFetched: newArticlesCount,
             articlesSelected: selectedArticles.length,
+            questionsGenerated: examinerStats.processed,
+            questionsFailed: examinerStats.failed,
             feedsOk,
             feedsFailed,
         });

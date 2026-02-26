@@ -70,7 +70,85 @@ export interface FeedScanResult {
     feedsFailed: number;
 }
 
-/** Fetch articles from all enabled feeds, filtering by date range. */
+/** Process a single feed: fetch, parse, upsert articles, and log result. */
+async function processSingleFeed(
+    feed: { feed_id: bigint; url: string; name: string },
+    scanRunId: bigint,
+    yesterdayStart: Date
+): Promise<{ articlesFound: number; ok: boolean }> {
+    const feedStartTime = Date.now();
+    try {
+        const parsed = isRedditFeed(feed.url)
+            ? await fetchRedditJSON(feed.url)
+            : await parser.parseURL(feed.url);
+        let feedArticlesFound = 0;
+
+        for (const item of parsed.items || []) {
+            if (!item.link || !item.title) continue;
+
+            const pubDate = item.pubDate ? new Date(item.pubDate) : new Date();
+            if (pubDate < yesterdayStart) continue;
+
+            try {
+                await db.news_articles.create({
+                    data: {
+                        feed_id: feed.feed_id,
+                        url: item.link,
+                        title: item.title,
+                        summary: item.contentSnippet || ("content" in item ? (item as Record<string, string>).content : "") || "",
+                        published_at: pubDate,
+                    },
+                });
+                feedArticlesFound++;
+            } catch (e) {
+                // Unique constraint violation (duplicate URL) — skip silently
+                if (e instanceof Error && e.message.includes("Unique constraint")) continue;
+                throw e;
+            }
+        }
+
+        await db.rss_feeds.update({
+            where: { feed_id: feed.feed_id },
+            data: { last_fetched_at: new Date() },
+        });
+
+        await db.cron_scan_feed_logs.create({
+            data: {
+                run_id: scanRunId,
+                feed_id: feed.feed_id,
+                feed_url: feed.url,
+                feed_name: feed.name,
+                status: "success",
+                articles_found: feedArticlesFound,
+                duration_ms: Date.now() - feedStartTime,
+            },
+        });
+
+        return { articlesFound: feedArticlesFound, ok: true };
+    } catch (_e) {
+        const errMsg = _e instanceof Error ? _e.message : String(_e);
+        console.warn(`Failed to parse feed ${feed.url}: ${errMsg}`);
+
+        await db.cron_scan_feed_logs.create({
+            data: {
+                run_id: scanRunId,
+                feed_id: feed.feed_id,
+                feed_url: feed.url,
+                feed_name: feed.name,
+                status: "failed",
+                articles_found: 0,
+                error_message: errMsg.substring(0, 1000),
+                duration_ms: Date.now() - feedStartTime,
+            },
+        });
+
+        return { articlesFound: 0, ok: false };
+    }
+}
+
+const FEED_BATCH_SIZE = 5;
+
+/** Fetch articles from all enabled feeds in parallel batches, filtering by date range. */
 export async function fetchFeedArticles(
     feeds: Array<{ feed_id: bigint; url: string; name: string }>,
     scanRunId: bigint,
@@ -80,73 +158,20 @@ export async function fetchFeedArticles(
     let feedsOk = 0;
     let feedsFailed = 0;
 
-    for (const feed of feeds) {
-        const feedStartTime = Date.now();
-        try {
-            const parsed = isRedditFeed(feed.url)
-                ? await fetchRedditJSON(feed.url)
-                : await parser.parseURL(feed.url);
-            let feedArticlesFound = 0;
+    for (let i = 0; i < feeds.length; i += FEED_BATCH_SIZE) {
+        const batch = feeds.slice(i, i + FEED_BATCH_SIZE);
+        const results = await Promise.allSettled(
+            batch.map((feed) => processSingleFeed(feed, scanRunId, yesterdayStart))
+        );
 
-            for (const item of parsed.items || []) {
-                if (!item.link || !item.title) continue;
-
-                const pubDate = item.pubDate ? new Date(item.pubDate) : new Date();
-                if (pubDate < yesterdayStart) continue;
-
-                const existing = await db.news_articles.findUnique({
-                    where: { url: item.link },
-                });
-
-                if (!existing) {
-                    await db.news_articles.create({
-                        data: {
-                            feed_id: feed.feed_id,
-                            url: item.link,
-                            title: item.title,
-                            summary: item.contentSnippet || ("content" in item ? (item as Record<string, string>).content : "") || "",
-                            published_at: pubDate,
-                        },
-                    });
-                    newArticlesCount++;
-                    feedArticlesFound++;
-                }
+        for (const r of results) {
+            if (r.status === "fulfilled") {
+                newArticlesCount += r.value.articlesFound;
+                if (r.value.ok) feedsOk++;
+                else feedsFailed++;
+            } else {
+                feedsFailed++;
             }
-
-            await db.rss_feeds.update({
-                where: { feed_id: feed.feed_id },
-                data: { last_fetched_at: new Date() },
-            });
-
-            feedsOk++;
-            await db.cron_scan_feed_logs.create({
-                data: {
-                    run_id: scanRunId,
-                    feed_id: feed.feed_id,
-                    feed_url: feed.url,
-                    feed_name: feed.name,
-                    status: "success",
-                    articles_found: feedArticlesFound,
-                    duration_ms: Date.now() - feedStartTime,
-                },
-            });
-        } catch (_e) {
-            const errMsg = _e instanceof Error ? _e.message : String(_e);
-            console.warn(`Failed to parse feed ${feed.url}: ${errMsg}`);
-
-            feedsFailed++;
-            await db.cron_scan_feed_logs.create({
-                data: {
-                    run_id: scanRunId,
-                    feed_id: feed.feed_id,
-                    feed_url: feed.url,
-                    feed_name: feed.name,
-                    status: "failed",
-                    articles_found: 0,
-                    error_message: errMsg.substring(0, 1000),
-                    duration_ms: Date.now() - feedStartTime,
-                },
-            });
         }
     }
 

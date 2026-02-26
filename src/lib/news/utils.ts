@@ -1,3 +1,25 @@
+/** Retry an async function with exponential backoff. */
+export async function retryAsync<T>(
+    fn: () => Promise<T>,
+    retries = 2,
+    delayMs = 1000
+): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            return await fn();
+        } catch (e) {
+            lastError = e;
+            if (attempt < retries) {
+                const wait = delayMs * 2 ** attempt;
+                console.warn(`Retry ${attempt + 1}/${retries} after ${wait}ms: ${e instanceof Error ? e.message : e}`);
+                await new Promise((r) => setTimeout(r, wait));
+            }
+        }
+    }
+    throw lastError;
+}
+
 /** Return midnight Date objects for the date range used by the cron job. */
 export function getDateRange(): { yesterdayStart: Date; todayStart: Date; tomorrowStart: Date } {
     const now = new Date();

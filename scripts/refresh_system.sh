@@ -2,28 +2,34 @@
 
 set -euo pipefail
 
-echo "開始執行 neuroquest-ai 重置流程..."
+echo "開始執行 neuroquest-ai 完整重置（加強版）..."
 
-# 1. 關閉正在運行的 neuroquest-ai 容器
-echo "正在停止容器 neuroquest-ai ..."
-docker stop neuroquest-ai >/dev/null 2>&1 || true
+# 強制停止 & 移除容器（不管有沒有在跑）
+echo "強制移除容器 neuroquest-ai ..."
+docker rm -f neuroquest-ai 2>/dev/null || true
 
-# 2. 移除容器 neuroquest-ai
-echo "正在移除容器 neuroquest-ai ..."
-docker rm neuroquest-ai >/dev/null 2>&1 || true
+# 移除任何可能還綁定的容器（保險）
+echo "清除任何還在使用該 volume 的容器..."
+docker rm -f $(docker ps -a --filter volume=neuroquest-ai_postgres_data -q) 2>/dev/null || true
 
-# 3. 移除 volume neuroquest-ai_postgres_data
-echo "正在刪除 volume neuroquest-ai_postgres_data ..."
-docker volume rm neuroquest-ai_postgres_data >/dev/null 2>&1 || true
+# 移除 volume（先普通再強制）
+echo "移除 volume neuroquest-ai_postgres_data ..."
+docker volume rm neuroquest-ai_postgres_data 2>/dev/null || \
+docker volume rm --force neuroquest-ai_postgres_data 2>/dev/null || true
 
-# 4. 在當前目錄執行 docker compose up (背景執行)
-echo "啟動 docker compose up (detached mode) ..."
+# 確認是否真的沒了
+if docker volume ls -q | grep -q neuroquest-ai_postgres_data; then
+    echo "警告：volume 還是存在！請手動檢查 docker volume inspect"
+else
+    echo "volume 已成功移除 ✓"
+fi
+
+# 執行一次 compose up-down 循環（背景）
+echo "啟動 docker compose up -d ..."
 docker compose up -d --quiet-pull
 
-# 5. 等待 8 秒
-echo "等待 5 秒讓服務啟動..."
+echo "等待 5 秒..."
 sleep 5
 
-# 7. run
-echo "開啟系統 ..."
+echo "啟動.."
 npm run dev
