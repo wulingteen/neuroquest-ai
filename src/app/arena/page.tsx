@@ -1,5 +1,4 @@
 "use client";
-import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 
 import { type ArenaChallenge } from "@/types/game";
@@ -78,7 +77,7 @@ export default function ArenaPage() {
     return (
         <div className="min-h-screen px-4 py-6 max-w-7xl mx-auto">
             {/* Header */}
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+            <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center neon-glow-purple">
                         <Swords className="w-5 h-5 text-white" />
@@ -102,13 +101,13 @@ export default function ArenaPage() {
                         <span className="text-slate-300">本週結算：2天 14小時後</span>
                     </div>
                 </div>
-            </motion.div>
+            </div>
 
             <div className="grid lg:grid-cols-2 gap-6">
                 {/* Left: Challenge + My submission */}
                 <div className="space-y-4">
                     {/* Challenge selector */}
-                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="glass-card p-5">
+                    <div className="glass-card p-5">
                         <p className="text-xs text-slate-500 uppercase tracking-widest mb-3">本週挑戰</p>
                         <div className="space-y-2 mb-4">
                             {challenges.map((c, i) => (
@@ -116,7 +115,7 @@ export default function ArenaPage() {
                                     key={c.id}
                                     onClick={() => { setSelectedChallenge(i); setSubmitted(false); setMyPrompt(""); setAiOutput(""); }}
                                     className={cn(
-                                        "w-full text-left p-3 rounded-xl border transition-all text-sm",
+                                        "w-full text-left p-3 rounded-xl border text-sm",
                                         selectedChallenge === i
                                             ? "border-purple-500/50 bg-purple-500/10 text-purple-300"
                                             : "border-white/5 text-slate-400 hover:border-white/10 hover:text-white"
@@ -155,10 +154,10 @@ export default function ArenaPage() {
                                 </div>
                             </div>
                         )}
-                    </motion.div>
+                    </div>
 
                     {/* My Prompt Input */}
-                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="glass-card p-5">
+                    <div className="glass-card p-5">
                         <p className="text-sm font-bold text-white mb-3 flex items-center gap-2">
                             <Star className="w-4 h-4 text-yellow-400" />
                             設計你的 Prompt
@@ -168,7 +167,7 @@ export default function ArenaPage() {
                             onChange={(e) => setMyPrompt(e.target.value)}
                             disabled={submitted}
                             placeholder="輸入你的 Prompt... 發揮創意，讓 AI 展現最佳表現！"
-                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-slate-200 placeholder-slate-600 resize-none h-28 focus:outline-none focus:border-purple-500/50 transition-colors"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-slate-200 placeholder-slate-600 resize-none h-28 focus:outline-none focus:border-purple-500/50"
                         />
                         <div className="flex items-center justify-between mt-3">
                             <span className="text-xs text-slate-500">{myPrompt.length} 字元</span>
@@ -179,12 +178,7 @@ export default function ArenaPage() {
                                     className="btn-primary flex items-center gap-2 text-sm px-5 py-2.5 disabled:opacity-50"
                                 >
                                     {loading ? (
-                                        <motion.div
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                        >
-                                            ⚛️
-                                        </motion.div>
+                                        <span>⚛️</span>
                                     ) : <Send className="w-4 h-4" />}
                                     {loading ? "AI 生成中..." : "提交 Prompt"}
                                 </button>
@@ -194,25 +188,19 @@ export default function ArenaPage() {
                         </div>
 
                         {/* AI Output */}
-                        <AnimatePresence>
-                            {aiOutput && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="mt-4 glass-card p-4 border border-cyan-500/20 bg-cyan-500/5"
-                                >
-                                    <p className="text-xs text-cyan-400 mb-2 flex items-center gap-1">
-                                        <Bot className="w-3 h-3" /> AI 生成結果
-                                    </p>
-                                    <p className="text-sm text-slate-300 whitespace-pre-wrap">{aiOutput}</p>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
+                        {aiOutput && (
+                            <div className="mt-4 glass-card p-4 border border-cyan-500/20 bg-cyan-500/5">
+                                <p className="text-xs text-cyan-400 mb-2 flex items-center gap-1">
+                                    <Bot className="w-3 h-3" /> AI 生成結果
+                                </p>
+                                <p className="text-sm text-slate-300 whitespace-pre-wrap">{aiOutput}</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Right: Leaderboard of this week's prompts */}
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }} className="glass-card p-5">
+                <div className="glass-card p-5">
                     <p className="text-sm font-bold text-white mb-4 flex items-center gap-2">
                         <Trophy className="w-4 h-4 text-yellow-400" />
                         本週熱門 Prompt
@@ -221,13 +209,10 @@ export default function ArenaPage() {
 
                     <div className="space-y-4">
                         {MOCK_ENTRIES.map((entry, idx) => (
-                            <motion.div
+                            <div
                                 key={idx}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: idx * 0.1 }}
                                 className={cn(
-                                    "glass-card p-4 border transition-all",
+                                    "glass-card p-4 border",
                                     idx === 0 ? "border-yellow-500/30 bg-yellow-500/5" :
                                         idx === 1 ? "border-slate-400/20" :
                                             "border-white/5"
@@ -243,7 +228,7 @@ export default function ArenaPage() {
                                     <button
                                         onClick={() => handleVote(idx)}
                                         className={cn(
-                                            "flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border transition-all",
+                                            "flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg border",
                                             votedIdx === idx
                                                 ? "border-purple-500/50 bg-purple-500/20 text-purple-300"
                                                 : votedIdx !== null
@@ -265,7 +250,7 @@ export default function ArenaPage() {
                                     <p className="text-xs text-cyan-400 mb-1">AI 輸出:</p>
                                     <p className="text-xs text-slate-300 line-clamp-3">{entry.aiOutput}</p>
                                 </div>
-                            </motion.div>
+                            </div>
                         ))}
                     </div>
 
@@ -275,7 +260,7 @@ export default function ArenaPage() {
                             投票可得 25 XP · 你的 Prompt 被投票可再得 10 XP
                         </p>
                     </div>
-                </motion.div>
+                </div>
             </div>
         </div>
     );

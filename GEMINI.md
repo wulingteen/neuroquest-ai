@@ -93,25 +93,31 @@ No test runner is configured yet.
 ### Frontend-Backend Status
 - **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), database-backed persistence.
 - **Backend:** Next.js API Routes act as microservices. News system is powered by LLM ranking and generation.
-- **Frontend Integration:** All main pages fetch real-time data. The News page (`/news`) has been redesigned with a **Duolingo-style** approachable interface, focused on singlend-task-at-a-time flows and English-only content.
+- **Frontend Integration:** All main pages fetch real-time data. The News page (`/news`) has been redesigned with a **Duolingo-style** approachable interface. The Map assessment interface (`LevelModal`) has been significantly revised to adopt the **Kurzgesagt** style, featuring dynamic guide characters and high-impact vector aesthetics.
 - **News Entry Point:** The news page is now accessed via the **Flame button** in the bottom navigation menu (next to the Map button).
 - **Profile Integration:** The `ProfileSetupModal` handles operative calibration (background/interests) to set the `difficulty_score`.
+
 
 ### Key Layers
 
 **`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS, (2) ranks articles via Gemini, (3) generates questions via Minimax.
 
-**`src/app/news/page.tsx`** — Completely redesigned as an **Approachable Learning Hub**:
-- **Hub View**: Large, friendly cards for daily stories.
-- **Reading Phase**: Clean, distraction-free summary briefing.
-- **Quiz Phase**: Duolingo-style one-question assessment with immediate feedback.
-- **Completion Phase**: Reward display and level-up progress.
+**`src/app/news/page.tsx`** — Redesigned as an **Approachable Learning Hub**.
+
+**`src/components/LevelModal.tsx`** — Revised as a **Kurzgesagt-style Assessment Hub**:
+- **Guide Character**: A custom SVG bird character ("KurzBird") with dynamic expressions (happy, thinking, surprised) guiding the user.
+- **Visual Style**: Bold 4px borders, flat paper-cut shadows, and high-contrast space-themed colors.
+- **Phases**: Intro briefing, multi-step neural probe (quiz), and mission extraction (result).
+
 
 ### Design System
 
 CSS custom properties and utilities are defined in `src/app/globals.css`:
-- Color palette: NASA Blue `#1cb0f6`, Nuclear Green `#58cc02`, Terminal Black `#02040a`, Amber `#ffc800`
-- Aesthetic: Glassmorphism, grid-lines, high-impact typography (Inter/Orbitron).
-- Interaction: Single-task focus, "Subtraction" principle.
+- **Color palette**: 
+    - Core: NASA Blue `#1cb0f6`, Nuclear Green `#58cc02`, Terminal Black `#02040a`, Amber `#ffc800`.
+    - Kurzgesagt: Space Indigo `#1D1C44`, Bird Yellow `#FFE100`, Sunset Orange `#FF7E5F`, Neon Cyan `#4EEAFF`.
+- **Aesthetic**: Glassmorphism, grid-lines, and now **Kurzgesagt-inspired flat vector design** with high-impact typography (Inter/Orbitron).
+- **Interaction**: Single-task focus, "Subtraction" principle, and spring-based physics for UI transitions.
+
 
 Path alias `@/*` maps to `./src/*`.
