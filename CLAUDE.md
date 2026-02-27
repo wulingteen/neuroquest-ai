@@ -105,7 +105,7 @@ No test runner is configured yet.
 **`src/app/news/page.tsx`** — Redesigned as an **Approachable Learning Hub**.
 
 **`src/components/LevelModal.tsx`** — Revised as a **Kurzgesagt-style Assessment Hub**:
-- **Guide Character**: A custom SVG bird character ("KurzBird") with dynamic expressions (happy, thinking, surprised) guiding the user.
+- **Guide Character**: A custom SVG bird character ("FomoBird") with dynamic expressions (happy, thinking, surprised) guiding the user.
 - **Visual Style**: Bold 4px borders, flat paper-cut shadows, and high-contrast space-themed colors.
 - **Phases**: Intro briefing, multi-step neural probe (quiz), and mission extraction (result).
 

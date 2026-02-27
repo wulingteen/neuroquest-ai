@@ -16,7 +16,7 @@ interface LevelModalProps {
     rollup: string;
 }
 
-const KurzBird = ({ className, expression = "happy" }: { className?: string, expression?: "happy" | "thinking" | "surprised" | "sad" }) => {
+const FomoBird = ({ className, expression = "happy" }: { className?: string, expression?: "happy" | "thinking" | "surprised" | "sad" }) => {
     return (
         <svg viewBox="0 0 100 100" className={cn("w-24 h-24", className)}>
             {/* Body */}
@@ -93,7 +93,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                         className="bg-[#1D1C44] border-[4px] border-[#0A0A26] rounded-[40px] w-full max-w-sm p-10 text-center shadow-[0_16px_0_#0A0A26]"
                     >
                         <div className="mb-6 flex justify-center">
-                            <KurzBird expression="thinking" />
+                            <FomoBird expression="thinking" />
                         </div>
                         <h3 className="text-3xl font-black text-white mb-4 italic tracking-tighter">EMPTY VOID</h3>
                         <p className="text-[#A5A5D9] mb-8 font-bold text-lg">Our space birds haven't mapped this sector yet!</p>
@@ -191,7 +191,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                     className="p-8 sm:p-14 text-center flex flex-col items-center justify-center flex-1"
                                 >
                                     <div className="relative mb-8">
-                                        <KurzBird className="w-32 h-32" />
+                                        <FomoBird className="w-32 h-32" />
                                         <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-[#58CC02] rounded-full border-[3px] border-[#0A0A26] flex items-center justify-center shadow-[0_4px_0_#0A0A26]">
                                             <span className="text-xl font-black text-white">HI!</span>
                                         </div>
@@ -332,7 +332,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                                         selected === question.correct ? "bg-[#58CC02]" : "bg-[#FF4B4B]"
                                                     )}>
                                                         <div className="w-28 h-28 bg-white/20 rounded-full flex items-center justify-center border-[4px] border-[#0A0A26] shrink-0 shadow-lg relative">
-                                                            <KurzBird className="w-20 h-20" expression={selected === question.correct ? "happy" : "surprised"} />
+                                                            <FomoBird className="w-20 h-20" expression={selected === question.correct ? "happy" : "surprised"} />
                                                             <div className="absolute -top-2 -right-2 bg-white w-10 h-10 rounded-full border-[3px] border-[#0A0A26] flex items-center justify-center font-black text-xl">
                                                                 {selected === question.correct ? "★" : "!"}
                                                             </div>
@@ -379,7 +379,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                 >
                                     <div className="relative mb-12">
                                         <div className="w-40 h-40 bg-[#4EEAFF] rounded-full flex items-center justify-center border-[5px] border-[#0A0A26] shadow-[0_15px_0_#0A0A26] animate-[bounce_2s_infinite]">
-                                            <KurzBird className="w-28 h-28" expression="happy" />
+                                            <FomoBird className="w-28 h-28" expression="happy" />
                                         </div>
                                         <div className="absolute -top-6 -right-6 w-16 h-16 bg-[#FEB47B] rounded-full border-[4px] border-[#0A0A26] flex items-center justify-center font-black text-3xl text-white shadow-lg">
                                             ★
