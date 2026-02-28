@@ -6,13 +6,22 @@
  *  2. Fetch all existing quiz_questions for that planet (sorted by question_id).
  *  3. Call the LLM with existing questions + planet context.
  *  4. Parse & validate the response.
- *  5. Create a new level (max level_number + 1) for this batch.
+ *  5. Compute new level_number(s) for the batch.
+ *  5b. **Ensure levels exist**: check that each target level_number exists in
+ *      the `levels` table. If missing, call LLM to generate a meaningful title
+ *      and insert the level with `xp_reward = LEVEL_BASE_XP + (n-1) × LEVEL_XP_STEP`.
  *  6. Compute `xp_reward` per question based on difficulty rank.
- *  7. Insert the level and questions into the database inside a transaction.
+ *  7. Insert questions into the database inside a transaction.
  */
 import db from "@/lib/db";
 import { openai, QUIZ_GENERATOR_MODEL } from "./constants";
-import { buildQuizGeneratorPrompt, type ExistingQuestion, type PlanetInfo } from "./prompts";
+import {
+    buildQuizGeneratorPrompt,
+    buildLevelTitlePrompt,
+    type ExistingQuestion,
+    type ExistingLevel,
+    type PlanetInfo,
+} from "./prompts";
 import { parseLLMJson, retryAsync } from "@/lib/news/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -27,7 +36,7 @@ interface GeneratedQuestion {
 export interface GenerationOptions {
     /** Planet rollup identifier (e.g. "prompt"). */
     rollup: string;
-    /** Number of questions to generate (1–20). */
+    /** Number of questions per level to generate (1–20). */
     count: number;
     /**
      * When true, all generated questions will be at the same advanced
@@ -35,6 +44,14 @@ export interface GenerationOptions {
      * Default: false (ascending difficulty).
      */
     sameDifficulty?: boolean;
+    /**
+     * Number of distinct difficulty levels to generate (1–10).
+     * Each level will contain `count` questions.
+     * Total questions = count × levelCount.
+     * When > 1, overrides sameDifficulty behaviour.
+     * Default: undefined (single level, legacy behaviour).
+     */
+    levelCount?: number;
 }
 
 export interface GenerationResult {
@@ -43,7 +60,12 @@ export interface GenerationResult {
     questionsRequested: number;
     questionsInserted: number;
     skippedDuplicates: number;
+    /** First (or only) level_number created. */
     levelNumber: number;
+    /** All level_numbers created (populated in multi-level mode). */
+    levelNumbers?: number[];
+    /** How many difficulty levels were requested (1 for legacy mode). */
+    levelCount: number;
     sameDifficulty: boolean;
     questions: Array<{
         question_id: number;
@@ -128,9 +150,26 @@ export function calculateXpReward(
     return base + position * STEP_XP + Math.floor(position * position * CURVE_FACTOR);
 }
 
+// ─── Level XP Reward Formula ────────────────────────────────────────────────
+
+/** Base XP reward for level 1. */
+const LEVEL_BASE_XP = 150;
+/** Additional XP per level increment. */
+const LEVEL_XP_STEP = 50;
+
+/**
+ * Calculate `xp_reward` for a level row based on its position.
+ * Formula: LEVEL_BASE_XP + (level_number - 1) × LEVEL_XP_STEP
+ *
+ * level_number 1 → 150, 2 → 200, 3 → 250, … 10 → 600, etc.
+ */
+export function calculateLevelXpReward(levelNumber: number): number {
+    return LEVEL_BASE_XP + (levelNumber - 1) * LEVEL_XP_STEP;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function fail(rollup: string, count: number, sameDifficulty: boolean, error: string): GenerationResult {
+function fail(rollup: string, count: number, sameDifficulty: boolean, error: string, levelCount = 1): GenerationResult {
     return {
         success: false,
         planet: rollup,
@@ -138,10 +177,145 @@ function fail(rollup: string, count: number, sameDifficulty: boolean, error: str
         questionsInserted: 0,
         skippedDuplicates: 0,
         levelNumber: 0,
+        levelCount,
         sameDifficulty,
         questions: [],
         error,
     };
+}
+
+// ─── Ensure Levels Exist ─────────────────────────────────────────────────────
+
+/**
+ * Pre-check that the target level_number(s) exist in the `levels` table for
+ * the given rollup. If any are missing, call the LLM to generate meaningful
+ * titles and insert them.
+ *
+ * Returns a Map<level_number, title> with all (existing + newly created) titles.
+ */
+async function ensureLevelsExist(
+    rollup: string,
+    planetInfo: PlanetInfo,
+    levelNumbers: number[],
+): Promise<Map<number, string>> {
+    const titleMap = new Map<number, string>();
+
+    // Fetch existing levels for this rollup
+    const existingLevels = await db.levels.findMany({
+        where: { rollup },
+        orderBy: { level_number: "asc" },
+    });
+
+    const existingLevelSet = new Set(existingLevels.map((l) => l.level_number));
+    for (const l of existingLevels) {
+        titleMap.set(l.level_number, l.title);
+    }
+
+    // Determine which level_numbers are missing
+    const missingLevelNumbers = levelNumbers.filter((n) => !existingLevelSet.has(n));
+    if (missingLevelNumbers.length === 0) {
+        console.log(`[quiz-gen] ✅ All target levels [${levelNumbers.join(", ")}] already exist for "${rollup}".`);
+        return titleMap;
+    }
+
+    console.log(`[quiz-gen] ⚠️  Missing levels [${missingLevelNumbers.join(", ")}] for "${rollup}". Generating titles via LLM…`);
+
+    // Build context from existing levels
+    const existingLevelContext: ExistingLevel[] = existingLevels.map((l) => ({
+        level_number: l.level_number,
+        title: l.title,
+        content_type: l.content_type,
+        xp_reward: l.xp_reward,
+    }));
+
+    // Call LLM to generate titles
+    const titlePrompt = buildLevelTitlePrompt(planetInfo, existingLevelContext, missingLevelNumbers);
+    let titleResponse: string;
+    try {
+        const completion = await retryAsync(
+            () =>
+                openai.chat.completions.create({
+                    model: QUIZ_GENERATOR_MODEL,
+                    messages: [{ role: "user", content: titlePrompt }],
+                }),
+            2,
+            2000,
+        );
+        titleResponse = completion.choices?.[0]?.message?.content || "[]";
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown LLM error";
+        console.warn(`[quiz-gen] LLM title generation failed for "${rollup}": ${msg}. Using fallback titles.`);
+        // Fallback to generic titles
+        titleResponse = JSON.stringify(
+            missingLevelNumbers.map((n) => ({
+                level_number: n,
+                title: `${planetInfo.label} — Level ${n}`,
+            })),
+        );
+    }
+
+    // Parse title response
+    let titleParsed: Array<{ level_number: number; title: string }>;
+    try {
+        titleParsed = parseLLMJson(titleResponse);
+        if (!Array.isArray(titleParsed)) {
+            throw new Error("Response is not an array");
+        }
+    } catch {
+        console.warn(`[quiz-gen] Failed to parse LLM title response. Using fallback titles.`);
+        titleParsed = missingLevelNumbers.map((n) => ({
+            level_number: n,
+            title: `${planetInfo.label} — Level ${n}`,
+        }));
+    }
+
+    // Build a lookup from LLM response
+    const llmTitles = new Map<number, string>();
+    for (const item of titleParsed) {
+        if (
+            typeof item.level_number === "number" &&
+            typeof item.title === "string" &&
+            item.title.trim().length > 0
+        ) {
+            llmTitles.set(item.level_number, item.title.trim());
+        }
+    }
+
+    // Compute next available level_id
+    const maxLevelGlobal = await db.levels.findFirst({
+        orderBy: { level_id: "desc" },
+    });
+    let nextLevelId = (maxLevelGlobal?.level_id ?? 0) + 1;
+
+    // Insert missing levels
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const insertOps: any[] = [];
+    for (const levelNumber of missingLevelNumbers) {
+        const title = llmTitles.get(levelNumber) || `${planetInfo.label} — Level ${levelNumber}`;
+        const xpReward = calculateLevelXpReward(levelNumber);
+
+        insertOps.push(
+            db.levels.create({
+                data: {
+                    level_id: nextLevelId++,
+                    rollup,
+                    level_number: levelNumber,
+                    title,
+                    content_type: "quiz",
+                    xp_reward: xpReward,
+                },
+            }),
+        );
+        titleMap.set(levelNumber, title);
+        console.log(`[quiz-gen]   → Level ${levelNumber}: "${title}" (xp_reward=${xpReward})`);
+    }
+
+    if (insertOps.length > 0) {
+        await db.$transaction(insertOps);
+        console.log(`[quiz-gen] ✅ Inserted ${insertOps.length} new level(s) for "${rollup}".`);
+    }
+
+    return titleMap;
 }
 
 // ─── Main Generator ──────────────────────────────────────────────────────────
@@ -149,14 +323,16 @@ function fail(rollup: string, count: number, sameDifficulty: boolean, error: str
 export async function generateQuizQuestions(
     options: GenerationOptions,
 ): Promise<GenerationResult> {
-    const { rollup, count, sameDifficulty = false } = options;
+    const { rollup, count, sameDifficulty = false, levelCount } = options;
+    const effectiveLevelCount = (typeof levelCount === "number" && levelCount > 1) ? levelCount : 1;
+    const isMultiLevel = effectiveLevelCount > 1;
 
     // ────────────────────────────────────────────────────────────────────
     // 1. Validate rollup
     // ────────────────────────────────────────────────────────────────────
     const planet = await db.planets.findUnique({ where: { rollup } });
     if (!planet) {
-        return fail(rollup, count, sameDifficulty, `Planet with rollup "${rollup}" not found.`);
+        return fail(rollup, count, sameDifficulty, `Planet with rollup "${rollup}" not found.`, effectiveLevelCount);
     }
 
     const planetInfo: PlanetInfo = {
@@ -188,7 +364,10 @@ export async function generateQuizQuestions(
     // ────────────────────────────────────────────────────────────────────
     // 3. Call LLM
     // ────────────────────────────────────────────────────────────────────
-    const prompt = buildQuizGeneratorPrompt(planetInfo, existingQuestions, count, sameDifficulty);
+    const prompt = buildQuizGeneratorPrompt(
+        planetInfo, existingQuestions, count, sameDifficulty,
+        isMultiLevel ? effectiveLevelCount : undefined,
+    );
 
     let llmResponse: string;
     try {
@@ -205,143 +384,196 @@ export async function generateQuizQuestions(
     } catch (err) {
         const msg = err instanceof Error ? err.message : "Unknown LLM error";
         console.error(`[quiz-gen] LLM call failed for "${rollup}":`, msg);
-        return fail(rollup, count, sameDifficulty, `LLM call failed: ${msg}`);
+        return fail(rollup, count, sameDifficulty, `LLM call failed: ${msg}`, effectiveLevelCount);
     }
 
     // ────────────────────────────────────────────────────────────────────
     // 4. Parse & validate
     // ────────────────────────────────────────────────────────────────────
-    let parsed: unknown[];
+    let parsed: unknown;
     try {
         parsed = parseLLMJson(llmResponse);
     } catch (parseErr) {
         console.error(`[quiz-gen] JSON parse error for "${rollup}":`, parseErr);
-        return fail(rollup, count, sameDifficulty, "Failed to parse LLM JSON response.");
+        return fail(rollup, count, sameDifficulty, "Failed to parse LLM JSON response.", effectiveLevelCount);
     }
 
-    if (!Array.isArray(parsed)) {
-        return fail(rollup, count, sameDifficulty, "LLM response was not an array.");
+    // ── Multi-level parsing ─────────────────────────────────────────────
+    // In multi-level mode the LLM returns { levels: [ { level, questions } ] }
+    // We flatten it into per-level buckets for DB insertion.
+    interface LevelBucket {
+        tierIndex: number; // 0-based index of the tier
+        questions: GeneratedQuestion[];
     }
 
-    // Filter to valid questions and detect duplicates
+    let levelBuckets: LevelBucket[];
     let skippedDuplicates = 0;
-    const validQuestions: GeneratedQuestion[] = [];
 
-    for (const raw of parsed) {
-        if (!isValidGeneratedQuestion(raw)) {
-            console.warn(`[quiz-gen] Skipping invalid question structure for "${rollup}".`);
-            continue;
+    if (isMultiLevel) {
+        // Accept both a wrapper object and a raw array (fallback)
+        const wrapper = parsed as Record<string, unknown>;
+        const levelsArr = Array.isArray(wrapper?.levels) ? wrapper.levels : null;
+
+        if (!levelsArr || levelsArr.length === 0) {
+            return fail(rollup, count, sameDifficulty, "Multi-level LLM response missing 'levels' array.", effectiveLevelCount);
         }
-        if (isDuplicate(raw.question_text, existingQuestions)) {
-            console.warn(`[quiz-gen] Skipping duplicate question for "${rollup}": "${raw.question_text.substring(0, 60)}…"`);
-            skippedDuplicates++;
-            continue;
+
+        levelBuckets = [];
+        for (let tierIdx = 0; tierIdx < levelsArr.length; tierIdx++) {
+            const tier = levelsArr[tierIdx] as Record<string, unknown>;
+            const rawQuestions = Array.isArray(tier?.questions) ? tier.questions : [];
+            const valid: GeneratedQuestion[] = [];
+            for (const raw of rawQuestions) {
+                if (!isValidGeneratedQuestion(raw)) {
+                    console.warn(`[quiz-gen] Skipping invalid question in tier ${tierIdx + 1} for "${rollup}".`);
+                    continue;
+                }
+                if (isDuplicate(raw.question_text, existingQuestions)) {
+                    console.warn(`[quiz-gen] Skipping duplicate in tier ${tierIdx + 1} for "${rollup}": "${raw.question_text.substring(0, 60)}…"`);
+                    skippedDuplicates++;
+                    continue;
+                }
+                valid.push(raw);
+            }
+            levelBuckets.push({ tierIndex: tierIdx, questions: valid });
         }
-        validQuestions.push(raw);
+    } else {
+        // Legacy single-level mode
+        if (!Array.isArray(parsed)) {
+            return fail(rollup, count, sameDifficulty, "LLM response was not an array.", effectiveLevelCount);
+        }
+        const valid: GeneratedQuestion[] = [];
+        for (const raw of parsed) {
+            if (!isValidGeneratedQuestion(raw)) {
+                console.warn(`[quiz-gen] Skipping invalid question structure for "${rollup}".`);
+                continue;
+            }
+            if (isDuplicate(raw.question_text, existingQuestions)) {
+                console.warn(`[quiz-gen] Skipping duplicate question for "${rollup}": "${raw.question_text.substring(0, 60)}…"`);
+                skippedDuplicates++;
+                continue;
+            }
+            valid.push(raw);
+        }
+        levelBuckets = [{ tierIndex: 0, questions: valid }];
     }
 
-    if (validQuestions.length === 0) {
-        return fail(rollup, count, sameDifficulty, "No valid, non-duplicate questions in LLM response.");
+    // Check we have at least some valid questions
+    const totalValid = levelBuckets.reduce((sum, b) => sum + b.questions.length, 0);
+    if (totalValid === 0) {
+        return fail(rollup, count, sameDifficulty, "No valid, non-duplicate questions in LLM response.", effectiveLevelCount);
     }
 
     // ────────────────────────────────────────────────────────────────────
-    // 5. New level_number = max(quiz_questions.level_number) + 1
-    //    Derived from quiz_questions only — the source of truth for
-    //    question data on this planet.
+    // 5. Compute new level_number(s)
+    //    Each bucket gets its own consecutive level_number.
     // ────────────────────────────────────────────────────────────────────
-    const maxQForPlanet = await db.quiz_questions.findFirst({
+    const maxLevelForPlanet = await db.levels.findFirst({
         where: { rollup },
         orderBy: { level_number: "desc" },
         select: { level_number: true },
     });
-    const newLevelNumber = (maxQForPlanet?.level_number ?? 0) + 1;
+    const baseLevelNumber = (maxLevelForPlanet?.level_number ?? 0) + 1;
 
-    // The levels table may already have a row at this level_number
-    // (orphaned from a previous generation whose questions were deleted).
-    // Use upsert to handle both cases cleanly.
-    const maxLevelGlobal = await db.levels.findFirst({
-        orderBy: { level_id: "desc" },
-    });
-    const newLevelId = (maxLevelGlobal?.level_id ?? 0) + 1;
+    // Compute the level_numbers we'll need
+    const targetLevelNumbers: number[] = [];
+    for (let bIdx = 0; bIdx < levelBuckets.length; bIdx++) {
+        if (levelBuckets[bIdx].questions.length > 0) {
+            targetLevelNumbers.push(baseLevelNumber + bIdx);
+        }
+    }
 
     // ────────────────────────────────────────────────────────────────────
-    // 6 & 7. Compute XP and insert level + questions in a transaction
+    // 5b. Ensure all target levels exist in the `levels` table.
+    //     If any are missing, call LLM to generate titles & insert them.
     // ────────────────────────────────────────────────────────────────────
-    const batchSize = validQuestions.length;
-    const avgXp = calculateXpReward(Math.floor(batchSize / 2), existingQuestions.length, sameDifficulty, batchSize);
+    await ensureLevelsExist(rollup, planetInfo, targetLevelNumbers);
 
-    const questionData = validQuestions.map((q, i) => ({
-        rollup,
-        level_number: newLevelNumber,
-        question_number: i + 1,
-        question_text: q.question_text.trim(),
-        options: q.options.map((o) => o.trim()),
-        correct_option_index: q.correct_option_index,
-        explanation: q.explanation.trim(),
-        xp_reward: calculateXpReward(i, existingQuestions.length, sameDifficulty, batchSize),
-    }));
+    // ────────────────────────────────────────────────────────────────────
+    // 6 & 7. Compute XP and insert questions in a transaction
+    //        (Levels are already guaranteed to exist at this point.)
+    // ────────────────────────────────────────────────────────────────────
+
+    // Build transaction operations across all level buckets
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const txOps: any[] = [];
+    const newLevelNumbers: number[] = [];
+    let questionDataCount = 0;
+
+    for (let bIdx = 0; bIdx < levelBuckets.length; bIdx++) {
+        const bucket = levelBuckets[bIdx];
+        if (bucket.questions.length === 0) continue;
+
+        const levelNumber = baseLevelNumber + bIdx;
+        newLevelNumbers.push(levelNumber);
+
+        const batchSize = bucket.questions.length;
+        // In multi-level mode, boost XP by tier index so higher tiers reward more
+        const tierBonus = isMultiLevel ? bIdx * STEP_XP * 2 : 0;
+
+        for (let qi = 0; qi < bucket.questions.length; qi++) {
+            const q = bucket.questions[qi];
+            const baseXp = calculateXpReward(
+                qi, existingQuestions.length,
+                isMultiLevel ? true : sameDifficulty,
+                batchSize,
+            );
+            txOps.push(
+                db.quiz_questions.create({
+                    data: {
+                        rollup,
+                        level_number: levelNumber,
+                        question_number: qi + 1,
+                        question_text: q.question_text.trim(),
+                        options: q.options.map((o) => o.trim()),
+                        correct_option_index: q.correct_option_index,
+                        explanation: q.explanation.trim(),
+                        xp_reward: baseXp + tierBonus,
+                    },
+                }),
+            );
+            questionDataCount++;
+        }
+    }
 
     try {
-        const levelTitle = sameDifficulty
-            ? `${planet.label} — Advanced Assessment ${newLevelNumber}`
-            : `${planet.label} — Level ${newLevelNumber}`;
+        const results = await db.$transaction(txOps);
 
-        const levelUpsert = db.levels.upsert({
-            where: { rollup_level_number: { rollup, level_number: newLevelNumber } },
-            create: {
-                level_id: newLevelId,
-                rollup,
-                level_number: newLevelNumber,
-                title: levelTitle,
-                content_type: "quiz",
-                xp_reward: avgXp,
-            },
-            update: {
-                title: levelTitle,
-                content_type: "quiz",
-                xp_reward: avgXp,
-            },
-        });
+        // All transaction ops are question creates now (levels are pre-ensured).
+        const insertedQuestions: GenerationResult["questions"] = [];
+        for (const r of results) {
+            const rec = r as Record<string, unknown>;
+            insertedQuestions.push({
+                question_id: rec.question_id as number,
+                level_number: rec.level_number as number,
+                question_number: rec.question_number as number,
+                question_text: rec.question_text as string,
+                xp_reward: rec.xp_reward as number,
+            });
+        }
 
-        const txOps = [
-            // Upsert the level row (satisfies FK, handles orphaned rows)
-            levelUpsert,
-            // Then insert all questions
-            ...questionData.map((data) => db.quiz_questions.create({ data })),
-        ];
-
-        const [, ...createdQuestions] = await db.$transaction(txOps);
-
-        const insertedQuestions: GenerationResult["questions"] = createdQuestions.map((r) => {
-            const rec = r as { question_id: number; level_number: number; question_number: number; question_text: string; xp_reward: number };
-            return {
-                question_id: rec.question_id,
-                level_number: rec.level_number,
-                question_number: rec.question_number,
-                question_text: rec.question_text,
-                xp_reward: rec.xp_reward,
-            };
-        });
-
+        const levelNumsStr = newLevelNumbers.join(", ");
         console.log(
-            `[quiz-gen] ✅ ${insertedQuestions.length}/${validQuestions.length} questions inserted for "${rollup}" ` +
-            `at level_number ${newLevelNumber} (${skippedDuplicates} duplicates skipped, ` +
-            `sameDifficulty=${sameDifficulty}).`,
+            `[quiz-gen] ✅ ${insertedQuestions.length}/${questionDataCount} questions inserted for "${rollup}" ` +
+            `at level_number(s) ${levelNumsStr} (${skippedDuplicates} duplicates skipped, ` +
+            `sameDifficulty=${sameDifficulty}, levelCount=${effectiveLevelCount}).`,
         );
 
         return {
             success: true,
             planet: rollup,
-            questionsRequested: count,
+            questionsRequested: count * effectiveLevelCount,
             questionsInserted: insertedQuestions.length,
             skippedDuplicates,
-            levelNumber: newLevelNumber,
+            levelNumber: newLevelNumbers[0] ?? baseLevelNumber,
+            levelNumbers: newLevelNumbers,
+            levelCount: effectiveLevelCount,
             sameDifficulty,
             questions: insertedQuestions,
         };
     } catch (txErr) {
         const msg = txErr instanceof Error ? txErr.message : String(txErr);
         console.error(`[quiz-gen] Transaction failed for "${rollup}":`, msg);
-        return fail(rollup, count, sameDifficulty, `Database insert failed: ${msg}`);
+        return fail(rollup, count, sameDifficulty, `Database insert failed: ${msg}`, effectiveLevelCount);
     }
 }

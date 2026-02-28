@@ -54,12 +54,7 @@ curl -X POST http://localhost:3000/api/user/profile \
 
 ## Quiz Question Generation Pipeline
 
-LLM-powered pipeline to generate quiz questions for any planet. Retrieves existing questions, sends them to the LLM as context, and generates harder ones.
-
-**Files:**
-- `src/lib/quiz/constants.ts` — Shared OpenRouter client & model config (Gemini 2.5 Flash)
-- `src/lib/quiz/prompts.ts` — Prompt template builder
-- `src/lib/quiz/generator.ts` — Core pipeline: fetch context → call LLM → validate → compute XP → insert into DB
+LLM-powered pipeline to generate quiz questions for any planet. Retrieves existing questions, sends them to the LLM as context, and generates harder ones. Before generating questions, the pipeline **auto-creates missing levels** in the `levels` table by calling the LLM to generate meaningful titles, and computes `xp_reward` using the formula: `150 + (level_number - 1) × 50`.
 
 **API Endpoint:**
 ```bash
@@ -72,13 +67,19 @@ curl -X POST http://localhost:3000/api/quiz/generate \
 curl -X POST http://localhost:3000/api/quiz/generate \
   -H 'Content-Type: application/json' \
   -d '{"rollup":"prompt","count":5,"sameDifficulty":true}'
+
+# Generate 3 questions × 4 difficulty levels (12 total, each level gets its own level_number)
+curl -X POST http://localhost:3000/api/quiz/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"rollup":"prompt","count":3,"levelCount":4}'
 ```
 
 **CLI Script** (requires dev server running):
 ```bash
-node scripts/generate-quiz.mjs --rollup prompt --count 5
-node scripts/generate-quiz.mjs -r model -c 3
-node scripts/generate-quiz.mjs -r prompt -c 5 --same-difficulty
+node scripts/generate-quiz.mjs --rollup [rollup] --count [The number of questions you need to generate]
+node scripts/generate-quiz.mjs -r [rollup] -c [The number of questions you need to generate]
+node scripts/generate-quiz.mjs -r [rollup] -c [The number of questions you need to generate] --same-difficulty
+node scripts/generate-quiz.mjs -r [rollup] -c [The number of questions you need to generate] --level-count [The number of difficulty levels you need to generate]
 ```
 
 ## Database Schema Overview

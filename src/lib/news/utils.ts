@@ -35,15 +35,25 @@ export function getDateRange(): { yesterdayStart: Date; todayStart: Date; tomorr
  *  Tries to extract the first JSON array or object if the model wraps it in prose. */
 export function parseLLMJson<T>(raw: string): T {
     // Strip common markdown fences
-    let cleaned = raw.replace(/```json|```/gi, "").trim();
+    const cleaned = raw.replace(/```json|```/gi, "").trim();
 
-    // Try to extract a JSON array [...] or object {...} if surrounded by prose
+    // 1. Try parsing the full cleaned string first — this preserves wrapper
+    //    objects like { "levels": [...] } that would otherwise be lost when
+    //    the regex extracts only the inner array.
+    try {
+        return JSON.parse(cleaned);
+    } catch {
+        // Fall through to regex extraction
+    }
+
+    // 2. Fallback: extract a JSON array [...] or object {...} from prose
     const arrayMatch = cleaned.match(/(\[[\s\S]*\])/);
     const objectMatch = cleaned.match(/(\{[\s\S]*\})/);
-    if (arrayMatch) cleaned = arrayMatch[1];
-    else if (objectMatch) cleaned = objectMatch[1];
+    let extracted = cleaned;
+    if (arrayMatch) extracted = arrayMatch[1];
+    else if (objectMatch) extracted = objectMatch[1];
 
-    return JSON.parse(cleaned);
+    return JSON.parse(extracted);
 }
 
 /** Normalize a title for fuzzy matching: lowercase, collapse whitespace,

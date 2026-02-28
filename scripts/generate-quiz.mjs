@@ -6,6 +6,7 @@
  *   node scripts/generate-quiz.mjs --rollup prompt --count 5
  *   node scripts/generate-quiz.mjs -r model -c 3
  *   node scripts/generate-quiz.mjs -r prompt -c 5 --same-difficulty
+ *   node scripts/generate-quiz.mjs -r future -c 3 --level-count 4
  *
  * Requires:
  *   - The dev server to be running (it hits localhost:3000/api/quiz/generate)
@@ -22,6 +23,7 @@ const { values } = parseArgs({
         count: { type: "string", short: "c", default: "5" },
         host: { type: "string", short: "h", default: "http://localhost:3000" },
         "same-difficulty": { type: "boolean", short: "s", default: false },
+        "level-count": { type: "string", short: "l" },
     },
 });
 
@@ -29,6 +31,8 @@ const rollup = values.rollup;
 const count = parseInt(values.count, 10);
 const host = values.host;
 const sameDifficulty = values["same-difficulty"] === true;
+const levelCountRaw = values["level-count"];
+const levelCount = levelCountRaw ? parseInt(levelCountRaw, 10) : undefined;
 
 if (!rollup) {
     console.error("❌ Missing --rollup flag. Example: --rollup prompt");
@@ -47,11 +51,33 @@ if (isNaN(count) || count < 1 || count > 20) {
     process.exit(1);
 }
 
+if (levelCount !== undefined && (isNaN(levelCount) || levelCount < 1 || levelCount > 10)) {
+    console.error("❌ --level-count must be an integer between 1 and 10.");
+    process.exit(1);
+}
+
+if (levelCount !== undefined && levelCount > 1 && sameDifficulty) {
+    console.error("❌ --same-difficulty and --level-count > 1 cannot be used together.");
+    console.error("   --level-count already organises questions into difficulty tiers.");
+    process.exit(1);
+}
+
+const totalQuestions = levelCount && levelCount > 1 ? count * levelCount : count;
+const modeLabel = levelCount && levelCount > 1
+    ? `multi-level (${levelCount} levels × ${count} questions)`
+    : sameDifficulty
+        ? "yes"
+        : "no (ascending)";
+
 console.log(`\n🧠 NeuroQuest AI — Quiz Question Generator`);
 console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 console.log(`  Planet rollup    : ${rollup}`);
-console.log(`  Questions        : ${count}`);
-console.log(`  Same difficulty  : ${sameDifficulty ? "yes" : "no (ascending)"}`);
+console.log(`  Questions/level  : ${count}`);
+if (levelCount && levelCount > 1) {
+    console.log(`  Level count      : ${levelCount}`);
+    console.log(`  Total questions  : ${totalQuestions}`);
+}
+console.log(`  Difficulty mode  : ${modeLabel}`);
 console.log(`  Server           : ${host}`);
 console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 console.log("⏳ Calling LLM… this may take 15–60 seconds.\n");
@@ -62,10 +88,15 @@ try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
+    const bodyPayload = { rollup, count, sameDifficulty };
+    if (levelCount !== undefined) {
+        bodyPayload.levelCount = levelCount;
+    }
+
     const res = await fetch(`${host}/api/quiz/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rollup, count, sameDifficulty }),
+        body: JSON.stringify(bodyPayload),
         signal: controller.signal,
     });
 
@@ -109,9 +140,15 @@ try {
         console.log("└────────┴───────┴────────┴───────┴────────────────────────────────────────────────────────────┘");
     }
 
-    console.log(`\n📊 Summary: ${data.questionsInserted}/${data.questionsRequested} questions inserted for planet "${data.planet}" at level ${data.levelNumber}.`);
-    if (data.sameDifficulty) {
-        console.log(`   🎯 Mode: uniform difficulty (all questions at same level).`);
+    // Summary line
+    if (data.levelCount > 1 && data.levelNumbers) {
+        console.log(`\n📊 Summary: ${data.questionsInserted}/${data.questionsRequested} questions inserted for planet "${data.planet}" across levels ${data.levelNumbers.join(", ")}.`);
+        console.log(`   📐 Mode: multi-level (${data.levelCount} difficulty tiers).`);
+    } else {
+        console.log(`\n📊 Summary: ${data.questionsInserted}/${data.questionsRequested} questions inserted for planet "${data.planet}" at level ${data.levelNumber}.`);
+        if (data.sameDifficulty) {
+            console.log(`   🎯 Mode: uniform difficulty (all questions at same level).`);
+        }
     }
 } catch (err) {
     if (err.name === "AbortError") {

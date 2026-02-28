@@ -6,8 +6,9 @@
  * Body (JSON):
  *   {
  *     "rollup": "prompt",          // planet rollup identifier
- *     "count": 5,                  // number of questions to generate (1–20)
- *     "sameDifficulty": false       // optional: all questions at same difficulty
+ *     "count": 5,                  // number of questions per level (1–20)
+ *     "sameDifficulty": false,      // optional: all questions at same difficulty
+ *     "levelCount": 4              // optional: number of difficulty levels (1–10)
  *   }
  *
  * Response: GenerationResult JSON
@@ -20,6 +21,8 @@ export const maxDuration = 120;
 
 const MIN_COUNT = 1;
 const MAX_COUNT = 20;
+const MIN_LEVEL_COUNT = 1;
+const MAX_LEVEL_COUNT = 10;
 
 export async function POST(request: Request) {
     try {
@@ -42,10 +45,11 @@ export async function POST(request: Request) {
             );
         }
 
-        const { rollup, count, sameDifficulty } = body as {
+        const { rollup, count, sameDifficulty, levelCount } = body as {
             rollup?: string;
             count?: number;
             sameDifficulty?: boolean;
+            levelCount?: number;
         };
 
         // ── Validate rollup ──────────────────────────────────────────────
@@ -76,11 +80,24 @@ export async function POST(request: Request) {
         // ── Validate sameDifficulty (optional boolean) ───────────────────
         const useSameDifficulty = sameDifficulty === true;
 
+        // ── Validate levelCount (optional integer 1–10) ──────────────────
+        let parsedLevelCount: number | undefined;
+        if (levelCount !== undefined && levelCount !== null) {
+            parsedLevelCount = Number(levelCount);
+            if (!Number.isInteger(parsedLevelCount) || parsedLevelCount < MIN_LEVEL_COUNT || parsedLevelCount > MAX_LEVEL_COUNT) {
+                return NextResponse.json(
+                    { success: false, error: `'levelCount' must be an integer between ${MIN_LEVEL_COUNT} and ${MAX_LEVEL_COUNT}.` },
+                    { status: 400 },
+                );
+            }
+        }
+
         // ── Run pipeline ─────────────────────────────────────────────────
         const result = await generateQuizQuestions({
             rollup: rollup.trim(),
             count: parsedCount,
             sameDifficulty: useSameDifficulty,
+            levelCount: parsedLevelCount,
         });
 
         if (!result.success) {
