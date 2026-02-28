@@ -18,6 +18,7 @@ import { openai, QUIZ_GENERATOR_MODEL } from "./constants";
 import {
     buildQuizGeneratorPrompt,
     buildLevelTitlePrompt,
+    buildPlanetDescriptionPrompt,
     type ExistingQuestion,
     type ExistingLevel,
     type PlanetInfo,
@@ -52,6 +53,11 @@ export interface GenerationOptions {
      * Default: undefined (single level, legacy behaviour).
      */
     levelCount?: number;
+    /**
+     * Topic overview provided by the user when the rollup doesn't exist
+     * in the `planets` table. Used to create the planet on the fly.
+     */
+    overview?: string;
 }
 
 export interface GenerationResult {
@@ -75,6 +81,8 @@ export interface GenerationResult {
         xp_reward: number;
     }>;
     error?: string;
+    /** When true, the client should prompt the user for an overview and retry. */
+    needsOverview?: boolean;
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────────
@@ -323,16 +331,96 @@ async function ensureLevelsExist(
 export async function generateQuizQuestions(
     options: GenerationOptions,
 ): Promise<GenerationResult> {
-    const { rollup, count, sameDifficulty = false, levelCount } = options;
+    const { rollup, count, sameDifficulty = false, levelCount, overview } = options;
     const effectiveLevelCount = (typeof levelCount === "number" && levelCount > 1) ? levelCount : 1;
     const isMultiLevel = effectiveLevelCount > 1;
 
     // ────────────────────────────────────────────────────────────────────
-    // 1. Validate rollup
+    // 1. Validate rollup — auto-create planet if overview is provided
     // ────────────────────────────────────────────────────────────────────
-    const planet = await db.planets.findUnique({ where: { rollup } });
+    let planet = await db.planets.findUnique({ where: { rollup } });
     if (!planet) {
-        return fail(rollup, count, sameDifficulty, `Planet with rollup "${rollup}" not found.`, effectiveLevelCount);
+        // If no overview provided, signal the caller to collect one
+        if (!overview || overview.trim().length === 0) {
+            const result = fail(
+                rollup, count, sameDifficulty,
+                `Planet with rollup "${rollup}" not found. Please provide a topic overview.`,
+                effectiveLevelCount,
+            );
+            result.needsOverview = true;
+            return result;
+        }
+
+        // Auto-create the planet from the overview via LLM
+        console.log(`[quiz-gen] 🌍 Planet "${rollup}" not found. Generating metadata via LLM…`);
+
+        // Call LLM to generate structured planet metadata
+        let planetMeta = {
+            label: (rollup.length <= 4 ? rollup.toUpperCase() : rollup.charAt(0).toUpperCase() + rollup.slice(1)) + " Planet",
+            subtitle: overview.trim().substring(0, 200),
+            description: overview.trim(),
+            icon: "🪐",
+        };
+
+        try {
+            const descPrompt = buildPlanetDescriptionPrompt(rollup, overview.trim());
+            const descCompletion = await retryAsync(
+                () =>
+                    openai.chat.completions.create({
+                        model: QUIZ_GENERATOR_MODEL,
+                        messages: [{ role: "user", content: descPrompt }],
+                    }),
+                2,
+                2000,
+            );
+            const descResponse = descCompletion.choices?.[0]?.message?.content || "{}";
+            const parsed = parseLLMJson(descResponse) as Record<string, unknown>;
+
+            if (
+                typeof parsed === "object" && parsed !== null &&
+                typeof parsed.label === "string" && parsed.label.trim().length > 0 &&
+                typeof parsed.subtitle === "string" && parsed.subtitle.trim().length > 0 &&
+                typeof parsed.description === "string" && parsed.description.trim().length > 0
+            ) {
+                planetMeta = {
+                    label: parsed.label.trim(),
+                    subtitle: parsed.subtitle.trim().substring(0, 200),
+                    description: parsed.description.trim(),
+                    icon: typeof parsed.icon === "string" && parsed.icon.trim().length > 0
+                        ? parsed.icon.trim()
+                        : "🪐",
+                };
+                console.log(`[quiz-gen]   → LLM generated: "${planetMeta.label}" | "${planetMeta.subtitle}"`);
+                console.log(`[quiz-gen]   → Description: "${planetMeta.description}"`);
+            } else {
+                console.warn(`[quiz-gen] ⚠️  LLM returned invalid planet metadata. Using fallback.`);
+            }
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Unknown LLM error";
+            console.warn(`[quiz-gen] ⚠️  LLM planet metadata generation failed: ${msg}. Using fallback.`);
+        }
+
+        const maxPlanet = await db.planets.findFirst({
+            orderBy: { planet_id: "desc" },
+        });
+        const nextPlanetId = (maxPlanet?.planet_id ?? 0) + 1;
+
+        planet = await db.planets.create({
+            data: {
+                planet_id: nextPlanetId,
+                rollup,
+                label: planetMeta.label,
+                subtitle: planetMeta.subtitle,
+                icon: planetMeta.icon,
+                color: "#8B5CF6",
+                glow_color: "rgba(139,92,246,0.5)",
+                bg_gradient: "from-purple-900 to-violet-950",
+                x: 50,
+                y: 50,
+                description: planetMeta.description,
+            },
+        });
+        console.log(`[quiz-gen] ✅ Created planet "${rollup}" (planet_id=${planet.planet_id}).`);
     }
 
     const planetInfo: PlanetInfo = {

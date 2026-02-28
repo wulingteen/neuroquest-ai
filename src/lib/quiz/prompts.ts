@@ -249,3 +249,48 @@ Return **ONLY** a valid JSON array (no markdown fences, no extra text) with exac
 
 Each object must have "level_number" (integer) and "title" (string).`;
 }
+
+// ─── Planet Description Prompt ───────────────────────────────────────────────
+
+/**
+ * Build a prompt that asks the LLM to generate structured planet metadata
+ * (label, subtitle, description, icon) from a user-provided topic overview.
+ *
+ * Output: single JSON object `{ label, subtitle, description, icon }`.
+ */
+export function buildPlanetDescriptionPrompt(
+    rollup: string,
+    overview: string,
+): string {
+    return `You are a creative writer for a gamified GenAI learning platform.
+
+The platform organises topics into "planets". Each planet has:
+- **label**: A short, catchy name ending with " Planet" (e.g. "Prompt Planet", "Model Planet").
+- **subtitle**: The academic / technical topic name (2–5 words, e.g. "Prompt Engineering", "LLM Fundamentals").
+- **description**: A single gamified, action-oriented sentence (10–20 words) that excites learners. It should start with a verb and convey mastery / exploration / discovery.
+- **icon**: A single emoji that best represents the topic.
+
+### Reference Examples
+| rollup  | label          | subtitle              | description                                                                 | icon |
+|---------|----------------|-----------------------|-----------------------------------------------------------------------------|------|
+| prompt  | Prompt Planet  | Prompt Engineering    | Master the power of Prompts and make AI work for you                        | ⚡   |
+
+## Your Task
+A user wants to create a new planet with rollup **"${rollup}"**. They provided the following topic overview:
+
+> ${overview}
+
+Generate the planet metadata following the style above.
+
+### Output Format
+Return **ONLY** a valid JSON object (no markdown fences, no extra text):
+
+{
+  "label": "Example Planet",
+  "subtitle": "Example Topic Name",
+  "description": "Action-oriented gamified one-liner about the topic",
+  "icon": "🔮"
+}
+
+All values must be strings. The description must be a single sentence (no period at the end).`;
+}

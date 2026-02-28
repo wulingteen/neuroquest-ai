@@ -7,6 +7,7 @@
  *   node scripts/generate-quiz.mjs -r model -c 3
  *   node scripts/generate-quiz.mjs -r prompt -c 5 --same-difficulty
  *   node scripts/generate-quiz.mjs -r future -c 3 --level-count 4
+ *   node scripts/generate-quiz.mjs -r rag -c 5   # new rollup → prompts for overview
  *
  * Requires:
  *   - The dev server to be running (it hits localhost:3000/api/quiz/generate)
@@ -14,8 +15,7 @@
  */
 
 import { parseArgs } from "node:util";
-
-const VALID_ROLLUPS = ["prompt", "model", "vision", "ethics", "agent", "future"];
+import { createInterface } from "node:readline";
 
 const { values } = parseArgs({
     options: {
@@ -36,13 +36,11 @@ const levelCount = levelCountRaw ? parseInt(levelCountRaw, 10) : undefined;
 
 if (!rollup) {
     console.error("❌ Missing --rollup flag. Example: --rollup prompt");
-    console.error(`\nAvailable rollups: ${VALID_ROLLUPS.join(", ")}`);
     process.exit(1);
 }
 
-if (!VALID_ROLLUPS.includes(rollup)) {
-    console.error(`❌ Unknown rollup "${rollup}".`);
-    console.error(`   Available rollups: ${VALID_ROLLUPS.join(", ")}`);
+if (rollup.length > 50) {
+    console.error("❌ --rollup must be 50 characters or fewer.");
     process.exit(1);
 }
 
@@ -62,6 +60,38 @@ if (levelCount !== undefined && levelCount > 1 && sameDifficulty) {
     process.exit(1);
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Prompt the user for multi-line input via stdin.
+ * Ends when the user enters a blank line or presses Ctrl+D.
+ */
+function promptForOverview(rollupName) {
+    return new Promise((resolve) => {
+        const rl = createInterface({ input: process.stdin, output: process.stdout });
+        console.log(`\n🆕 Rollup "${rollupName}" is not registered in the system.`);
+        console.log(`   Please provide a topic overview so the LLM can generate questions.`);
+        console.log(`   (Type your overview, then press Enter twice or Ctrl+D to submit)\n`);
+        process.stdout.write("📝 Overview: ");
+
+        const lines = [];
+        rl.on("line", (line) => {
+            if (line.trim() === "" && lines.length > 0) {
+                rl.close();
+            } else {
+                lines.push(line);
+                process.stdout.write("   ... ");
+            }
+        });
+        rl.on("close", () => {
+            const overview = lines.join("\n").trim();
+            resolve(overview);
+        });
+    });
+}
+
+// ─── Main ────────────────────────────────────────────────────────────────────
+
 const totalQuestions = levelCount && levelCount > 1 ? count * levelCount : count;
 const modeLabel = levelCount && levelCount > 1
     ? `multi-level (${levelCount} levels × ${count} questions)`
@@ -80,17 +110,23 @@ if (levelCount && levelCount > 1) {
 console.log(`  Difficulty mode  : ${modeLabel}`);
 console.log(`  Server           : ${host}`);
 console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-console.log("⏳ Calling LLM… this may take 15–60 seconds.\n");
 
 const TIMEOUT_MS = 180_000; // 3 minutes
 
-try {
+/**
+ * Send the generation request to the API.
+ * @param {string|undefined} overview - optional topic overview for new rollups
+ */
+async function callGenerateApi(overview) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
     const bodyPayload = { rollup, count, sameDifficulty };
     if (levelCount !== undefined) {
         bodyPayload.levelCount = levelCount;
+    }
+    if (overview) {
+        bodyPayload.overview = overview;
     }
 
     const res = await fetch(`${host}/api/quiz/generate`, {
@@ -111,7 +147,25 @@ try {
         process.exit(1);
     }
 
-    const data = await res.json();
+    return { res, data: await res.json() };
+}
+
+try {
+    console.log("⏳ Calling LLM… this may take 15–60 seconds.\n");
+
+    let { res, data } = await callGenerateApi();
+
+    // ── Handle "needs overview" response ──────────────────────────────
+    if (!res.ok && data.needsOverview) {
+        const overview = await promptForOverview(rollup);
+        if (!overview) {
+            console.error("\n❌ No overview provided. Cannot generate questions for an unknown rollup.");
+            process.exit(1);
+        }
+        console.log(`\n✅ Overview received (${overview.length} chars). Sending to LLM…\n`);
+        console.log("⏳ Creating planet & generating questions… this may take 15–60 seconds.\n");
+        ({ res, data } = await callGenerateApi(overview));
+    }
 
     if (!res.ok || !data.success) {
         console.error(`❌ Generation failed (HTTP ${res.status}):`);

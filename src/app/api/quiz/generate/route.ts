@@ -8,7 +8,8 @@
  *     "rollup": "prompt",          // planet rollup identifier
  *     "count": 5,                  // number of questions per level (1–20)
  *     "sameDifficulty": false,      // optional: all questions at same difficulty
- *     "levelCount": 4              // optional: number of difficulty levels (1–10)
+ *     "levelCount": 4,             // optional: number of difficulty levels (1–10)
+ *     "overview": "..."            // optional: topic overview for new rollups
  *   }
  *
  * Response: GenerationResult JSON
@@ -45,11 +46,12 @@ export async function POST(request: Request) {
             );
         }
 
-        const { rollup, count, sameDifficulty, levelCount } = body as {
+        const { rollup, count, sameDifficulty, levelCount, overview } = body as {
             rollup?: string;
             count?: number;
             sameDifficulty?: boolean;
             levelCount?: number;
+            overview?: string;
         };
 
         // ── Validate rollup ──────────────────────────────────────────────
@@ -92,12 +94,18 @@ export async function POST(request: Request) {
             }
         }
 
+        // ── Validate overview (optional string, max 2000 chars) ────────────
+        const sanitizedOverview = typeof overview === "string" && overview.trim().length > 0
+            ? overview.trim().substring(0, 2000)
+            : undefined;
+
         // ── Run pipeline ─────────────────────────────────────────────────
         const result = await generateQuizQuestions({
             rollup: rollup.trim(),
             count: parsedCount,
             sameDifficulty: useSameDifficulty,
             levelCount: parsedLevelCount,
+            overview: sanitizedOverview,
         });
 
         if (!result.success) {
