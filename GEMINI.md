@@ -52,6 +52,35 @@ curl -X POST http://localhost:3000/api/user/profile \
   -d '{"background":"developer","interests":["prompt_eng","llm_fundamentals"]}'
 ```
 
+## Quiz Question Generation Pipeline
+
+LLM-powered pipeline to generate quiz questions for any planet. Retrieves existing questions, sends them to the LLM as context, and generates harder ones.
+
+**Files:**
+- `src/lib/quiz/constants.ts` — Shared OpenRouter client & model config (Gemini 2.5 Flash)
+- `src/lib/quiz/prompts.ts` — Prompt template builder
+- `src/lib/quiz/generator.ts` — Core pipeline: fetch context → call LLM → validate → compute XP → insert into DB
+
+**API Endpoint:**
+```bash
+# Generate 5 new questions for the "prompt" planet
+curl -X POST http://localhost:3000/api/quiz/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"rollup":"prompt","count":5}'
+
+# Generate 5 questions at uniform (same) difficulty
+curl -X POST http://localhost:3000/api/quiz/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"rollup":"prompt","count":5,"sameDifficulty":true}'
+```
+
+**CLI Script** (requires dev server running):
+```bash
+node scripts/generate-quiz.mjs --rollup prompt --count 5
+node scripts/generate-quiz.mjs -r model -c 3
+node scripts/generate-quiz.mjs -r prompt -c 5 --same-difficulty
+```
+
 ## Database Schema Overview
 
 The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a concise overview of each table and its columns:
