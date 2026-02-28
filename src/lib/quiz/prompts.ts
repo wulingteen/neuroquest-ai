@@ -252,16 +252,42 @@ Each object must have "level_number" (integer) and "title" (string).`;
 
 // ─── Planet Description Prompt ───────────────────────────────────────────────
 
+export interface ExistingPlanetSummary {
+    rollup: string;
+    description: string | null;
+}
+
 /**
  * Build a prompt that asks the LLM to generate structured planet metadata
- * (label, subtitle, description, icon) from a user-provided topic overview.
+ * (label, subtitle, description, icon, required_rollup) from a user-provided
+ * topic overview.
  *
- * Output: single JSON object `{ label, subtitle, description, icon }`.
+ * The LLM receives existing planets so it can decide if the new planet should
+ * have a prerequisite (`required_rollup`). It may return `null` if none fits.
+ *
+ * Output: single JSON object `{ label, subtitle, description, icon, required_rollup }`.
  */
 export function buildPlanetDescriptionPrompt(
     rollup: string,
     overview: string,
+    existingPlanets: ExistingPlanetSummary[],
 ): string {
+    const existingBlock =
+        existingPlanets.length > 0
+            ? `### Existing Planets
+\`\`\`json
+${JSON.stringify(
+                existingPlanets.map((p) => ({
+                    rollup: p.rollup,
+                    description: p.description ?? "N/A",
+                })),
+                null,
+                2,
+            )}
+\`\`\`
+`
+            : "\n(No existing planets yet.)\n";
+
     return `You are a creative writer for a gamified GenAI learning platform.
 
 The platform organises topics into "planets". Each planet has:
@@ -269,18 +295,20 @@ The platform organises topics into "planets". Each planet has:
 - **subtitle**: The academic / technical topic name (2–5 words, e.g. "Prompt Engineering", "LLM Fundamentals").
 - **description**: A single gamified, action-oriented sentence (10–20 words) that excites learners. It should start with a verb and convey mastery / exploration / discovery.
 - **icon**: A single emoji that best represents the topic.
+- **required_rollup**: The rollup ID of a prerequisite planet (from the existing list below) that a learner should complete before this one. Set to \`null\` if no prerequisite is needed — for example, when the topic is beginner-friendly, stands on its own, or doesn't logically follow any existing planet.
 
 ### Reference Examples
 | rollup  | label          | subtitle              | description                                                                 | icon |
 |---------|----------------|-----------------------|-----------------------------------------------------------------------------|------|
 | prompt  | Prompt Planet  | Prompt Engineering    | Master the power of Prompts and make AI work for you                        | ⚡   |
 
+${existingBlock}
 ## Your Task
 A user wants to create a new planet with rollup **"${rollup}"**. They provided the following topic overview:
 
 > ${overview}
 
-Generate the planet metadata following the style above.
+Generate the planet metadata following the style above. Carefully consider the existing planets and decide whether a \`required_rollup\` is appropriate.
 
 ### Output Format
 Return **ONLY** a valid JSON object (no markdown fences, no extra text):
@@ -289,8 +317,10 @@ Return **ONLY** a valid JSON object (no markdown fences, no extra text):
   "label": "Example Planet",
   "subtitle": "Example Topic Name",
   "description": "Action-oriented gamified one-liner about the topic",
-  "icon": "🔮"
+  "icon": "🔮",
+  "required_rollup": "prompt" or null
 }
 
-All values must be strings. The description must be a single sentence (no period at the end).`;
+All values must be strings except \`required_rollup\` which is either a string (one of the existing rollup IDs) or \`null\`. The description must be a single sentence (no period at the end).`;
 }
+

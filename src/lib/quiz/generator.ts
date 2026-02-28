@@ -354,16 +354,34 @@ export async function generateQuizQuestions(
         // Auto-create the planet from the overview via LLM
         console.log(`[quiz-gen] 🌍 Planet "${rollup}" not found. Generating metadata via LLM…`);
 
+        // Fetch all existing planets for context (required_rollup selection)
+        const existingPlanets = await db.planets.findMany({
+            select: { rollup: true, description: true },
+            orderBy: { planet_id: "asc" },
+        });
+        const existingRollupSet = new Set(existingPlanets.map((p) => p.rollup));
+
         // Call LLM to generate structured planet metadata
-        let planetMeta = {
+        let planetMeta: {
+            label: string;
+            subtitle: string;
+            description: string;
+            icon: string;
+            required_rollup: string | null;
+        } = {
             label: (rollup.length <= 4 ? rollup.toUpperCase() : rollup.charAt(0).toUpperCase() + rollup.slice(1)) + " Planet",
             subtitle: overview.trim().substring(0, 200),
             description: overview.trim(),
             icon: "🪐",
+            required_rollup: null,
         };
 
         try {
-            const descPrompt = buildPlanetDescriptionPrompt(rollup, overview.trim());
+            const descPrompt = buildPlanetDescriptionPrompt(
+                rollup,
+                overview.trim(),
+                existingPlanets.map((p) => ({ rollup: p.rollup, description: p.description })),
+            );
             const descCompletion = await retryAsync(
                 () =>
                     openai.chat.completions.create({
@@ -382,6 +400,17 @@ export async function generateQuizQuestions(
                 typeof parsed.subtitle === "string" && parsed.subtitle.trim().length > 0 &&
                 typeof parsed.description === "string" && parsed.description.trim().length > 0
             ) {
+                // Validate required_rollup: must be null or a known rollup
+                let requiredRollup: string | null = null;
+                if (typeof parsed.required_rollup === "string" && parsed.required_rollup.trim().length > 0) {
+                    const candidate = parsed.required_rollup.trim();
+                    if (existingRollupSet.has(candidate)) {
+                        requiredRollup = candidate;
+                    } else {
+                        console.warn(`[quiz-gen] ⚠️  LLM suggested required_rollup "${candidate}" which doesn't exist. Ignoring.`);
+                    }
+                }
+
                 planetMeta = {
                     label: parsed.label.trim(),
                     subtitle: parsed.subtitle.trim().substring(0, 200),
@@ -389,9 +418,11 @@ export async function generateQuizQuestions(
                     icon: typeof parsed.icon === "string" && parsed.icon.trim().length > 0
                         ? parsed.icon.trim()
                         : "🪐",
+                    required_rollup: requiredRollup,
                 };
                 console.log(`[quiz-gen]   → LLM generated: "${planetMeta.label}" | "${planetMeta.subtitle}"`);
                 console.log(`[quiz-gen]   → Description: "${planetMeta.description}"`);
+                console.log(`[quiz-gen]   → Required rollup: ${planetMeta.required_rollup ?? "(none)"}`);
             } else {
                 console.warn(`[quiz-gen] ⚠️  LLM returned invalid planet metadata. Using fallback.`);
             }
@@ -418,6 +449,7 @@ export async function generateQuizQuestions(
                 x: 50,
                 y: 50,
                 description: planetMeta.description,
+                required_rollup: planetMeta.required_rollup,
             },
         });
         console.log(`[quiz-gen] ✅ Created planet "${rollup}" (planet_id=${planet.planet_id}).`);
