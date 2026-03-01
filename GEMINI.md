@@ -123,10 +123,32 @@ No test runner is configured yet.
 ### Frontend-Backend Status
 - **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), database-backed persistence.
 - **Backend:** Next.js API Routes act as microservices. News system is powered by LLM ranking and generation.
-- **Frontend Integration:** All main pages fetch real-time data. The News page (`/news`) has been redesigned with a **Duolingo-style** approachable interface. The Map assessment interface (`LevelModal`) has been significantly revised to adopt the **Kurzgesagt** style, featuring dynamic guide characters and high-impact vector aesthetics.
+- **Frontend Integration:** The Map assessment interface (`LevelModal`) has been significantly revised to adopt the **Kurzgesagt** style, featuring dynamic guide characters and high-impact vector aesthetics.
 - **News Entry Point:** The news page is now accessed via the **Flame button** in the bottom navigation menu (next to the Map button).
 - **Profile Integration:** The `ProfileSetupModal` handles operative calibration (background/interests) to set the `difficulty_score`.
 
+### Library Directory (`src/lib/`)
+
+Each module folder has a barrel `index.ts` for cleaner imports.
+
+- **`db.ts`** — Singleton Prisma client.
+- **`utils.ts`** — Generic frontend utilities (`cn` for Tailwind class merging).
+- **`llm/`** — Shared LLM/OpenRouter client and generic helpers (`client.ts`, `helpers.ts`). Both news and quiz pipelines import from here.
+- **`game/`** — Player domain helpers: XP/level calculations, streak logic (`helpers.ts`).
+- **`news/`** — News cron pipeline: RSS feed fetching (`feeds.ts`), LLM article ranking (`ranker.ts`), question generation (`examiner.ts`), full-text scraping (`scraper.ts`), prompt templates (`prompts.ts`), date/title utilities (`utils.ts`), and feed list + model constants (`constants.ts`).
+- **`quiz/`** — Quiz generation pipeline: core generator (`generator.ts`), prompt templates (`prompts.ts`), model constants (`constants.ts`).
+
+### Component Directory (`src/components/`)
+
+Each folder has a barrel `index.ts` for cleaner imports.
+
+- **`effects/`** — Visual effects (`StarField`)
+- **`icons/`** — Reusable SVG icon components (`Saturn`, `FomoBird`)
+- **`layout/`** — App-level layout components (`BottomMenu`)
+- **`map/`** — Map page sub-components (`BackgroundGraphics` with animated planet transitions)
+- **`modals/`** — Modal dialogs (`DailyRewardModal`, `LevelModal`, `ProfileSetupModal`)
+- **`news/`** — News page sub-components (`BackgroundGraphics` with static Kurzgesagt planets)
+- **`providers/`** — App initialization wrappers (`GameInitializer`)
 
 ### Key Layers
 
@@ -134,8 +156,8 @@ No test runner is configured yet.
 
 **`src/app/news/page.tsx`** — Redesigned as an **Approachable Learning Hub**.
 
-**`src/components/LevelModal.tsx`** — Revised as a **Kurzgesagt-style Assessment Hub**:
-- **Guide Character**: A custom SVG bird character ("FomoBird") with dynamic expressions (happy, thinking, surprised) guiding the user.
+**`src/components/modals/LevelModal.tsx`** — Revised as a **Kurzgesagt-style Assessment Hub**:
+- **Guide Character**: `FomoBird` (`src/components/icons/FomoBird.tsx`) — custom SVG bird with dynamic expressions (happy, thinking, surprised).
 - **Visual Style**: Bold 4px borders, flat paper-cut shadows, and high-contrast space-themed colors.
 - **Phases**: Intro briefing, multi-step neural probe (quiz), and mission extraction (result).
 
@@ -146,7 +168,7 @@ CSS custom properties and utilities are defined in `src/app/globals.css`:
 - **Color palette**: 
     - Core: NASA Blue `#1cb0f6`, Nuclear Green `#58cc02`, Terminal Black `#02040a`, Amber `#ffc800`.
     - Kurzgesagt: Space Indigo `#1D1C44`, Bird Yellow `#FFE100`, Sunset Orange `#FF7E5F`, Neon Cyan `#4EEAFF`.
-- **Aesthetic**: Glassmorphism, grid-lines, and now **Kurzgesagt-inspired flat vector design** with high-impact typography (Inter/Orbitron).
+- **Aesthetic**: **Kurzgesagt-inspired flat vector design** with high-impact typography (Inter/Orbitron).
 - **Interaction**: Single-task focus, "Subtraction" principle, and spring-based physics for UI transitions.
 
 

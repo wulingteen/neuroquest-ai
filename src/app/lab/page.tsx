@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import { getLevelTitle } from "@/lib/gameData";
+import { getLevelTitle } from "@/lib/game/helpers";
 import { type Achievement } from "@/types/game";
 import { useGameStore } from "@/store/gameStore";
 import { cn } from "@/lib/utils";

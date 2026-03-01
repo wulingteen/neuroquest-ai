@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Orbitron } from "next/font/google";
 import "./globals.css";
-import BottomMenu from "@/components/BottomMenu";
-import StarField from "@/components/StarField";
-import GameInitializer from "@/components/GameInitializer";
+import BottomMenu from "@/components/layout/BottomMenu";
+import StarField from "@/components/effects/StarField";
+import GameInitializer from "@/components/providers/GameInitializer";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const orbitron = Orbitron({

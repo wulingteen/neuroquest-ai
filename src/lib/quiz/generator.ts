@@ -23,7 +23,7 @@ import {
     type ExistingLevel,
     type PlanetInfo,
 } from "./prompts";
-import { parseLLMJson, retryAsync } from "@/lib/news/utils";
+import { parseLLMJson, retryAsync } from "@/lib/llm";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

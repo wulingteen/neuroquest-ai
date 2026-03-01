@@ -1,24 +1,13 @@
-/** Retry an async function with exponential backoff. */
-export async function retryAsync<T>(
-    fn: () => Promise<T>,
-    retries = 2,
-    delayMs = 1000
-): Promise<T> {
-    let lastError: unknown;
-    for (let attempt = 0; attempt <= retries; attempt++) {
-        try {
-            return await fn();
-        } catch (e) {
-            lastError = e;
-            if (attempt < retries) {
-                const wait = delayMs * 2 ** attempt;
-                console.warn(`Retry ${attempt + 1}/${retries} after ${wait}ms: ${e instanceof Error ? e.message : e}`);
-                await new Promise((r) => setTimeout(r, wait));
-            }
-        }
-    }
-    throw lastError;
-}
+/**
+ * News-pipeline-specific utility functions.
+ *
+ * Generic LLM helpers (retryAsync, parseLLMJson) have been moved to
+ * `@/lib/llm/helpers`. They are re-exported here for backward compatibility
+ * with existing imports within the news module.
+ */
+
+// Re-export shared LLM helpers so intra-module imports keep working
+export { retryAsync, parseLLMJson } from "@/lib/llm/helpers";
 
 /** Return midnight Date objects for the date range used by the cron job. */
 export function getDateRange(): { yesterdayStart: Date; todayStart: Date; tomorrowStart: Date } {
@@ -29,31 +18,6 @@ export function getDateRange(): { yesterdayStart: Date; todayStart: Date; tomorr
     const tomorrowStart = new Date(todayStart);
     tomorrowStart.setDate(tomorrowStart.getDate() + 1);
     return { yesterdayStart, todayStart, tomorrowStart };
-}
-
-/** Strip markdown fences and parse JSON from an LLM response.
- *  Tries to extract the first JSON array or object if the model wraps it in prose. */
-export function parseLLMJson<T>(raw: string): T {
-    // Strip common markdown fences
-    const cleaned = raw.replace(/```json|```/gi, "").trim();
-
-    // 1. Try parsing the full cleaned string first — this preserves wrapper
-    //    objects like { "levels": [...] } that would otherwise be lost when
-    //    the regex extracts only the inner array.
-    try {
-        return JSON.parse(cleaned);
-    } catch {
-        // Fall through to regex extraction
-    }
-
-    // 2. Fallback: extract a JSON array [...] or object {...} from prose
-    const arrayMatch = cleaned.match(/(\[[\s\S]*\])/);
-    const objectMatch = cleaned.match(/(\{[\s\S]*\})/);
-    let extracted = cleaned;
-    if (arrayMatch) extracted = arrayMatch[1];
-    else if (objectMatch) extracted = objectMatch[1];
-
-    return JSON.parse(extracted);
 }
 
 /** Normalize a title for fuzzy matching: lowercase, collapse whitespace,

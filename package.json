@@ -11,8 +11,6 @@
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
     "@prisma/client": "^6.19.2",
-    "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.97.0",
     "canvas-confetti": "^1.9.4",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",

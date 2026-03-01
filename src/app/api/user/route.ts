@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
-import { calculateStreak } from '@/lib/playerUtils';
+import { calculateStreak } from '@/lib/game/helpers';
 
 export async function GET() {
     try {

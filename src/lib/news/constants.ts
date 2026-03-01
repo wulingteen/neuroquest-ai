@@ -1,4 +1,4 @@
-import { OpenAI } from "openai";
+export { openai } from "@/lib/llm";
 
 export const RSS_FEEDS_LIST = [
     { name: "WIRED – Artificial Intelligence", url: "https://www.wired.com/feed/tag/ai/latest/rss" },
@@ -33,11 +33,4 @@ export const RSS_FEEDS_LIST = [
 export const RANKER_MODEL = "deepseek/deepseek-v3.2";
 export const EXAMINER_MODEL = "deepseek/deepseek-v3.2";
 
-export const openai = new OpenAI({
-    apiKey: process.env.OPENROUTER_API_KEY || "dummy_key",
-    baseURL: "https://openrouter.ai/api/v1",
-    defaultHeaders: {
-        "HTTP-Referer": "https://neuroquest.ai",
-        "X-Title": "NeuroQuest AI",
-    },
-});
+

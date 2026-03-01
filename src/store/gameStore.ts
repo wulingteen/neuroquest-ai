@@ -1,7 +1,7 @@
 "use client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getLevelFromXP, getLevelProgress, getLevelTitle } from "@/lib/gameData";
+import { getLevelFromXP, getLevelProgress, getLevelTitle } from "@/lib/game/helpers";
 
 interface GameState {
     // Player data
