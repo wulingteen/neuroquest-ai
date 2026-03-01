@@ -137,6 +137,7 @@ Each module folder has a barrel `index.ts` for cleaner imports.
 - **`game/`** — Player domain helpers: XP/level calculations, streak logic (`helpers.ts`).
 - **`news/`** — News cron pipeline: RSS feed fetching (`feeds.ts`), LLM article ranking (`ranker.ts`), question generation (`examiner.ts`), full-text scraping (`scraper.ts`), prompt templates (`prompts.ts`), date/title utilities (`utils.ts`), and feed list + model constants (`constants.ts`).
 - **`quiz/`** — Quiz generation pipeline: core generator (`generator.ts`), prompt templates (`prompts.ts`), model constants (`constants.ts`).
+- **`services/`** — Domain service layer for API route handlers. Each service encapsulates DB queries, DTO mapping, and business logic for its domain: `planet.service.ts`, `level.service.ts`, `achievement.service.ts`, `arena.service.ts`, `leaderboard.service.ts`, `quiz.service.ts`, `user.service.ts` (player + profile + options), `news.service.ts` (selections + scan-logs). Route handlers in `src/app/api/` delegate to these services.
 
 ### Component Directory (`src/components/`)
 

@@ -1,29 +1,15 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { NextResponse } from "next/server";
+import { getAllChallenges } from "@/lib/services/arena.service";
 
 export async function GET() {
     try {
-        const challengesRaw = await prisma.arena_challenges.findMany({
-            orderBy: { created_at: 'asc' }
-        });
-
-        const challenges = challengesRaw.map((c) => ({
-            id: c.challenge_id,
-            title: c.title,
-            description: c.description,
-            difficulty: c.difficulty,
-            examples: c.example_prompts
-        }));
-
-        return NextResponse.json({
-            success: true,
-            data: challenges,
-        });
+        const data = await getAllChallenges();
+        return NextResponse.json({ success: true, data });
     } catch (error) {
-        console.error('Error fetching arena challenges:', error);
+        console.error("Error fetching arena challenges:", error);
         return NextResponse.json(
-            { success: false, error: 'Failed to fetch arena challenges' },
-            { status: 500 }
+            { success: false, error: "Failed to fetch arena challenges" },
+            { status: 500 },
         );
     }
 }
