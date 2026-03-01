@@ -1,13 +1,13 @@
-#!/usr/bin/env node
+#!/usr/bin/env npx tsx
 /**
  * CLI script to generate quiz questions for a specific planet.
  *
  * Usage:
- *   node scripts/generate-quiz.mjs --rollup prompt --count 5
- *   node scripts/generate-quiz.mjs -r model -c 3
- *   node scripts/generate-quiz.mjs -r prompt -c 5 --same-difficulty
- *   node scripts/generate-quiz.mjs -r future -c 3 --level-count 4
- *   node scripts/generate-quiz.mjs -r rag -c 5   # new rollup → prompts for overview
+ *   npx tsx scripts/generate-quiz.ts --rollup prompt --count 5
+ *   npx tsx scripts/generate-quiz.ts -r model -c 3
+ *   npx tsx scripts/generate-quiz.ts -r prompt -c 5 --same-difficulty
+ *   npx tsx scripts/generate-quiz.ts -r future -c 3 --level-count 4
+ *   npx tsx scripts/generate-quiz.ts -r rag -c 5   # new rollup → prompts for overview
  *
  * Requires:
  *   - The dev server to be running (it hits localhost:3000/api/quiz/generate)
@@ -19,9 +19,49 @@ import { createInterface } from "node:readline";
 
 const TIMEOUT_MS = 180_000; // 3 minutes
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface CliOptions {
+    rollup: string;
+    count: number;
+    host: string;
+    sameDifficulty: boolean;
+    levelCount: number | undefined;
+    isMultiLevel: boolean;
+}
+
+interface QuizQuestion {
+    question_id: number;
+    level_number: number;
+    question_number: number;
+    xp_reward: number;
+    question_text: string;
+}
+
+interface GenerateResponse {
+    success?: boolean;
+    needsOverview?: boolean;
+    questionsInserted: number;
+    questionsRequested: number;
+    skippedDuplicates?: number;
+    planet: string;
+    sameDifficulty?: boolean;
+    levelNumber?: number;
+    levelCount?: number;
+    levelNumbers?: number[];
+    questions: QuizQuestion[];
+}
+
+interface Column {
+    header: string;
+    width: number;
+    align: "left" | "right";
+    value: (q: QuizQuestion) => string;
+}
+
 // ─── CLI Parsing & Validation ────────────────────────────────────────────────
 
-function parseCli() {
+function parseCli(): CliOptions {
     const { values } = parseArgs({
         options: {
             rollup: { type: "string", short: "r" },
@@ -33,18 +73,18 @@ function parseCli() {
     });
 
     const rollup = values.rollup;
-    const count = parseInt(values.count, 10);
-    const host = values.host;
+    const count = parseInt(values.count!, 10);
+    const host = values.host!;
     const sameDifficulty = values["same-difficulty"] === true;
     const levelCount = values["level-count"] ? parseInt(values["level-count"], 10) : undefined;
 
-    const errors = [];
+    const errors: string[] = [];
     if (!rollup) errors.push("Missing --rollup flag. Example: --rollup prompt");
     else if (rollup.length > 50) errors.push("--rollup must be 50 characters or fewer.");
     if (isNaN(count) || count < 1 || count > 20) errors.push("--count must be an integer between 1 and 20.");
     if (levelCount !== undefined && (isNaN(levelCount) || levelCount < 1 || levelCount > 10))
         errors.push("--level-count must be an integer between 1 and 10.");
-    if (levelCount > 1 && sameDifficulty)
+    if (levelCount! > 1 && sameDifficulty)
         errors.push("--same-difficulty and --level-count > 1 cannot be used together.");
 
     if (errors.length > 0) {
@@ -52,13 +92,13 @@ function parseCli() {
         process.exit(1);
     }
 
-    const isMultiLevel = levelCount > 1;
-    return { rollup, count, host, sameDifficulty, levelCount, isMultiLevel };
+    const isMultiLevel = levelCount! > 1;
+    return { rollup: rollup!, count, host, sameDifficulty, levelCount, isMultiLevel };
 }
 
 // ─── Interactive Overview Prompt ─────────────────────────────────────────────
 
-function promptForOverview(rollupName) {
+function promptForOverview(rollupName: string): Promise<string> {
     return new Promise((resolve) => {
         const rl = createInterface({ input: process.stdin, output: process.stdout });
         console.log(`\n🆕 Rollup "${rollupName}" is not registered in the system.`);
@@ -66,8 +106,8 @@ function promptForOverview(rollupName) {
         console.log(`   (Type your overview, then press Enter twice or Ctrl+D to submit)\n`);
         process.stdout.write("📝 Overview: ");
 
-        const lines = [];
-        rl.on("line", (line) => {
+        const lines: string[] = [];
+        rl.on("line", (line: string) => {
             if (line.trim() === "" && lines.length > 0) {
                 rl.close();
             } else {
@@ -81,16 +121,25 @@ function promptForOverview(rollupName) {
 
 // ─── API Call ────────────────────────────────────────────────────────────────
 
-async function callGenerateApi({ host, rollup, count, sameDifficulty, levelCount }, overview) {
+interface ApiCallResult {
+    res: Response;
+    data: GenerateResponse;
+}
+
+async function callGenerateApi(opts: CliOptions, overview?: string): Promise<ApiCallResult> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-    const body = { rollup, count, sameDifficulty };
-    if (levelCount !== undefined) body.levelCount = levelCount;
+    const body: Record<string, unknown> = {
+        rollup: opts.rollup,
+        count: opts.count,
+        sameDifficulty: opts.sameDifficulty,
+    };
+    if (opts.levelCount !== undefined) body.levelCount = opts.levelCount;
     if (overview) body.overview = overview;
 
     try {
-        const res = await fetch(`${host}/api/quiz/generate`, {
+        const res = await fetch(`${opts.host}/api/quiz/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
@@ -103,7 +152,7 @@ async function callGenerateApi({ host, rollup, count, sameDifficulty, levelCount
             throw new Error(`Non-JSON response (HTTP ${res.status}): ${text.substring(0, 500)}`);
         }
 
-        return { res, data: await res.json() };
+        return { res, data: (await res.json()) as GenerateResponse };
     } finally {
         clearTimeout(timeout);
     }
@@ -111,8 +160,9 @@ async function callGenerateApi({ host, rollup, count, sameDifficulty, levelCount
 
 // ─── Output Formatting ──────────────────────────────────────────────────────
 
-function printBanner({ rollup, count, host, sameDifficulty, levelCount, isMultiLevel }) {
-    const totalQuestions = isMultiLevel ? count * levelCount : count;
+function printBanner(opts: CliOptions): void {
+    const { rollup, count, host, sameDifficulty, levelCount, isMultiLevel } = opts;
+    const totalQuestions = isMultiLevel ? count * levelCount! : count;
     const modeLabel = isMultiLevel
         ? `multi-level (${levelCount} levels × ${count} questions)`
         : sameDifficulty ? "yes" : "no (ascending)";
@@ -130,10 +180,10 @@ function printBanner({ rollup, count, host, sameDifficulty, levelCount, isMultiL
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 }
 
-function printResultTable(questions) {
+function printResultTable(questions: QuizQuestion[] | undefined): void {
     if (!questions?.length) return;
 
-    const cols = [
+    const cols: Column[] = [
         { header: "Q ID", width: 6, align: "right", value: (q) => String(q.question_id) },
         { header: "Level", width: 5, align: "right", value: (q) => String(q.level_number) },
         { header: "Q Num", width: 6, align: "right", value: (q) => String(q.question_number) },
@@ -141,10 +191,11 @@ function printResultTable(questions) {
         { header: "Question", width: 58, align: "left", value: (q) => q.question_text.substring(0, 58) },
     ];
 
-    const sep = (left, mid, right) =>
+    const sep = (left: string, mid: string, right: string): string =>
         left + cols.map((c) => "─".repeat(c.width + 2)).join(mid) + right;
-    const cell = (val, col) => col.align === "right" ? val.padStart(col.width) : val.padEnd(col.width);
-    const row = (cells) =>
+    const cell = (val: string, col: Column): string =>
+        col.align === "right" ? val.padStart(col.width) : val.padEnd(col.width);
+    const row = (cells: string[]): string =>
         "│ " + cells.map((val, i) => cell(val, cols[i])).join(" │ ") + " │";
 
     console.log(sep("┌", "┬", "┐"));
@@ -154,9 +205,9 @@ function printResultTable(questions) {
     console.log(sep("└", "┴", "┘"));
 }
 
-function printSummary(data) {
+function printSummary(data: GenerateResponse): void {
     const base = `${data.questionsInserted}/${data.questionsRequested} questions inserted for planet "${data.planet}"`;
-    if (data.levelCount > 1 && data.levelNumbers) {
+    if (data.levelCount! > 1 && data.levelNumbers) {
         console.log(`\n📊 Summary: ${base} across levels ${data.levelNumbers.join(", ")}.`);
         console.log(`   📐 Mode: multi-level (${data.levelCount} difficulty tiers).`);
     } else {
@@ -169,7 +220,7 @@ function printSummary(data) {
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
-async function main() {
+async function main(): Promise<void> {
     const opts = parseCli();
     printBanner(opts);
 
@@ -195,7 +246,7 @@ async function main() {
     }
 
     console.log(`✅ Successfully generated ${data.questionsInserted} questions!`);
-    if (data.skippedDuplicates > 0) {
+    if (data.skippedDuplicates! > 0) {
         console.log(`   ⚠️  ${data.skippedDuplicates} duplicate(s) skipped.`);
     }
     console.log();
@@ -204,7 +255,7 @@ async function main() {
     printSummary(data);
 }
 
-main().catch((err) => {
+main().catch((err: Error & { name?: string }) => {
     if (err.name === "AbortError") {
         console.error(`❌ Request timed out after ${TIMEOUT_MS / 1000}s.`);
         console.error("   The LLM may be overloaded. Try again later.");

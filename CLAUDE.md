@@ -76,10 +76,10 @@ curl -X POST http://localhost:3000/api/quiz/generate \
 
 **CLI Script** (requires dev server running):
 ```bash
-node scripts/generate-quiz.mjs --rollup [rollup] --count [The number of questions you need to generate]
-node scripts/generate-quiz.mjs -r [rollup] -c [The number of questions you need to generate]
-node scripts/generate-quiz.mjs -r [rollup] -c [The number of questions you need to generate] --same-difficulty
-node scripts/generate-quiz.mjs -r [rollup] -c [The number of questions you need to generate] --level-count [The number of difficulty levels you need to generate]
+npx tsx scripts/generate-quiz.ts --rollup [rollup] --count [The number of questions you need to generate]
+npx tsx scripts/generate-quiz.ts -r [rollup] -c [The number of questions you need to generate]
+npx tsx scripts/generate-quiz.ts -r [rollup] -c [The number of questions you need to generate] --same-difficulty
+npx tsx scripts/generate-quiz.ts -r [rollup] -c [The number of questions you need to generate] --level-count [The number of difficulty levels you need to generate]
 ```
 
 ## Database Schema Overview
@@ -121,7 +121,7 @@ No test runner is configured yet.
 **NeuroQuest AI** is a gamified GenAI learning platform built as a Next.js 16 app with React 19, TypeScript, Tailwind CSS 4, and Zustand for state management.
 
 ### Frontend-Backend Status
-- **Frontend:** Next.js Server & Client Components (`src/components/`, `src/app/` pages), Zustand state (`src/store/`), database-backed persistence.
+- **Frontend:** Next.js Server & Client Components (shared in `src/components/`, page-specific co-located in `src/app/*/_components/`), Zustand state (`src/store/`), database-backed persistence.
 - **Backend:** Next.js API Routes act as microservices. News system is powered by LLM ranking and generation.
 - **Frontend Integration:** The Map assessment interface (`LevelModal`) has been significantly revised to adopt the **Kurzgesagt** style, featuring dynamic guide characters and high-impact vector aesthetics.
 - **News Entry Point:** The news page is now accessed via the **Flame button** in the bottom navigation menu (next to the Map button).
@@ -139,17 +139,19 @@ Each module folder has a barrel `index.ts` for cleaner imports.
 - **`quiz/`** — Quiz generation pipeline: core generator (`generator.ts`), prompt templates (`prompts.ts`), model constants (`constants.ts`).
 - **`services/`** — Domain service layer for API route handlers. Each service encapsulates DB queries, DTO mapping, and business logic for its domain: `planet.service.ts`, `level.service.ts`, `achievement.service.ts`, `arena.service.ts`, `leaderboard.service.ts`, `quiz.service.ts`, `user.service.ts` (player + profile + options), `news.service.ts` (selections + scan-logs). Route handlers in `src/app/api/` delegate to these services.
 
-### Component Directory (`src/components/`)
+### Shared Component Directory (`src/components/`)
 
-Each folder has a barrel `index.ts` for cleaner imports.
+Only truly shared (app-level) components live here. Page-specific components are co-located with their pages using `_components/` folders.
 
 - **`effects/`** — Visual effects (`StarField`)
 - **`icons/`** — Reusable SVG icon components (`Saturn`, `FomoBird`)
 - **`layout/`** — App-level layout components (`BottomMenu`)
-- **`map/`** — Map page sub-components (`BackgroundGraphics` with animated planet transitions)
-- **`modals/`** — Modal dialogs (`DailyRewardModal`, `LevelModal`, `ProfileSetupModal`)
-- **`news/`** — News page sub-components (`BackgroundGraphics` with static Kurzgesagt planets)
 - **`providers/`** — App initialization wrappers (`GameInitializer`)
+
+### Page-Specific Components (Co-located)
+
+- **`src/app/_components/`** — Map page components: `BackgroundGraphics` (animated planet transitions), `DailyRewardModal`, `LevelModal`.
+- **`src/app/news/_components/`** — News page components: `BackgroundGraphics` (static Kurzgesagt planets), `ProfileSetupModal`.
 
 ### Key Layers
 
@@ -157,7 +159,7 @@ Each folder has a barrel `index.ts` for cleaner imports.
 
 **`src/app/news/page.tsx`** — Redesigned as an **Approachable Learning Hub**.
 
-**`src/components/modals/LevelModal.tsx`** — Revised as a **Kurzgesagt-style Assessment Hub**:
+**`src/app/_components/LevelModal.tsx`** — Revised as a **Kurzgesagt-style Assessment Hub**:
 - **Guide Character**: `FomoBird` (`src/components/icons/FomoBird.tsx`) — custom SVG bird with dynamic expressions (happy, thinking, surprised).
 - **Visual Style**: Bold 4px borders, flat paper-cut shadows, and high-contrast space-themed colors.
 - **Phases**: Intro briefing, multi-step neural probe (quiz), and mission extraction (result).

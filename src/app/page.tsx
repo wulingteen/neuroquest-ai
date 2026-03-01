@@ -7,9 +7,9 @@ import { Lock, Star, CheckCircle2, Sword, ChevronLeft, ChevronRight, Building, R
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import DailyRewardModal from "@/components/modals/DailyRewardModal";
-import LevelModal from "@/components/modals/LevelModal";
-import BackgroundGraphics from "@/components/map/BackgroundGraphics";
+import DailyRewardModal from "./_components/DailyRewardModal";
+import LevelModal from "./_components/LevelModal";
+import BackgroundGraphics from "./_components/BackgroundGraphics";
 
 const PLANET_COLORS = [
   "#3b82f6", // Blue

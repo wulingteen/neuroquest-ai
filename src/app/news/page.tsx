@@ -19,8 +19,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { type NewsItem } from "@/types/game";
-import ProfileSetupModal from "@/components/modals/ProfileSetupModal";
-import BackgroundGraphics from "@/components/news/BackgroundGraphics";
+import ProfileSetupModal from "./_components/ProfileSetupModal";
+import BackgroundGraphics from "./_components/BackgroundGraphics";
 
 /**
  * KURZGESAGT STYLE NEWS PAGE
