@@ -2,9 +2,15 @@
 
 **Database is running in Docker**
 
-## Get news_article function
+## Get news article function
 
+```bash
+npx tsx scripts/news-cron.ts
+npx tsx scripts/news-cron.ts --host http://localhost:3000
 ```
+
+**API Endpoint:**
+```bash
 curl http://localhost:3000/api/news/cron
 ```
 
