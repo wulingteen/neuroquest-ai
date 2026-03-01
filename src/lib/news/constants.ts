@@ -30,7 +30,7 @@ export const RSS_FEEDS_LIST = [
     { name: "Andrej Karpathy", url: "https://medium.com/feed/@karpathy" },
 ];
 
-export const RANKER_MODEL = "google/gemini-2.5-flash";
+export const RANKER_MODEL = "minimax/minimax-m2.5";
 export const EXAMINER_MODEL = "minimax/minimax-m2.5";
 
 export const openai = new OpenAI({

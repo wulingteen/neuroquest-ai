@@ -7,7 +7,7 @@
 import { OpenAI } from "openai";
 
 /** Model used for quiz question generation. */
-export const QUIZ_GENERATOR_MODEL = "google/gemini-2.5-flash";
+export const QUIZ_GENERATOR_MODEL = "minimax/minimax-m2.5";
 
 /** Maximum number of existing questions to include in the context window.
  *  Prevents token overflow when a planet has hundreds of questions. */
