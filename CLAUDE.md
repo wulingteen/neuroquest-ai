@@ -52,6 +52,36 @@ curl -X POST http://localhost:3000/api/user/profile \
   -d '{"background":"developer","interests":["prompt_eng","llm_fundamentals"]}'
 ```
 
+## Quiz Question Generation Pipeline
+
+LLM-powered pipeline to generate quiz questions for any planet. Retrieves existing questions, sends them to the LLM as context, and generates harder ones. Before generating questions, the pipeline **auto-creates missing levels** in the `levels` table by calling the LLM to generate meaningful titles, and computes `xp_reward` using the formula: `150 + (level_number - 1) × 50`.
+
+**API Endpoint:**
+```bash
+# Generate 5 new questions for the "prompt" planet
+curl -X POST http://localhost:3000/api/quiz/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"rollup":"prompt","count":5}'
+
+# Generate 5 questions at uniform (same) difficulty
+curl -X POST http://localhost:3000/api/quiz/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"rollup":"prompt","count":5,"sameDifficulty":true}'
+
+# Generate 3 questions × 4 difficulty levels (12 total, each level gets its own level_number)
+curl -X POST http://localhost:3000/api/quiz/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"rollup":"prompt","count":3,"levelCount":4}'
+```
+
+**CLI Script** (requires dev server running):
+```bash
+node scripts/generate-quiz.mjs --rollup [rollup] --count [The number of questions you need to generate]
+node scripts/generate-quiz.mjs -r [rollup] -c [The number of questions you need to generate]
+node scripts/generate-quiz.mjs -r [rollup] -c [The number of questions you need to generate] --same-difficulty
+node scripts/generate-quiz.mjs -r [rollup] -c [The number of questions you need to generate] --level-count [The number of difficulty levels you need to generate]
+```
+
 ## Database Schema Overview
 
 The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a concise overview of each table and its columns:
@@ -100,7 +130,7 @@ No test runner is configured yet.
 
 ### Key Layers
 
-**`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS, (2) ranks articles via Gemini, (3) generates questions via Minimax.
+**`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS, (2) ranks articles via LLM, (3) generates questions via LLM.
 
 **`src/app/news/page.tsx`** — Redesigned as an **Approachable Learning Hub**.
 

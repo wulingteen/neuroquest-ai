@@ -7,7 +7,7 @@
 import { OpenAI } from "openai";
 
 /** Model used for quiz question generation. */
-export const QUIZ_GENERATOR_MODEL = "minimax/minimax-m2.5";
+export const QUIZ_GENERATOR_MODEL = "deepseek/deepseek-v3.2";
 
 /** Maximum number of existing questions to include in the context window.
  *  Prevents token overflow when a planet has hundreds of questions. */

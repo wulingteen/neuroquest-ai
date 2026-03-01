@@ -30,8 +30,8 @@ export const RSS_FEEDS_LIST = [
     { name: "Andrej Karpathy", url: "https://medium.com/feed/@karpathy" },
 ];
 
-export const RANKER_MODEL = "minimax/minimax-m2.5";
-export const EXAMINER_MODEL = "minimax/minimax-m2.5";
+export const RANKER_MODEL = "deepseek/deepseek-v3.2";
+export const EXAMINER_MODEL = "deepseek/deepseek-v3.2";
 
 export const openai = new OpenAI({
     apiKey: process.env.OPENROUTER_API_KEY || "dummy_key",

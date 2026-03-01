@@ -130,7 +130,7 @@ No test runner is configured yet.
 
 ### Key Layers
 
-**`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS, (2) ranks articles via Gemini, (3) generates questions via Minimax.
+**`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS, (2) ranks articles via LLM, (3) generates questions via LLM.
 
 **`src/app/news/page.tsx`** — Redesigned as an **Approachable Learning Hub**.
 
