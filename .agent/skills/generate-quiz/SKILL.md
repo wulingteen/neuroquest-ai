@@ -46,7 +46,7 @@ Use command `npx tsx scripts/generate-quiz.ts --rollup {rollup} --count {The num
 - `explanation` is used to clarify foundational concepts and the rationale for the correct answer. Less than 30 words.
 - Provide exactly 4 options per question, with incorrect options distinguishable from the correct answer. Each option must be under 10 words.
 - Exclude options like “All of the above” or “None of the above.”
-- Distribute `correct option indices` evenly across the 0, 1, 2, 3 range.
+- Distribute `correct_option_index` evenly across the 0, 1, 2, 3 range.
 - Ensure consistent difficulty within the same level.
 - The difficulty level of your questions must start from `the level_number of the last question + 1`.
 - `title` Enter the name of this level
