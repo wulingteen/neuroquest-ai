@@ -88,6 +88,29 @@ npx tsx scripts/generate-quiz.ts -r [rollup] -c [The number of questions you nee
 npx tsx scripts/generate-quiz.ts -r [rollup] -c [The number of questions you need to generate] --level-count [The number of difficulty levels you need to generate]
 ```
 
+## Manual Quiz Question Insertion
+
+Direct database insertion of quiz questions without LLM. Auto-resolves `question_number` and `xp_reward`. Auto-creates `levels` row if missing.
+
+**Single question:**
+```bash
+npx tsx .agent/skills/generate-quiz/scripts/insert-question.ts \
+  --rollup prompt \
+  --level 2 \
+  --title "Zero-shot vs Few-shot" \
+  --question "Question text here" \
+  --options '["Option A","Option B","Option C","Option D"]' \
+  --correct 1 \
+  --explanation "Why this answer is correct"
+```
+
+**Batch mode (JSON file):**
+```bash
+npx tsx .agent/skills/generate-quiz/scripts/insert-question.ts --file questions.json
+```
+
+**Useful flags:** `--dry-run` (preview only), `--upsert` (update on conflict), `--xp <N>` (override XP), `--yes` (skip confirmation).
+
 ## Database Schema Overview
 
 The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a concise overview of each table and its columns:
@@ -118,6 +141,10 @@ npm run dev      # Start development server (localhost:3000, uses Turbopack)
 npm run build    # Production build
 npm run start    # Run production server
 npm run lint     # ESLint (Next.js core-web-vitals + TypeScript rules)
+npm run tree -- <slug>            # View a roadmap's hierarchy as ASCII tree
+npm run tree -- <slug> "<label>"  # Look up content for a specific topic
+npm run graph -- <slug>           # Cross-roadmap relationship graph
+npm run graph -- --all            # Graph ALL roadmaps
 ```
 
 No test runner is configured yet.

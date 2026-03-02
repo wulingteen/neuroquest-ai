@@ -50,6 +50,7 @@ export function buildQuizGeneratorPrompt(
     // Cap context to avoid blowing the token budget.
     // Keep the TAIL (hardest / most recent) questions as that's what matters.
     const totalExisting = existingQuestions.length;
+    const hasExistingQuestions = totalExisting > 0;
     const contextQuestions =
         totalExisting > MAX_CONTEXT_QUESTIONS
             ? existingQuestions.slice(-MAX_CONTEXT_QUESTIONS)
@@ -92,14 +93,23 @@ ${JSON.stringify(
         ? `Generate exactly **${totalQuestions}** NEW multiple-choice questions for the planet topic above, organised into **${levelCount} difficulty levels** with **${count} questions per level**.`
         : `Generate exactly **${count}** NEW multiple-choice questions for the planet topic above.`;
 
-    // Difficulty rule adapts to mode
+    // Difficulty rule #1 adapts based on whether existing questions are present
+    const difficultyBaseRule = hasExistingQuestions
+        ? `**Significantly harder**: Every new question must be noticeably more difficult than the existing ones.`
+        : `**Start from fundamentals**: There are no existing questions for this planet yet. Generate questions starting from the most fundamental knowledge of this topic. Begin with core definitions, basic concepts, and introductory principles, then gradually increase the difficulty.`;
+
+    // Difficulty rule #2 adapts to mode
     let difficultyRule: string;
     if (useMultiLevel) {
-        difficultyRule = `**${levelCount} difficulty levels**: Organise the questions into ${levelCount} distinct difficulty tiers numbered 1 (easiest) through ${levelCount} (hardest). Each tier must contain exactly ${count} questions. The difficulty difference between tiers should be clearly noticeable — tier 1 should be approachable for beginners, and tier ${levelCount} should challenge experts. Within each tier, all questions should be at the same difficulty.`;
+        difficultyRule = hasExistingQuestions
+            ? `**${levelCount} difficulty levels**: Organise the questions into ${levelCount} distinct difficulty tiers numbered 1 (easiest) through ${levelCount} (hardest). Each tier must contain exactly ${count} questions. The difficulty difference between tiers should be clearly noticeable — tier 1 should be approachable for beginners, and tier ${levelCount} should challenge experts. Within each tier, all questions should be at the same difficulty.`
+            : `**${levelCount} difficulty levels**: Organise the questions into ${levelCount} distinct difficulty tiers numbered 1 (easiest) through ${levelCount} (hardest). Each tier must contain exactly ${count} questions. Since there are no existing questions yet, tier 1 must start from the most fundamental knowledge — core definitions and basic concepts. Each subsequent tier should build on the previous one, progressing naturally from foundational to advanced. Tier ${levelCount} should cover intermediate-to-advanced topics. Within each tier, all questions should be at the same difficulty.`;
     } else if (sameDifficulty) {
         difficultyRule = `**Uniform difficulty**: All ${count} questions must be at the **same** advanced difficulty level — the hardest tier you can produce for this topic. Do NOT vary the difficulty across questions. Cover different sub-topics but keep the challenge consistent.`;
     } else {
-        difficultyRule = `**Sorted easiest → hardest**: Arrange the ${count} questions in ascending order of difficulty (the first is the easiest of the new batch; the last is the hardest).`;
+        difficultyRule = hasExistingQuestions
+            ? `**Sorted easiest → hardest**: Arrange the ${count} questions in ascending order of difficulty (the first is the easiest of the new batch; the last is the hardest).`
+            : `**Sorted easiest → hardest**: Arrange the ${count} questions in ascending order of difficulty. The first question should cover the most basic, foundational concept of the topic; the last should be the most challenging of the batch.`;
     }
 
     // Output format adapts to mode
@@ -162,7 +172,7 @@ ${existingBlock}
 ${taskDescription}
 
 ### Rules
-1. **Significantly harder**: Every new question must be noticeably more difficult than the existing ones. If no existing questions are present, start at an intermediate level and ramp up.
+1. ${difficultyBaseRule}
 2. ${difficultyRule}
 3. **No duplicates**: Do NOT repeat or rephrase any existing question.
 4. **4 options each**: Each question must have exactly 4 answer options (indices 0–3).

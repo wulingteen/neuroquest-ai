@@ -20,6 +20,19 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Question Generation
+
+### Agent Skill (if you want to create new skill)
+
+1. use claude-code or Antigravity
+2. input ```use `generate-quiz` skill. [your instructions]```
+
+### Command Line (if level exist, and you want to add more quiz, MORE QUICKLY)
+
+```bash
+npx tsx scripts/generate-quiz.ts --rollup {rollup} --count {The number of questions you need to generate}
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
