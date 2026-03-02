@@ -8,6 +8,16 @@
 import type { PrismaClient } from "@prisma/client";
 import { calculateLevelXp } from "./xp.js";
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+/** Rich information about a level that already exists in the database. */
+export interface ExistingLevelInfo {
+    rollup: string;
+    level_number: number;
+    title: string;
+    question_count: number;
+}
+
 // ─── Planet Validation ───────────────────────────────────────────────────────
 
 /**
@@ -35,42 +45,42 @@ export async function ensurePlanetExists(
 // ─── Level Management ────────────────────────────────────────────────────────
 
 /**
- * Pre-flight guard: check that NONE of the target (rollup, level_number)
- * pairs already exist in the `levels` table. If any do, throw so the caller
- * can abort the entire operation.
+ * Check which of the target (rollup, level_number) pairs already exist
+ * in the `levels` table. Returns rich info for each existing level
+ * (title, question count) so the caller can display it to the user.
+ *
+ * Returns an empty array if none of the pairs exist.
  */
-export async function guardNoExistingLevels(
+export async function checkExistingLevels(
     prisma: PrismaClient,
     pairs: Array<{ rollup: string; level_number: number }>,
-): Promise<void> {
-    const conflicts: Array<{ rollup: string; level_number: number; title: string }> = [];
+): Promise<ExistingLevelInfo[]> {
+    const existing: ExistingLevelInfo[] = [];
 
     for (const { rollup, level_number } of pairs) {
-        const existing = await prisma.levels.findUnique({
+        const level = await prisma.levels.findUnique({
             where: { rollup_level_number: { rollup, level_number } },
             select: { level_number: true, title: true },
         });
-        if (existing) {
-            conflicts.push({ rollup, level_number, title: existing.title });
+        if (level) {
+            const questionCount = await prisma.quiz_questions.count({
+                where: { rollup, level_number },
+            });
+            existing.push({
+                rollup,
+                level_number,
+                title: level.title,
+                question_count: questionCount,
+            });
         }
     }
 
-    if (conflicts.length > 0) {
-        const details = conflicts
-            .map((c) => `  • rollup="${c.rollup}"  level_number=${c.level_number}  title="${c.title}"`)
-            .join("\n");
-        throw new Error(
-            `The following level(s) already exist in the database:\n\n` +
-            `${details}\n\n` +
-            `The entire file was NOT written. Please use a different level_number\n` +
-            `or remove existing levels before retrying.`,
-        );
-    }
+    return existing;
 }
 
 /**
- * Create a new level row. Called only after guardNoExistingLevels has
- * confirmed the level does not exist.
+ * Create a new level row. Should only be called for levels confirmed
+ * to not yet exist.
  */
 export async function createLevel(
     prisma: PrismaClient,
@@ -97,6 +107,26 @@ export async function createLevel(
 
     console.log(`  📦 Created level ${levelNumber}: "${title}" for "${rollup}" (level_id=${nextLevelId}, xp=${xpReward})`);
     return { level_id: nextLevelId, xp_reward: xpReward };
+}
+
+// ─── Next Question Number ────────────────────────────────────────────────────
+
+/**
+ * Returns the next available question_number for the given
+ * (rollup, level_number) pair by querying the max existing value.
+ */
+export async function getNextQuestionNumber(
+    prisma: PrismaClient,
+    rollup: string,
+    levelNumber: number,
+): Promise<number> {
+    const maxQ = await prisma.quiz_questions.findFirst({
+        where: { rollup, level_number: levelNumber },
+        orderBy: { question_number: "desc" },
+        select: { question_number: true },
+    });
+
+    return (maxQ?.question_number ?? 0) + 1;
 }
 
 // ─── Duplicate Detection ─────────────────────────────────────────────────────

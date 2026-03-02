@@ -48,14 +48,19 @@ import {
     parseCliArgs,
     printUsage,
     validateBatch,
+    detectTitleConflicts,
     calculateQuestionXp,
     ensurePlanetExists,
-    guardNoExistingLevels,
+    checkExistingLevels,
+    getNextQuestionNumber,
     createLevel,
     isDuplicate,
     readBatchFile,
     confirm,
     printPreview,
+    printExistingLevels,
+    printTitleConflicts,
+    printMultiRollupNotice,
 } from "./src/index.js";
 import type { QuestionInput, ResolvedQuestion } from "./src/index.js";
 
@@ -86,12 +91,34 @@ function buildInputsFromCli(cli: ReturnType<typeof parseCliArgs>): QuestionInput
     ];
 }
 
+// ─── Unique Pairs Helper ─────────────────────────────────────────────────────
+
+function extractUniquePairs(inputs: QuestionInput[]): Array<{ rollup: string; level_number: number }> {
+    const seen = new Map<string, { rollup: string; level_number: number }>();
+    for (const q of inputs) {
+        const key = `${q.rollup.trim()}:${q.level_number}`;
+        if (!seen.has(key)) {
+            seen.set(key, { rollup: q.rollup.trim(), level_number: q.level_number });
+        }
+    }
+    return [...seen.values()];
+}
+
 // ─── Question Resolution ─────────────────────────────────────────────────────
 
+/**
+ * Resolves question inputs into fully-computed questions, handling both
+ * new and existing levels for question_number assignment.
+ *
+ * @param existingLevelKeys — Set of `rollup:level_number` keys that already
+ *        exist in the DB (used to determine whether to query next question_number
+ *        or start from 1).
+ */
 async function resolveQuestions(
     prisma: PrismaClient,
     inputs: QuestionInput[],
     upsert: boolean,
+    existingLevelKeys: Set<string>,
 ): Promise<ResolvedQuestion[]> {
     const resolved: ResolvedQuestion[] = [];
     const qnumTracker = new Map<string, number>();
@@ -108,13 +135,18 @@ async function resolveQuestions(
         }
 
         const levelNumber = input.level_number;
-
-        // Compute question_number (accounts for batch siblings)
         const trackKey = `${rollup}:${levelNumber}`;
+
+        // Compute question_number — for existing levels, query the DB first
         let questionNumber: number;
         if (qnumTracker.has(trackKey)) {
+            // Already computed the base for this level (either from DB or start=1)
             questionNumber = qnumTracker.get(trackKey)! + 1;
+        } else if (existingLevelKeys.has(trackKey)) {
+            // Existing level — start from next available in DB
+            questionNumber = await getNextQuestionNumber(prisma, rollup, levelNumber);
         } else {
+            // Brand-new level — start from 1
             questionNumber = 1;
         }
         qnumTracker.set(trackKey, questionNumber);
@@ -138,17 +170,22 @@ async function resolveQuestions(
 
 // ─── Database Write ──────────────────────────────────────────────────────────
 
+/**
+ * Writes resolved questions to the database.
+ * Only creates level rows for levels that don't already exist.
+ */
 async function insertQuestions(
     prisma: PrismaClient,
     inputs: QuestionInput[],
     resolved: ResolvedQuestion[],
     upsert: boolean,
+    existingLevelKeys: Set<string>,
 ): Promise<void> {
-    // Create all new levels
+    // Create only NEW levels (skip existing ones)
     const createdLevels = new Set<string>();
     for (const input of inputs) {
         const key = `${input.rollup.trim()}:${input.level_number}`;
-        if (!createdLevels.has(key)) {
+        if (!createdLevels.has(key) && !existingLevelKeys.has(key)) {
             await createLevel(prisma, input.rollup.trim(), input.level_number, input.title.trim());
             createdLevels.add(key);
         }
@@ -226,7 +263,7 @@ async function main(): Promise<void> {
         process.exit(1);
     }
 
-    // Validate all inputs
+    // ── Phase 1: Field-level validation ──────────────────────────────────
     try {
         validateBatch(inputs);
     } catch (err) {
@@ -234,36 +271,71 @@ async function main(): Promise<void> {
         process.exit(1);
     }
 
+    // ── Phase 2: Batch consistency checks ────────────────────────────────
+
+    // Check for title conflicts (same level_number with different titles)
+    const titleConflicts = detectTitleConflicts(inputs);
+    if (titleConflicts.length > 0) {
+        printTitleConflicts(titleConflicts);
+        process.exit(1);
+    }
+
+    // Check for multiple rollups in a batch
+    const uniqueRollups = [...new Set(inputs.map((q) => q.rollup.trim()))];
+    if (uniqueRollups.length > 1) {
+        printMultiRollupNotice(uniqueRollups);
+        if (!cli.yes) {
+            const proceed = await confirm("Continue with questions across multiple planets?");
+            if (!proceed) {
+                console.log("❌ Cancelled.");
+                process.exit(0);
+            }
+        }
+    }
+
     console.log(`\n🧩 Preparing ${inputs.length} question(s) for insertion…\n`);
 
     const prisma = new PrismaClient();
 
     try {
+        // ── Phase 3: Database pre-flight checks ─────────────────────────
+
         // Validate all referenced planets exist
-        const uniqueRollups = [...new Set(inputs.map((q) => q.rollup))];
         for (const rollup of uniqueRollups) {
             await ensurePlanetExists(prisma, rollup);
         }
 
-        // Pre-flight: block if any target level already exists
-        const uniquePairs = new Map<string, { rollup: string; level_number: number }>();
-        for (const q of inputs) {
-            const key = `${q.rollup.trim()}:${q.level_number}`;
-            if (!uniquePairs.has(key)) {
-                uniquePairs.set(key, { rollup: q.rollup.trim(), level_number: q.level_number });
+        // Check for existing levels
+        const uniquePairs = extractUniquePairs(inputs);
+        const existingLevels = await checkExistingLevels(prisma, uniquePairs);
+        const existingLevelKeys = new Set(
+            existingLevels.map((l) => `${l.rollup}:${l.level_number}`),
+        );
+
+        if (existingLevels.length > 0) {
+            printExistingLevels(existingLevels);
+            if (!cli.yes) {
+                const proceed = await confirm(
+                    `Append new questions to ${existingLevels.length} existing level(s)?`,
+                );
+                if (!proceed) {
+                    console.log("❌ Cancelled — no data written.");
+                    return;
+                }
+            } else {
+                console.log("  ℹ️  --yes flag set: auto-appending to existing levels.\n");
             }
         }
-        await guardNoExistingLevels(prisma, [...uniquePairs.values()]);
 
-        // Resolve questions
-        const resolved = await resolveQuestions(prisma, inputs, cli.upsert);
+        // ── Phase 4: Resolve questions ──────────────────────────────────
+        const resolved = await resolveQuestions(prisma, inputs, cli.upsert, existingLevelKeys);
 
         if (resolved.length === 0) {
             console.log("\n⚠️  No new questions to insert (all duplicates or empty).");
             return;
         }
 
-        // Preview
+        // ── Phase 5: Preview ────────────────────────────────────────────
         printPreview(resolved);
 
         if (cli.dryRun) {
@@ -271,7 +343,7 @@ async function main(): Promise<void> {
             return;
         }
 
-        // Confirm
+        // ── Phase 6: Final confirmation & write ─────────────────────────
         if (!cli.yes) {
             const proceed = await confirm(`Insert ${resolved.length} question(s) into the database?`);
             if (!proceed) {
@@ -280,8 +352,7 @@ async function main(): Promise<void> {
             }
         }
 
-        // Write
-        await insertQuestions(prisma, inputs, resolved, cli.upsert);
+        await insertQuestions(prisma, inputs, resolved, cli.upsert, existingLevelKeys);
     } catch (err) {
         console.error(`\n❌ ${err instanceof Error ? err.message : err}`);
         process.exit(1);

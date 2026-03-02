@@ -88,29 +88,6 @@ npx tsx scripts/generate-quiz.ts -r [rollup] -c [The number of questions you nee
 npx tsx scripts/generate-quiz.ts -r [rollup] -c [The number of questions you need to generate] --level-count [The number of difficulty levels you need to generate]
 ```
 
-## Manual Quiz Question Insertion
-
-Direct database insertion of quiz questions without LLM. Auto-resolves `question_number` and `xp_reward`. Auto-creates `levels` row if missing.
-
-**Single question:**
-```bash
-npx tsx .agent/skills/generate-quiz/scripts/insert-question.ts \
-  --rollup prompt \
-  --level 2 \
-  --title "Zero-shot vs Few-shot" \
-  --question "Question text here" \
-  --options '["Option A","Option B","Option C","Option D"]' \
-  --correct 1 \
-  --explanation "Why this answer is correct"
-```
-
-**Batch mode (JSON file):**
-```bash
-npx tsx .agent/skills/generate-quiz/scripts/insert-question.ts --file questions.json
-```
-
-**Useful flags:** `--dry-run` (preview only), `--upsert` (update on conflict), `--xp <N>` (override XP), `--yes` (skip confirmation).
-
 ## Database Schema Overview
 
 The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a concise overview of each table and its columns:
@@ -201,9 +178,8 @@ Only truly shared (app-level) components live here. Page-specific components are
 ### Design System
 
 CSS custom properties and utilities are defined in `src/app/globals.css`:
-- **Color palette**: 
-    - Core: NASA Blue `#1cb0f6`, Nuclear Green `#58cc02`, Terminal Black `#02040a`, Amber `#ffc800`.
-    - Kurzgesagt: Space Indigo `#1D1C44`, Bird Yellow `#FFE100`, Sunset Orange `#FF7E5F`, Neon Cyan `#4EEAFF`.
+- **Color palette**: NASA Blue `#1cb0f6`, Nuclear Green `#58cc02`, Terminal Black `#02040a`, Amber `#ffc800`.
+- **Kurzgesagt-style**: Space Indigo `#1D1C44`, Bird Yellow `#FFE100`, Sunset Orange `#FF7E5F`, Neon Cyan `#4EEAFF`.
 - **Aesthetic**: **Kurzgesagt-inspired flat vector design** with high-impact typography (Inter/Orbitron).
 - **Interaction**: Single-task focus, "Subtraction" principle, and spring-based physics for UI transitions.
 

@@ -91,3 +91,41 @@ export function validateBatch(inputs: QuestionInput[]): void {
         throw new Error(`Validation errors:\n\n${formatted}`);
     }
 }
+
+// ─── Batch Consistency Checks ────────────────────────────────────────────────
+
+/** A conflict where the same (rollup, level_number) has multiple titles. */
+export interface TitleConflict {
+    rollup: string;
+    level_number: number;
+    titles: string[];
+}
+
+/**
+ * Detects cases where the same (rollup, level_number) pair appears with
+ * different `title` values in the batch. This is ambiguous because only
+ * one title can be used for the level row.
+ *
+ * Returns an empty array if there are no conflicts.
+ */
+export function detectTitleConflicts(inputs: QuestionInput[]): TitleConflict[] {
+    const titleMap = new Map<string, Set<string>>();
+    for (const q of inputs) {
+        const key = `${q.rollup.trim()}:${q.level_number}`;
+        if (!titleMap.has(key)) titleMap.set(key, new Set());
+        titleMap.get(key)!.add(q.title.trim());
+    }
+
+    const conflicts: TitleConflict[] = [];
+    for (const [key, titles] of titleMap) {
+        if (titles.size > 1) {
+            const [rollup, levelStr] = key.split(":");
+            conflicts.push({
+                rollup,
+                level_number: parseInt(levelStr, 10),
+                titles: [...titles],
+            });
+        }
+    }
+    return conflicts;
+}
