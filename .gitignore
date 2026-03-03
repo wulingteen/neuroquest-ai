@@ -44,6 +44,5 @@ next-env.d.ts
 /src/generated/prisma
 
 # export-subject-material skill
-.agent/skills/export-subject-material/scripts/output/
-.agent/skills/export-subject-material/assets*
+scripts/roadmap/output/
 src/generated/questions*

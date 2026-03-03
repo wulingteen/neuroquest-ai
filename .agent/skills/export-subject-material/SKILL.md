@@ -14,7 +14,7 @@ description: get reference text from roadmaps. **ONLY use while there are troubl
 ## File Structure
 
 ```
-scripts/
+scripts/roadmap/
 ├── export-roadmaps.ts        # CLI entry point (thin orchestrator)
 ├── lib/
 │   ├── types.ts              # Shared interfaces (RoadmapNode, GraphNode, etc.)
@@ -27,11 +27,13 @@ scripts/
 │   ├── tree-renderer.ts      # ASCII rendering, hierarchy conversion, label search
 │   └── graph.ts              # Cross-roadmap relationship graph
 └── output/                   # Generated JSON files
+
+data/roadmaps/                # 81 roadmap assets
 ```
 
 ## COMMAND OVERVIEW
 
-### View a single roadmap's hierarchy as an ASCII tree (also writes scripts/output/<slug>.json)
+### View a single roadmap's hierarchy as an ASCII tree (also writes scripts/roadmap/output/<slug>.json)
 npm run tree -- {roadmap-name}
 
 ### View as structured JSON (only labels + children)
@@ -47,7 +49,7 @@ npm run tree -- ai-agents "Gemini Function Calling"
 
 ### Cross-roadmap relationship graph
 
-The `--graph` flag builds a tree of cross-roadmap relationships using the `relatedRoadmaps` field in each roadmap's frontmatter. JSON is always saved to `scripts/output/`.
+The `--graph` flag builds a tree of cross-roadmap relationships using the `relatedRoadmaps` field in each roadmap's frontmatter. JSON is always saved to `scripts/roadmap/output/`.
 
 ### Show relationship graph for a single roadmap (depth 1 = direct neighbours)
 npm run graph -- {roadmap-name} --depth 1
@@ -55,7 +57,7 @@ npm run graph -- {roadmap-name} --depth 1
 ### Show relationships between multiple roadmaps with unlimited depth
 npm run graph -- {slug1} {slug2}
 
-### Graph ALL roadmaps (saves to scripts/output/roadmap-graph.json)
+### Graph ALL roadmaps (saves to scripts/roadmap/output/roadmap-graph.json)
 npm run graph -- --all
 
 ### JSON output

@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "tree": "tsx .agent/skills/export-subject-material/scripts/export-roadmaps.ts",
-    "graph": "tsx .agent/skills/export-subject-material/scripts/export-roadmaps.ts --graph"
+    "tree": "tsx scripts/roadmap/export-roadmaps.ts",
+    "graph": "tsx scripts/roadmap/export-roadmaps.ts --graph"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
