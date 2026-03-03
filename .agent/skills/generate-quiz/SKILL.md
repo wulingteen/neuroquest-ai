@@ -25,7 +25,11 @@ description: generate quiz questions for any planet **ONLY use when user allow y
 
 ### Command Mode
 
-Use command `npx tsx scripts/generate-quiz.ts --rollup {rollup} --count {The number of questions you need to generate}` or `npx tsx scripts/generate-quiz.ts -r {rollup} -c {The number of questions you need to generate}`to generate new questions for the user.
+1. Determine whether the user-entered {rollup name} appears in the output of the recent `npm run graph -- {rollup-name}` command (or if a similar rollup name exists). **If further user questioning would improve your accuracy, please ask them.**
+2. Use command `npx tsx scripts/generate-quiz.ts --rollup {rollup} --count {The number of questions you need to generate}` or `npx tsx scripts/generate-quiz.ts -r {rollup} -c {The number of questions you need to generate}`to generate new questions for the user.
+3. this command may ask you the "overview", you may give a brief overview of this rollup name. And it requires starting with the simplest questions.
+4. wait for about 6 minutes.
+5. finished. and tell user, briefly.
 
 ### Manual Mode
 
