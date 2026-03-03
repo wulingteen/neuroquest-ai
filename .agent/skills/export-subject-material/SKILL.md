@@ -26,14 +26,14 @@ scripts/roadmap/
 │   ├── legacy-tree-builder.ts# Balsamiq/mockup-format tree builder
 │   ├── tree-renderer.ts      # ASCII rendering, hierarchy conversion, label search
 │   └── graph.ts              # Cross-roadmap relationship graph
-└── output/                   # Generated JSON files
+└── (no output/ — generated JSON goes to data/roadmap-exports/)
 
 data/roadmaps/                # 81 roadmap assets
 ```
 
 ## COMMAND OVERVIEW
 
-### View a single roadmap's hierarchy as an ASCII tree (also writes scripts/roadmap/output/<slug>.json)
+### View a single roadmap's hierarchy as an ASCII tree (also writes data/roadmap-exports/<slug>.json)
 npm run tree -- {roadmap-name}
 
 ### View as structured JSON (only labels + children)
@@ -49,7 +49,7 @@ npm run tree -- ai-agents "Gemini Function Calling"
 
 ### Cross-roadmap relationship graph
 
-The `--graph` flag builds a tree of cross-roadmap relationships using the `relatedRoadmaps` field in each roadmap's frontmatter. JSON is always saved to `scripts/roadmap/output/`.
+The `--graph` flag builds a tree of cross-roadmap relationships using the `relatedRoadmaps` field in each roadmap's frontmatter. JSON is always saved to `data/roadmap-exports/`.
 
 ### Show relationship graph for a single roadmap (depth 1 = direct neighbours)
 npm run graph -- {roadmap-name} --depth 1
@@ -57,7 +57,7 @@ npm run graph -- {roadmap-name} --depth 1
 ### Show relationships between multiple roadmaps with unlimited depth
 npm run graph -- {slug1} {slug2}
 
-### Graph ALL roadmaps (saves to scripts/roadmap/output/roadmap-graph.json)
+### Graph ALL roadmaps (saves to data/roadmap-exports/roadmap-graph.json)
 npm run graph -- --all
 
 ### JSON output

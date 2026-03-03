@@ -12,4 +12,4 @@ const __dirname = path.dirname(__filename);
 export const ROADMAPS_DIR = path.resolve(__dirname, '../../../data/roadmaps');
 
 /** Output directory for generated JSON files. */
-export const OUTPUT_DIR = path.resolve(__dirname, '../output');
+export const OUTPUT_DIR = path.resolve(__dirname, '../../../data/roadmap-exports');

@@ -4,7 +4,7 @@
  * Reads roadmap data from data/roadmaps/ and outputs the internal
  * node labels and hierarchical relationships for a specified roadmap.
  *
- * A JSON file is always written to scripts/roadmap/output/<slug>.json (overwriting
+ * A JSON file is always written to data/roadmap-exports/<slug>.json (overwriting
  * any existing file) regardless of output mode.
  *
  * Usage:
@@ -118,7 +118,7 @@ function main() {
             graph: graphRoots.map(toGraphJson),
         };
 
-        // Always save JSON to output/
+        // Always save JSON to data/roadmap-exports/
         const autoJsonStr = JSON.stringify(payload, null, 2);
         fs.mkdirSync(OUTPUT_DIR, { recursive: true });
         const autoJsonFilename =
