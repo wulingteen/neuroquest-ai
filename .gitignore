@@ -46,3 +46,5 @@ next-env.d.ts
 # export-subject-material skill
 data/roadmap-exports/
 src/generated/questions*
+profile-threejs.jpg
+lab-page.png
