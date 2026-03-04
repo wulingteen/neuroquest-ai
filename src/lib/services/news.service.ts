@@ -82,7 +82,17 @@ export async function getSelections(params: {
         },
     });
 
-    const items: NewsSelectionDTO[] = selections.map((sel) => {
+    // Cap at 3 articles per tier (cron may have run more than once on the same day,
+    // creating duplicate tier entries for the same cycle_date).
+    const tierCount = new Map<number, number>();
+    const cappedSelections = selections.filter((sel) => {
+        const count = tierCount.get(sel.tier) ?? 0;
+        if (count >= 3) return false;
+        tierCount.set(sel.tier, count + 1);
+        return true;
+    });
+
+    const items: NewsSelectionDTO[] = cappedSelections.map((sel) => {
         const article = sel.news_articles;
         const meta = TIER_META[sel.tier] ?? TIER_META[3];
 

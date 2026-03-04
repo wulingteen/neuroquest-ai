@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "tree": "tsx scripts/roadmap/export-roadmaps.ts",
-    "graph": "tsx scripts/roadmap/export-roadmaps.ts --graph"
+    "graph": "tsx scripts/roadmap/export-roadmaps.ts --graph",
+    "convert-3mf": "NODE_OPTIONS='--max-old-space-size=4096' tsx scripts/convert-3mf-to-glb.ts"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
