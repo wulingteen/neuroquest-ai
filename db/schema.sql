@@ -56,9 +56,13 @@ CREATE TABLE IF NOT EXISTS achievements (
 
 -- 4. Quiz Questions Table
 -- Questions pool
+-- NOTE: `rollup` is intentionally kept as a plain column (not a standalone FK to planets)
+-- because the composite FK (rollup, level_number) → levels already enforces referential
+-- integrity transitively: levels.rollup → planets.rollup. A direct planet FK would be a
+-- transitive redundancy (3NF violation) and would create a confusing double-CASCADE path.
 CREATE TABLE IF NOT EXISTS quiz_questions (
     question_id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    rollup TEXT NOT NULL REFERENCES planets(rollup) ON DELETE CASCADE,
+    rollup TEXT NOT NULL,
     level_number INTEGER NOT NULL,
     question_number INTEGER NOT NULL,
     question_text TEXT NOT NULL,
