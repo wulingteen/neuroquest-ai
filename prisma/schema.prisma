@@ -100,6 +100,8 @@ model players {
   player_news_answers    player_news_answers[]
   friends                friends[]              @relation("player_friends")
   friend_of              friends[]              @relation("friend_players")
+  sent_friend_requests   friend_requests[]      @relation("request_sender")
+  received_friend_requests friend_requests[]    @relation("request_receiver")
   daily_top_messages     daily_top_messages[]
   player_achievements    player_achievements[]
 
@@ -301,6 +303,22 @@ model daily_top_messages {
 
 // top_scorer_notifications was removed — daily_top_messages already encodes
 // the "notified/prompted today" semantic via UNIQUE(player_id, message_date).
+
+/// Friend request with consent — status: pending | accepted | declined
+model friend_requests {
+  request_id   BigInt   @id @default(autoincrement())
+  requester_id String   @db.Uuid
+  requestee_id String   @db.Uuid
+  status       String   @default("pending")
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  requester    players  @relation("request_sender",   fields: [requester_id], references: [player_id], onDelete: Cascade)
+  requestee    players  @relation("request_receiver", fields: [requestee_id], references: [player_id], onDelete: Cascade)
+
+  @@unique([requester_id, requestee_id])
+  @@index([requestee_id, status], map: "idx_friend_requests_requestee_status")
+  @@index([requester_id],         map: "idx_friend_requests_requester")
+}
 
 model player_achievements {
   player_id      String   @db.Uuid

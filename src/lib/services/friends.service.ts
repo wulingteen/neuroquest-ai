@@ -11,6 +11,14 @@ export interface FriendDTO {
     streak: number;
 }
 
+export interface FriendRequestDTO {
+    request_id: string;
+    requester_id: string;
+    requester_username: string | null;
+    requester_avatar: string | null;
+    created_at: string;
+}
+
 export interface FriendsLeaderboardEntryDTO {
     name: string | null;
     xp: number;
@@ -34,7 +42,7 @@ async function getCurrentPlayer() {
 // ─── Service Functions ────────────────────────────────────────────────────────
 
 /**
- * List all friends of the current player (YouPlayer).
+ * List all confirmed friends of the current player (YouPlayer).
  * Returns friends sorted by XP descending.
  */
 export async function getFriends(): Promise<FriendDTO[]> {
@@ -70,10 +78,11 @@ export async function getFriends(): Promise<FriendDTO[]> {
 }
 
 /**
- * Add a friend by username.
- * Creates a bidirectional friendship (both directions).
+ * Send a friend request from YouPlayer to the given username.
+ * Does NOT create a friendship immediately — the other party must accept.
+ * Replaces the old "instant add" behaviour.
  */
-export async function addFriend(friendUsername: string): Promise<{ success: boolean; message: string }> {
+export async function sendFriendRequest(friendUsername: string): Promise<{ success: boolean; message: string }> {
     const player = await getCurrentPlayer();
     if (!player) throw new Error("Player not found");
 
@@ -89,32 +98,158 @@ export async function addFriend(friendUsername: string): Promise<{ success: bool
         return { success: false, message: `Player "${friendUsername}" not found` };
     }
 
-    // Check if already friends
-    const existing = await db.friends.findFirst({
+    // Already friends?
+    const alreadyFriends = await db.friends.findFirst({
         where: {
             player_id: player.player_id,
             friend_id: friendPlayer.player_id,
         },
     });
-
-    if (existing) {
+    if (alreadyFriends) {
         return { success: false, message: "Already friends" };
     }
 
-    // Create bidirectional friendship
-    await db.friends.createMany({
-        data: [
-            { player_id: player.player_id, friend_id: friendPlayer.player_id },
-            { player_id: friendPlayer.player_id, friend_id: player.player_id },
-        ],
-        skipDuplicates: true,
+    // Pending request already sent?
+    const existingOutgoing = await db.friend_requests.findFirst({
+        where: {
+            requester_id: player.player_id,
+            requestee_id: friendPlayer.player_id,
+            status: "pending",
+        },
+    });
+    if (existingOutgoing) {
+        return { success: false, message: "Friend request already sent" };
+    }
+
+    // They already sent us a request? Auto-accept it.
+    const incomingRequest = await db.friend_requests.findFirst({
+        where: {
+            requester_id: friendPlayer.player_id,
+            requestee_id: player.player_id,
+            status: "pending",
+        },
+    });
+    if (incomingRequest) {
+        return acceptFriendRequest(incomingRequest.request_id.toString());
+    }
+
+    // Create the pending request
+    await db.friend_requests.create({
+        data: {
+            requester_id: player.player_id,
+            requestee_id: friendPlayer.player_id,
+            status: "pending",
+        },
     });
 
-    return { success: true, message: `You are now friends with ${friendUsername}` };
+    return { success: true, message: `Friend request sent to ${friendUsername}` };
 }
 
 /**
- * Remove a friend by username.
+ * Get all pending friend requests sent TO the current player (YouPlayer).
+ */
+export async function getPendingFriendRequests(): Promise<FriendRequestDTO[]> {
+    const player = await getCurrentPlayer();
+    if (!player) throw new Error("Player not found");
+
+    const requests = await db.friend_requests.findMany({
+        where: {
+            requestee_id: player.player_id,
+            status: "pending",
+        },
+        include: {
+            requester: {
+                select: {
+                    player_id: true,
+                    username: true,
+                    avatar: true,
+                },
+            },
+        },
+        orderBy: { created_at: "asc" },
+    });
+
+    return requests.map((r) => ({
+        request_id: r.request_id.toString(),
+        requester_id: r.requester_id,
+        requester_username: r.requester.username,
+        requester_avatar: r.requester.avatar,
+        created_at: r.created_at.toISOString(),
+    }));
+}
+
+/**
+ * Accept a pending friend request.
+ * Creates bidirectional friendship and marks request as accepted.
+ */
+export async function acceptFriendRequest(requestId: string): Promise<{ success: boolean; message: string }> {
+    const player = await getCurrentPlayer();
+    if (!player) throw new Error("Player not found");
+
+    const request = await db.friend_requests.findUnique({
+        where: { request_id: BigInt(requestId) },
+    });
+
+    if (!request || request.status !== "pending") {
+        return { success: false, message: "Friend request not found or already handled" };
+    }
+
+    if (request.requestee_id !== player.player_id) {
+        return { success: false, message: "Not authorized to accept this request" };
+    }
+
+    // Create bidirectional friendship
+    await db.$transaction([
+        db.friends.createMany({
+            data: [
+                { player_id: request.requestee_id, friend_id: request.requester_id },
+                { player_id: request.requester_id, friend_id: request.requestee_id },
+            ],
+            skipDuplicates: true,
+        }),
+        db.friend_requests.update({
+            where: { request_id: BigInt(requestId) },
+            data: { status: "accepted", updated_at: new Date() },
+        }),
+    ]);
+
+    const requester = await db.players.findUnique({
+        where: { player_id: request.requester_id },
+        select: { username: true },
+    });
+
+    return { success: true, message: `You are now friends with ${requester?.username ?? "them"}` };
+}
+
+/**
+ * Decline a pending friend request.
+ */
+export async function declineFriendRequest(requestId: string): Promise<{ success: boolean; message: string }> {
+    const player = await getCurrentPlayer();
+    if (!player) throw new Error("Player not found");
+
+    const request = await db.friend_requests.findUnique({
+        where: { request_id: BigInt(requestId) },
+    });
+
+    if (!request || request.status !== "pending") {
+        return { success: false, message: "Friend request not found or already handled" };
+    }
+
+    if (request.requestee_id !== player.player_id) {
+        return { success: false, message: "Not authorized to decline this request" };
+    }
+
+    await db.friend_requests.update({
+        where: { request_id: BigInt(requestId) },
+        data: { status: "declined", updated_at: new Date() },
+    });
+
+    return { success: true, message: "Friend request declined" };
+}
+
+/**
+ * Remove a confirmed friend by username.
  * Removes both directions of the friendship.
  */
 export async function removeFriend(friendUsername: string): Promise<{ success: boolean; message: string }> {

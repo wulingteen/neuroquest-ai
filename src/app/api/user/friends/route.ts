@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getFriends, addFriend, removeFriend } from "@/lib/services/friends.service";
+import { getFriends, sendFriendRequest, removeFriend } from "@/lib/services/friends.service";
 
 /**
  * GET /api/user/friends
- * Returns the current player's friends list sorted by XP.
+ * Returns the current player's confirmed friends list sorted by XP.
  */
 export async function GET() {
     try {
@@ -20,7 +20,7 @@ export async function GET() {
 
 /**
  * POST /api/user/friends
- * Add a friend by username.
+ * Send a friend request by username (requires other party's consent).
  * Body: { "username": "FriendName" }
  */
 export async function POST(req: NextRequest) {
@@ -35,12 +35,12 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const result = await addFriend(username.trim());
+        const result = await sendFriendRequest(username.trim());
         return NextResponse.json(result, { status: result.success ? 200 : 400 });
     } catch (error) {
-        console.error("Error adding friend:", error);
+        console.error("Error sending friend request:", error);
         return NextResponse.json(
-            { success: false, error: "Failed to add friend" },
+            { success: false, error: "Failed to send friend request" },
             { status: 500 },
         );
     }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
 /**
  * DELETE /api/user/friends
- * Remove a friend by username.
+ * Remove a confirmed friend by username.
  * Body: { "username": "FriendName" }
  */
 export async function DELETE(req: NextRequest) {

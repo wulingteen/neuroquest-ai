@@ -60,24 +60,33 @@ curl -X POST http://localhost:3000/api/user/profile \
 
 ## Friends Feature
 
-Manage the current player's (YouPlayer) friends list. Friendships are bidirectional.
+Friendships are **consent-based**: sending a request creates a `pending` row in `friend_requests`; the other party must accept before a confirmed friendship is created. Friendships are bidirectional.
 
 **API Endpoints:**
 ```bash
-# List friends (sorted by XP desc)
+# List confirmed friends (sorted by XP desc)
 curl http://localhost:3000/api/user/friends
 
-# Add a friend by username
+# Send a friend request by username (requires acceptance)
 curl -X POST http://localhost:3000/api/user/friends \
   -H 'Content-Type: application/json' \
   -d '{"username":"NeuralNinja"}'
 
-# Remove a friend by username
+# Remove a confirmed friend by username
 curl -X DELETE http://localhost:3000/api/user/friends \
   -H 'Content-Type: application/json' \
   -d '{"username":"NeuralNinja"}'
 
-# Friends Leaderboard (current player + friends, sorted by XP)
+# List pending friend requests received by YouPlayer
+curl http://localhost:3000/api/user/friends/requests
+
+# Accept or decline a friend request
+curl -X POST http://localhost:3000/api/user/friends/requests \
+  -H 'Content-Type: application/json' \
+  -d '{"request_id":"1","action":"accept"}'
+# action can be: "accept" | "decline"
+
+# Friends Leaderboard (current player + confirmed friends, sorted by XP)
 curl http://localhost:3000/api/leaderboard/friends
 ```
 
@@ -144,6 +153,7 @@ The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a co
 - **player_profiles**: `player_id` (UUID PK FK→players), `background` (TEXT), `interests` (TEXT[]), `difficulty_score` (INTEGER 0-100), `created_at`, `updated_at`. Score = 40% background_score + 60% avg(interest_scores).
 - **cron_scan_runs**: `run_id` (BIGINT PK), `status` (TEXT: running/completed/failed), `total_feeds`, `feeds_ok`, `feeds_failed`, `articles_found`, `articles_selected`, `error_message`, `started_at`, `finished_at`. One row per cron invocation.
 - **cron_scan_feed_logs**: `log_id` (BIGINT PK), `run_id` (FK), `feed_id` (FK), `feed_url`, `feed_name`, `status` (success/failed/skipped), `articles_found`, `error_message`, `duration_ms`, `created_at`. One row per feed per run.
+- **friend_requests**: `request_id` (BIGINT PK), `requester_id` (UUID FK→players), `requestee_id` (UUID FK→players), `status` (TEXT: pending/accepted/declined DEFAULT 'pending'), `created_at`, `updated_at`. UNIQUE(requester_id, requestee_id). Indexed on (requestee_id, status WHERE pending) and requester_id.
 
 These tables support the core gameplay mechanics, including planet navigation, level progression, achievements, quizzes, arena challenges, and player tracking.
 
@@ -212,7 +222,8 @@ Only truly shared (app-level) components live here. Page-specific components are
 
 **`src/app/leaderboard/page.tsx`** — Completely redesigned in **Kurzgesagt style** with dual-tab layout:
 - **All Players Tab**: A high-impact horizontal bar chart showing all 100 players ranked by XP.
-- **Friends Tab**: Shows only the current player + their friends ranked by XP. Includes inline Add Friend (by username) and Remove Friend controls.
+- **Friends Tab**: Shows only the current player + their confirmed friends ranked by XP. Includes a popup to **Add Friend** (by username) and a **Friend Requests inbox** at the bottom.
+- **Friend Requests Inbox**: Pending requests from other players appear with Accept/Decline buttons. The Friends tab badge shows an orange pulsing count when there are pending requests.
 - **Integrated Identity**: Avatars, names, and titles are embedded directly inside the bars.
 - **Clean Metrics**: Shows only raw numerical XP values inside the bars.
 - **Aesthetic**: Uses the space-themed flat vector design consistent with the Map and News systems.

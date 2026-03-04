@@ -275,7 +275,31 @@ CREATE TABLE IF NOT EXISTS friends (
 
 CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON friends(friend_id);
 
--- 18. Daily Top Messages Table
+-- 18. Friend Requests Table
+-- Tracks pending/accepted/declined friend invitations (consent-based flow)
+-- Once accepted the friends table is populated; the request row remains as audit trail.
+CREATE TABLE IF NOT EXISTS friend_requests (
+    request_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    requester_id UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+    requestee_id UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+    status       TEXT NOT NULL DEFAULT 'pending'
+                   CHECK (status IN ('pending', 'accepted', 'declined')),
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (requester_id <> requestee_id),
+    UNIQUE (requester_id, requestee_id)
+);
+
+-- Inbox lookup: "show me all pending requests sent TO me"
+CREATE INDEX IF NOT EXISTS idx_friend_requests_requestee_status
+    ON friend_requests(requestee_id, status)
+    WHERE status = 'pending';
+
+-- Outbox dedup: "did I already send a request to this person?"
+CREATE INDEX IF NOT EXISTS idx_friend_requests_requester
+    ON friend_requests(requester_id);
+
+-- 19. Daily Top Messages Table
 CREATE TABLE IF NOT EXISTS daily_top_messages (
     message_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     player_id UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,

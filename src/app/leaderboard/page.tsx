@@ -7,7 +7,7 @@ import { getLevelTitle } from "@/lib/game/helpers";
 import FomoBird from "@/components/icons/FomoBird";
 import BackgroundGraphics from "@/app/news/_components/BackgroundGraphics";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Globe, Plus, X, Search, UserCheck, UserX } from "lucide-react";
+import { Users, Globe, Plus, X, Search, UserCheck } from "lucide-react";
 
 type Tab = "all" | "friends";
 
@@ -20,6 +20,14 @@ interface FriendEntry {
     streak: number;
 }
 
+interface FriendRequestEntry {
+    request_id: string;
+    requester_id: string;
+    requester_username: string | null;
+    requester_avatar: string | null;
+    created_at: string;
+}
+
 export default function LeaderboardPage() {
     const { playerName } = useGameStore();
 
@@ -30,6 +38,7 @@ export default function LeaderboardPage() {
     // ─── Friends leaderboard ───────────────────────────────────────────
     const [friendsBoard, setFriendsBoard] = useState<(LeaderboardEntry & { isMe: boolean })[]>([]);
     const [friendsList, setFriendsList] = useState<FriendEntry[]>([]);
+    const [pendingRequests, setPendingRequests] = useState<FriendRequestEntry[]>([]);
     const [loadingFriends, setLoadingFriends] = useState(true);
 
     // ─── UI state ─────────────────────────────────────────────────────
@@ -38,7 +47,7 @@ export default function LeaderboardPage() {
     const [addInput, setAddInput] = useState("");
     const [addStatus, setAddStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
     const [addingFriend, setAddingFriend] = useState(false);
-    const [removingFriend, setRemovingFriend] = useState<string | null>(null);
+    const [handlingRequest, setHandlingRequest] = useState<string | null>(null);
 
     // ─── Data fetching ─────────────────────────────────────────────────
     const fetchAll = useCallback(async () => {
@@ -57,14 +66,17 @@ export default function LeaderboardPage() {
     const fetchFriends = useCallback(async () => {
         setLoadingFriends(true);
         try {
-            const [boardRes, listRes] = await Promise.all([
+            const [boardRes, listRes, requestsRes] = await Promise.all([
                 fetch("/api/leaderboard/friends"),
                 fetch("/api/user/friends"),
+                fetch("/api/user/friends/requests"),
             ]);
             const boardData = await boardRes.json();
             const listData = await listRes.json();
+            const requestsData = await requestsRes.json();
             if (boardData.success) setFriendsBoard(boardData.data);
             if (listData.success) setFriendsList(listData.data);
+            if (requestsData.success) setPendingRequests(requestsData.data);
         } catch (e) {
             console.error("Failed to fetch friends data:", e);
         } finally {
@@ -77,7 +89,7 @@ export default function LeaderboardPage() {
         fetchFriends();
     }, [fetchAll, fetchFriends]);
 
-    // ─── Add friend ────────────────────────────────────────────────────
+    // ─── Send friend request ───────────────────────────────────────────
     const handleAddFriend = async () => {
         if (!addInput.trim()) return;
         setAddingFriend(true);
@@ -101,21 +113,29 @@ export default function LeaderboardPage() {
         }
     };
 
-    // ─── Remove friend ─────────────────────────────────────────────────
-    const handleRemoveFriend = async (username: string) => {
-        setRemovingFriend(username);
+
+    // ─── Handle friend request (accept / decline) ──────────────────────
+    const handleFriendRequest = async (requestId: string, action: "accept" | "decline") => {
+        setHandlingRequest(requestId);
         try {
-            await fetch("/api/user/friends", {
-                method: "DELETE",
+            await fetch("/api/user/friends/requests", {
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username }),
+                body: JSON.stringify({ request_id: requestId, action }),
             });
             await fetchFriends();
         } catch (e) {
-            console.error("Failed to remove friend:", e);
+            console.error("Failed to handle friend request:", e);
         } finally {
-            setRemovingFriend(null);
+            setHandlingRequest(null);
         }
+    };
+
+    // ─── Close modal helper ────────────────────────────────────────────
+    const closeAddFriendModal = () => {
+        setShowAddFriend(false);
+        setAddStatus(null);
+        setAddInput("");
     };
 
     // ─── Render helpers ────────────────────────────────────────────────
@@ -126,6 +146,7 @@ export default function LeaderboardPage() {
     ) => {
         const isMe = entry.isMe || entry.name === playerName || entry.name === "YouPlayer";
         const percentage = maxXP > 0 ? (entry.xp / maxXP) * 100 : 0;
+        const barWidth = Math.max(percentage, 5);
         const title = getLevelTitle(entry.level || 1);
 
         let accentColor = "bg-[#58CC02]";
@@ -133,6 +154,50 @@ export default function LeaderboardPage() {
         else if (entry.rank === 2) accentColor = "bg-[#FEB47B]";
         else if (entry.rank === 3) accentColor = "bg-[#4EEAFF]";
         else if (isMe) accentColor = "bg-[#8B5CF6]";
+
+        const renderBarContent = (isOnBar: boolean) => {
+            const isLightBar = accentColor !== "bg-[#8B5CF6]";
+            const useDark = isOnBar && isLightBar;
+            return (
+                <div
+                    className="absolute inset-x-0 inset-y-0 flex items-center justify-between px-5 z-10 pointer-events-none"
+                    aria-hidden={isOnBar ? "true" : "false"}
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-[#0A0A26]/20 border border-white/10 flex items-center justify-center text-2xl backdrop-blur-sm">
+                            {entry.avatar || "🧑"}
+                        </div>
+                        <div className="flex flex-col">
+                            <span className={cn(
+                                "font-black tracking-tight text-base leading-none mb-0.5",
+                                useDark ? "text-[#0A0A26]" : "text-white",
+                            )}>
+                                {entry.name} {isMe && "(YOU)"}
+                            </span>
+                            <span className={cn(
+                                "text-[9px] font-black uppercase tracking-widest leading-none",
+                                useDark ? "text-[#0A0A26]/60" : "text-white/60",
+                            )}>
+                                {title}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-baseline gap-1">
+                        <span className={cn(
+                            "text-2xl font-black italic tracking-tighter leading-none",
+                            useDark ? "text-[#0A0A26]" : "text-white",
+                        )}>
+                            {entry.xp.toLocaleString()}
+                        </span>
+                        <span className={cn(
+                            "text-[10px] font-black uppercase",
+                            useDark ? "text-[#0A0A26]/40" : "text-white/40",
+                        )}>XP</span>
+                    </div>
+                </div>
+            );
+        };
 
         return (
             <motion.div
@@ -142,52 +207,30 @@ export default function LeaderboardPage() {
                 transition={{ delay: 0.05 * idx, type: "spring", stiffness: 100 }}
                 className="relative mb-8 mt-4"
             >
-                <div className="relative h-16 bg-[#15113B] border-[4px] border-[#0A0A26] rounded-[24px] shadow-[0_8px_0_#0A0A26] flex items-center">
-                    {/* Bar Fill */}
+                <div className="relative h-16 bg-[#15113B] border-[4px] border-[#0A0A26] rounded-[24px] shadow-[0_8px_0_#0A0A26] flex items-center overflow-hidden">
+                    {/* Layer 1: Underlay (White text on dark bg) */}
+                    {renderBarContent(false)}
+
+                    {/* Layer 2: Bar Background (Moves with width) */}
                     <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${Math.max(percentage, 5)}%` }}
+                        animate={{ width: `${barWidth}%` }}
                         transition={{ duration: 1.2, ease: "easeOut" }}
                         className={cn("absolute inset-y-0 left-0 rounded-[20px] overflow-hidden", accentColor)}
                     >
                         <div className="absolute right-0 top-0 bottom-0 w-8 bg-white/20 blur-[4px]" />
                     </motion.div>
 
-                    {/* Item Content */}
-                    <div className="absolute inset-x-0 inset-y-0 flex items-center justify-between px-5 z-10 pointer-events-none">
-                        <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-[#0A0A26]/20 border border-white/10 flex items-center justify-center text-2xl backdrop-blur-sm">
-                                {entry.avatar || "🧑"}
-                            </div>
-                            <div className="flex flex-col">
-                                <span className={cn(
-                                    "font-black uppercase tracking-tight text-base leading-none mb-0.5",
-                                    isMe ? "text-white" : "text-[#0A0A26]",
-                                )}>
-                                    {entry.name} {isMe && "(YOU)"}
-                                </span>
-                                <span className={cn(
-                                    "text-[9px] font-black uppercase tracking-widest leading-none",
-                                    isMe ? "text-white/60" : "text-[#0A0A26]/60",
-                                )}>
-                                    {title}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-baseline gap-1">
-                            <span className={cn(
-                                "text-2xl font-black italic tracking-tighter leading-none",
-                                isMe ? "text-white" : "text-[#0A0A26]",
-                            )}>
-                                {entry.xp.toLocaleString()}
-                            </span>
-                            <span className={cn(
-                                "text-[10px] font-black uppercase opacity-50",
-                                isMe ? "text-white/40" : "text-[#0A0A26]/40",
-                            )}>XP</span>
-                        </div>
-                    </div>
+                    {/* Layer 3: Overlay (Dark text, clipped to bar width) */}
+                    <motion.div
+                        className="absolute inset-0 pointer-events-none"
+                        initial={{ clipPath: "inset(0 100% 0 0)" }}
+                        animate={{ clipPath: `inset(0 ${100 - barWidth}% 0 0)` }}
+                        transition={{ duration: 1.2, ease: "easeOut" }}
+                        style={{ zIndex: 15 }}
+                    >
+                        {renderBarContent(true)}
+                    </motion.div>
                 </div>
 
                 {/* Victory Message for Rank 1 */}
@@ -197,7 +240,7 @@ export default function LeaderboardPage() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         className="absolute -top-12 left-10 z-[100]"
                     >
-                        <div className="bg-white text-[#0A0A26] px-5 py-2 rounded-2xl border-[4px] border-[#0A0A26] font-black text-[12px] uppercase shadow-[5px_5px_0px_0px_#0A0A26] flex items-center gap-3 relative">
+                        <div className="bg-white text-[#0A0A26] px-5 py-2 rounded-2xl border-[4px] border-[#0A0A26] font-black text-[12px] shadow-[5px_5px_0px_0px_#0A0A26] flex items-center gap-3 relative">
                             <span className="w-2.5 h-2.5 bg-[#FFD166] rounded-full animate-pulse shadow-[0_0_8px_#FFD166]" />
                             {entry.victoryMessage}
                             <div className="absolute -bottom-3.5 left-6 w-5 h-5 bg-white border-r-[4px] border-b-[4px] border-[#0A0A26] rotate-45 z-[-1]" />
@@ -279,6 +322,11 @@ export default function LeaderboardPage() {
                                 {friendsList.length}
                             </span>
                         )}
+                        {pendingRequests.length > 0 && (
+                            <span className="bg-[#FF7E5F] text-white text-[10px] px-1.5 py-0.5 rounded-full font-black ml-1 animate-pulse">
+                                {pendingRequests.length}
+                            </span>
+                        )}
                     </button>
                 </div>
 
@@ -309,78 +357,6 @@ export default function LeaderboardPage() {
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.2 }}
                         >
-                            {/* Add Friend Section */}
-                            <div className="mb-8">
-                                <div className="bg-[#15113B] border-[4px] border-[#0A0A26] rounded-[24px] shadow-[0_8px_0_#0A0A26] overflow-hidden">
-                                    <button
-                                        id="btn-add-friend-toggle"
-                                        onClick={() => {
-                                            setShowAddFriend((v) => !v);
-                                            setAddStatus(null);
-                                            setAddInput("");
-                                        }}
-                                        className="w-full flex items-center justify-between px-6 py-4"
-                                    >
-                                        <span className="flex items-center gap-2 font-black uppercase text-sm tracking-wide text-[#4EEAFF]">
-                                            <Plus className="w-4 h-4" />
-                                            Add a Friend
-                                        </span>
-                                        <span className="text-white/30 text-lg">{showAddFriend ? "−" : "+"}</span>
-                                    </button>
-
-                                    <AnimatePresence>
-                                        {showAddFriend && (
-                                            <motion.div
-                                                initial={{ height: 0, opacity: 0 }}
-                                                animate={{ height: "auto", opacity: 1 }}
-                                                exit={{ height: 0, opacity: 0 }}
-                                                className="overflow-hidden border-t-[4px] border-[#0A0A26]"
-                                            >
-                                                <div className="px-6 py-4 space-y-3">
-                                                    <div className="flex gap-2">
-                                                        <div className="relative flex-1">
-                                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                                                            <input
-                                                                id="input-friend-username"
-                                                                type="text"
-                                                                placeholder="Enter username..."
-                                                                value={addInput}
-                                                                onChange={(e) => setAddInput(e.target.value)}
-                                                                onKeyDown={(e) => e.key === "Enter" && handleAddFriend()}
-                                                                className="w-full bg-[#09080F] border-[3px] border-[#0A0A26] rounded-[14px] pl-9 pr-4 py-2.5 text-white font-bold text-sm placeholder:text-white/20 focus:outline-none focus:border-[#4EEAFF]"
-                                                            />
-                                                        </div>
-                                                        <button
-                                                            id="btn-add-friend-submit"
-                                                            onClick={handleAddFriend}
-                                                            disabled={addingFriend || !addInput.trim()}
-                                                            className="flex items-center gap-2 bg-[#4EEAFF] text-[#0A0A26] font-black uppercase text-sm px-4 py-2.5 rounded-[14px] border-[3px] border-[#0A0A26] shadow-[0_4px_0_#0A0A26] disabled:opacity-40 hover:brightness-110 transition-all active:translate-y-1 active:shadow-none"
-                                                        >
-                                                            <UserCheck className="w-4 h-4" />
-                                                            {addingFriend ? "Adding..." : "Add"}
-                                                        </button>
-                                                    </div>
-                                                    {addStatus && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, y: -4 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            className={cn(
-                                                                "text-xs font-bold px-4 py-2 rounded-xl border-2",
-                                                                addStatus.type === "success"
-                                                                    ? "bg-[#58CC02]/10 border-[#58CC02] text-[#58CC02]"
-                                                                    : "bg-[#FF4B4B]/10 border-[#FF4B4B] text-[#FF4B4B]",
-                                                            )}
-                                                        >
-                                                            {addStatus.message}
-                                                        </motion.div>
-                                                    )}
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
-                            </div>
-
                             {/* Friends Leaderboard Bars */}
                             {friendsBoard.length === 0 ? (
                                 <motion.div
@@ -400,47 +376,74 @@ export default function LeaderboardPage() {
                                 </div>
                             )}
 
-                            {/* Friends Management List */}
-                            {friendsList.length > 0 && (
-                                <div className="mt-10">
-                                    <h2 className="font-black uppercase text-xs tracking-[0.3em] text-white/30 mb-4 px-2">
-                                        Your Friends ({friendsList.length})
+
+                            {/* ─── Pending Friend Requests Inbox ─────── */}
+                            {pendingRequests.length > 0 && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-10"
+                                >
+                                    <h2 className="font-black uppercase text-xs tracking-[0.3em] text-[#FFE100] mb-4 px-2">
+                                        Friend Requests ({pendingRequests.length})
                                     </h2>
                                     <div className="space-y-2">
-                                        {friendsList.map((friend) => (
+                                        {pendingRequests.map((req) => (
                                             <motion.div
-                                                key={friend.player_id}
+                                                key={req.request_id}
                                                 layout
                                                 initial={{ opacity: 0, x: -10 }}
                                                 animate={{ opacity: 1, x: 0 }}
                                                 exit={{ opacity: 0, x: 10 }}
-                                                className="flex items-center justify-between bg-[#15113B] border-[3px] border-[#0A0A26] rounded-[18px] px-4 py-3 shadow-[0_4px_0_#0A0A26]"
+                                                className="flex items-center justify-between bg-[#1D1C44] border-[4px] border-[#0A0A26] rounded-[18px] px-5 py-3 shadow-[0_5px_0_#0A0A26]"
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-2xl">{friend.avatar || "🧑"}</span>
-                                                    <div>
-                                                        <p className="font-black text-sm text-white uppercase tracking-tight">
-                                                            {friend.username}
-                                                        </p>
-                                                        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
-                                                            {getLevelTitle(friend.level || 1)} · {friend.xp.toLocaleString()} XP
-                                                        </p>
-                                                    </div>
+                                                <p className="font-black text-sm text-white tracking-tight">
+                                                    {req.requester_username}
+                                                </p>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        id={`btn-decline-request-${req.request_id}`}
+                                                        onClick={() => handleFriendRequest(req.request_id, "decline")}
+                                                        disabled={handlingRequest === req.request_id}
+                                                        className="bg-[#FF4B4B]/15 text-[#FF4B4B] border-[2px] border-[#FF4B4B]/50 px-3 py-1.5 rounded-[10px] font-black text-[11px] uppercase tracking-wide hover:bg-[#FF4B4B]/30 transition-all disabled:opacity-40"
+                                                    >
+                                                        {handlingRequest === req.request_id ? "..." : "Decline"}
+                                                    </button>
+                                                    <button
+                                                        id={`btn-accept-request-${req.request_id}`}
+                                                        onClick={() => handleFriendRequest(req.request_id, "accept")}
+                                                        disabled={handlingRequest === req.request_id}
+                                                        className="bg-[#FFE100] text-[#0A0A26] border-[2px] border-[#0A0A26] px-4 py-1.5 rounded-[10px] font-black text-[11px] uppercase tracking-wide hover:brightness-110 shadow-[0_3px_0_#0A0A26] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-40"
+                                                    >
+                                                        {handlingRequest === req.request_id ? "..." : "Accept"}
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    id={`btn-remove-friend-${friend.username}`}
-                                                    onClick={() => friend.username && handleRemoveFriend(friend.username)}
-                                                    disabled={removingFriend === (friend.username ?? "")}
-                                                    className="flex items-center gap-1.5 bg-[#FF4B4B]/10 text-[#FF4B4B] border-[2px] border-[#FF4B4B]/40 px-3 py-1.5 rounded-[10px] font-black text-[11px] uppercase tracking-wide hover:bg-[#FF4B4B]/20 transition-all disabled:opacity-40"
-                                                >
-                                                    <UserX className="w-3 h-3" />
-                                                    {removingFriend === (friend.username ?? "") ? "..." : "Remove"}
-                                                </button>
                                             </motion.div>
                                         ))}
                                     </div>
-                                </div>
+                                </motion.div>
                             )}
+
+                            {/* Add Friend Button — bottom of friends list */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 }}
+                                className="mt-10 mb-4"
+                            >
+                                <button
+                                    id="btn-add-friend-toggle"
+                                    onClick={() => {
+                                        setShowAddFriend(true);
+                                        setAddStatus(null);
+                                        setAddInput("");
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2.5 bg-[#4EEAFF] text-[#0A0A26] font-black uppercase text-sm tracking-widest px-8 py-4 rounded-[20px] border-[4px] border-[#0A0A26] shadow-[0_6px_0_#0A0A26] hover:brightness-110 transition-all active:translate-y-1.5 active:shadow-[0_2px_0_#0A0A26]"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    Add a Friend
+                                </button>
+                            </motion.div>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -454,6 +457,98 @@ export default function LeaderboardPage() {
                     </p>
                 </div>
             </div>
+
+            {/* ─── Add Friend Modal ─────────────────────────────────────────── */}
+            <AnimatePresence>
+                {showAddFriend && (
+                    <motion.div
+                        key="add-friend-modal"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0"
+                        onClick={closeAddFriendModal}
+                    >
+                        {/* Backdrop */}
+                        <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
+
+                        {/* Modal Card */}
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 40 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 40 }}
+                            transition={{ type: "spring", stiffness: 280, damping: 24 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="relative w-full max-w-sm bg-[#1D1C44] border-[4px] border-[#0A0A26] rounded-[28px] shadow-[0_12px_0_#0A0A26] overflow-hidden"
+                        >
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between px-6 pt-6 pb-5 border-b-[4px] border-[#0A0A26]">
+                                <h2 className="font-black uppercase text-sm tracking-[0.2em] text-[#FFE100]">
+                                    Add a Friend
+                                </h2>
+                                <button
+                                    id="btn-close-add-friend-modal"
+                                    onClick={closeAddFriendModal}
+                                    className="w-8 h-8 rounded-[10px] bg-[#0A0A26]/60 border-[2px] border-[#0A0A26] flex items-center justify-center text-white/50 hover:text-white hover:bg-[#0A0A26] transition-all"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="px-6 py-6 space-y-4">
+                                <p className="text-white/40 font-bold text-xs uppercase tracking-widest">
+                                    Enter their username — they&apos;ll need to accept
+                                </p>
+
+                                {/* Input */}
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                                    <input
+                                        id="input-friend-username"
+                                        type="text"
+                                        placeholder="Username..."
+                                        value={addInput}
+                                        onChange={(e) => setAddInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleAddFriend()}
+                                        autoFocus
+                                        className="w-full bg-[#090812] border-[4px] border-[#0A0A26] rounded-[16px] pl-10 pr-4 py-3.5 text-white font-bold text-sm placeholder:text-white/20 focus:outline-none focus:border-[#FFE100] transition-colors shadow-[inset_0_2px_0_rgba(0,0,0,0.4)]"
+                                    />
+                                </div>
+
+                                {/* Send Button — full width */}
+                                <button
+                                    id="btn-add-friend-submit"
+                                    onClick={handleAddFriend}
+                                    disabled={addingFriend || !addInput.trim()}
+                                    className="w-full flex items-center justify-center gap-2 bg-[#FFE100] text-[#0A0A26] font-black uppercase text-sm tracking-widest py-4 rounded-[16px] border-[4px] border-[#0A0A26] shadow-[0_5px_0_#0A0A26] hover:brightness-105 transition-all active:translate-y-1 active:shadow-[0_2px_0_#0A0A26] disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    <UserCheck className="w-4 h-4" />
+                                    {addingFriend ? "Sending..." : "Send Request"}
+                                </button>
+
+                                <AnimatePresence>
+                                    {addStatus && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -4 }}
+                                            className={cn(
+                                                "text-xs font-bold px-4 py-3 rounded-[14px] border-[3px]",
+                                                addStatus.type === "success"
+                                                    ? "bg-[#58CC02]/10 border-[#58CC02] text-[#58CC02]"
+                                                    : "bg-[#FF4B4B]/10 border-[#FF4B4B] text-[#FF4B4B]",
+                                            )}
+                                        >
+                                            {addStatus.message}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
