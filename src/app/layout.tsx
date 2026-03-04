@@ -4,6 +4,7 @@ import "./globals.css";
 import BottomMenu from "@/components/layout/BottomMenu";
 import StarField from "@/components/effects/StarField";
 import GameInitializer from "@/components/providers/GameInitializer";
+import TopScorerModal from "@/components/social/TopScorerModal";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const orbitron = Orbitron({
@@ -32,6 +33,7 @@ export default function RootLayout({
     <html lang="zh-TW" className={`${inter.variable} ${orbitron.variable}`}>
       <body className="min-h-screen min-h-screen bg-[#0D0D2B] text-slate-100 font-inter items-center">
         <GameInitializer />
+        <TopScorerModal />
         <StarField />
         <main className="relative min-h-screen pb-20">
           {children}

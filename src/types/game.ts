@@ -62,6 +62,8 @@ export interface LeaderboardEntry {
     xp: number;
     streak: number;
     guild?: string;
+    victoryMessage?: string;
+    isMe?: boolean;
 }
 
 export interface NewsItem {

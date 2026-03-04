@@ -264,6 +264,44 @@ CREATE INDEX IF NOT EXISTS idx_cron_scan_feed_logs_run_id ON cron_scan_feed_logs
 CREATE INDEX IF NOT EXISTS idx_cron_scan_feed_logs_feed_id ON cron_scan_feed_logs(feed_id);
 CREATE INDEX IF NOT EXISTS idx_cron_scan_feed_logs_status ON cron_scan_feed_logs(status) WHERE status = 'failed';
 
+-- 17. Friends Table
+CREATE TABLE IF NOT EXISTS friends (
+    player_id UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+    friend_id UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (player_id, friend_id),
+    CHECK (player_id <> friend_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_friends_friend_id ON friends(friend_id);
+
+-- 18. Daily Top Messages Table
+CREATE TABLE IF NOT EXISTS daily_top_messages (
+    message_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    player_id UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+    message TEXT NOT NULL CHECK (length(message) <= 20),
+    message_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (player_id, message_date)
+);
+
+-- Index the FK column (player_id) — PostgreSQL does not auto-index FK columns
+CREATE INDEX IF NOT EXISTS idx_top_messages_player_id ON daily_top_messages(player_id);
+CREATE INDEX IF NOT EXISTS idx_top_messages_date ON daily_top_messages(message_date);
+
+-- NOTE: top_scorer_notifications was removed — daily_top_messages already encodes
+-- the "notified/prompted today" semantic via its UNIQUE(player_id, message_date)
+-- constraint. Keeping a second table for this was redundant and error-prone.
+
+-- 19. Player Achievements Table
+-- Junction table for players and achievements
+CREATE TABLE IF NOT EXISTS player_achievements (
+    player_id UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+    achievement_id TEXT NOT NULL REFERENCES achievements(achievement_id) ON DELETE CASCADE,
+    unlocked_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (player_id, achievement_id)
+);
+
 -- Initial Data Migration
 
 -- Planets
@@ -410,16 +448,16 @@ ON CONFLICT (category, option_key) DO UPDATE SET
 
 -- Dummy Players and Progress for Testing
 INSERT INTO players (username, xp, streak_days, guild_name) VALUES
-('NeuralNinja', 48920, 32, 'AI Pioneers'),
-('PromptPhysicist', 42150, 15, 'Deep Minds'),
-('TokenWizard', 38700, 28, 'AI Pioneers'),
-('LLMSurfer', 32400, 7, 'Prompt Lords'),
-('VectorQueen', 29800, 21, 'Deep Minds'),
-('EmbeddingElf', 26500, 5, NULL),
-('RAGRunner', 22100, 12, 'Prompt Lords'),
-('AttentionAce', 19800, 3, NULL),
-('AgentAlpha', 17200, 9, 'AI Pioneers'),
-('YouPlayer', 14500, 4, 'Beginner Village')
+('NeuralNinja', 8000, 32, 'AI Pioneers'),
+('PromptPhysicist', 2000, 15, 'Deep Minds'),
+('TokenWizard', 1000, 28, 'AI Pioneers'),
+('LLMSurfer', 6500, 7, 'Prompt Lords'),
+('VectorQueen', 9800, 21, 'Deep Minds'),
+('EmbeddingElf', 2600, 5, NULL),
+('RAGRunner', 2210, 12, 'Prompt Lords'),
+('AttentionAce', 1980, 3, NULL),
+('AgentAlpha', 7200, 9, 'AI Pioneers'),
+('YouPlayer', 50000, 4, 'Beginner Village')
 ON CONFLICT (username) DO NOTHING;
 
 -- Initial Progress for YouPlayer
@@ -428,3 +466,16 @@ SELECT p.player_id, l.level_id
 FROM players p, levels l
 WHERE p.username = 'YouPlayer' AND l.level_id IN (1, 2, 3)
 ON CONFLICT (player_id, level_id) DO NOTHING;
+
+-- Seed Friends for YouPlayer
+INSERT INTO friends (player_id, friend_id)
+SELECT p1.player_id, p2.player_id
+FROM players p1, players p2
+WHERE p1.username = 'YouPlayer' AND p2.username IN ('NeuralNinja', 'PromptPhysicist', 'TokenWizard')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO friends (player_id, friend_id)
+SELECT p1.player_id, p2.player_id
+FROM players p1, players p2
+WHERE p2.username = 'YouPlayer' AND p1.username IN ('NeuralNinja', 'PromptPhysicist', 'TokenWizard')
+ON CONFLICT DO NOTHING;

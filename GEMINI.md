@@ -58,6 +58,42 @@ curl -X POST http://localhost:3000/api/user/profile \
   -d '{"background":"developer","interests":["prompt_eng","llm_fundamentals"]}'
 ```
 
+## Friends Feature
+
+Manage the current player's (YouPlayer) friends list. Friendships are bidirectional.
+
+**API Endpoints:**
+```bash
+# List friends (sorted by XP desc)
+curl http://localhost:3000/api/user/friends
+
+# Add a friend by username
+curl -X POST http://localhost:3000/api/user/friends \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"NeuralNinja"}'
+
+# Remove a friend by username
+curl -X DELETE http://localhost:3000/api/user/friends \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"NeuralNinja"}'
+
+# Friends Leaderboard (current player + friends, sorted by XP)
+curl http://localhost:3000/api/leaderboard/friends
+```
+
+## Top Scorer Victory Message
+
+Players who become #1 among their friends are prompted to set a daily "Victory Message".
+
+**API Endpoints:**
+- `GET /api/user/top-status`: Returns `{ isTopScorer, hasMessageToday, yesterdayMessage }`.
+- `POST /api/user/top-message`: Sets the daily message (JSON: `{ "message": "..." }`).
+
+**Mechanism:**
+- Refreshes daily.
+- Logic handled in `SocialService` (`src/lib/services/social.service.ts`).
+- UI handled by `TopScorerModal` (`src/components/social/TopScorerModal.tsx`).
+
 ## Quiz Question Generation Pipeline
 
 LLM-powered pipeline to generate quiz questions for any planet. Retrieves existing questions, sends them to the LLM as context, and generates harder ones. Before generating questions, the pipeline **auto-creates missing levels** in the `levels` table by calling the LLM to generate meaningful titles, and computes `xp_reward` using the formula: `150 + (level_number - 1) × 50`.
@@ -147,7 +183,7 @@ Each module folder has a barrel `index.ts` for cleaner imports.
 - **`game/`** — Player domain helpers: XP/level calculations, streak logic (`helpers.ts`).
 - **`news/`** — News cron pipeline: RSS feed fetching (`feeds.ts`), LLM article ranking (`ranker.ts`), question generation (`examiner.ts`), full-text scraping (`scraper.ts`), prompt templates (`prompts.ts`), date/title utilities (`utils.ts`), and feed list + model constants (`constants.ts`).
 - **`quiz/`** — Quiz generation pipeline: core generator (`generator.ts`), prompt templates (`prompts.ts`), model constants (`constants.ts`).
-- **`services/`** — Domain service layer for API route handlers. Each service encapsulates DB queries, DTO mapping, and business logic for its domain: `planet.service.ts`, `level.service.ts`, `achievement.service.ts`, `arena.service.ts`, `leaderboard.service.ts`, `quiz.service.ts`, `user.service.ts` (player + profile + options), `news.service.ts` (selections + scan-logs). Route handlers in `src/app/api/` delegate to these services.
+- **`services/`** — Domain service layer for API route handlers. Each service encapsulates DB queries, DTO mapping, and business logic for its domain: `planet.service.ts`, `level.service.ts`, `achievement.service.ts`, `arena.service.ts`, `leaderboard.service.ts`, `quiz.service.ts`, `user.service.ts` (player + profile + options), `news.service.ts` (selections + scan-logs), `friends.service.ts` (list/add/remove friends, friends leaderboard), `social.service.ts` (top-scorer check + daily messages). Route handlers in `src/app/api/` delegate to these services.
 
 ### Shared Component Directory (`src/components/`)
 
@@ -173,6 +209,13 @@ Only truly shared (app-level) components live here. Page-specific components are
 - **Guide Character**: `FomoBird` (`src/components/icons/FomoBird.tsx`) — custom SVG bird with dynamic expressions (happy, thinking, surprised).
 - **Visual Style**: Bold 4px borders, flat paper-cut shadows, and high-contrast space-themed colors.
 - **Phases**: Intro briefing, multi-step neural probe (quiz), and mission extraction (result).
+
+**`src/app/leaderboard/page.tsx`** — Completely redesigned in **Kurzgesagt style** with dual-tab layout:
+- **All Players Tab**: A high-impact horizontal bar chart showing all 100 players ranked by XP.
+- **Friends Tab**: Shows only the current player + their friends ranked by XP. Includes inline Add Friend (by username) and Remove Friend controls.
+- **Integrated Identity**: Avatars, names, and titles are embedded directly inside the bars.
+- **Clean Metrics**: Shows only raw numerical XP values inside the bars.
+- **Aesthetic**: Uses the space-themed flat vector design consistent with the Map and News systems.
 
 
 ### Design System

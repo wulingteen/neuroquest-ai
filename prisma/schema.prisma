@@ -98,6 +98,10 @@ model players {
   player_progress        player_progress[]
   player_profile         player_profiles?
   player_news_answers    player_news_answers[]
+  friends                friends[]              @relation("player_friends")
+  friend_of              friends[]              @relation("friend_players")
+  daily_top_messages     daily_top_messages[]
+  player_achievements    player_achievements[]
 
   @@index([xp(sort: Desc)], map: "idx_players_xp")
 }
@@ -270,4 +274,39 @@ model cron_scan_feed_logs {
   @@index([run_id], map: "idx_cron_scan_feed_logs_run_id")
   @@index([feed_id], map: "idx_cron_scan_feed_logs_feed_id")
   @@index([status], map: "idx_cron_scan_feed_logs_status")
+}
+
+model friends {
+  player_id  String   @db.Uuid
+  friend_id  String   @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  player     players  @relation("player_friends", fields: [player_id], references: [player_id], onDelete: Cascade)
+  friend     players  @relation("friend_players", fields: [friend_id], references: [player_id], onDelete: Cascade)
+
+  @@id([player_id, friend_id])
+  @@index([friend_id], map: "idx_friends_friend_id")
+}
+
+model daily_top_messages {
+  message_id   BigInt   @id @default(autoincrement())
+  player_id    String   @db.Uuid
+  message      String   @db.Text
+  message_date DateTime @default(now()) @db.Date
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  player       players  @relation(fields: [player_id], references: [player_id], onDelete: Cascade)
+
+  @@unique([player_id, message_date])
+  @@index([message_date], map: "idx_top_messages_date")
+}
+
+// top_scorer_notifications was removed — daily_top_messages already encodes
+// the "notified/prompted today" semantic via UNIQUE(player_id, message_date).
+
+model player_achievements {
+  player_id      String   @db.Uuid
+  achievement_id String
+  unlocked_at    DateTime @default(now()) @db.Timestamptz(6)
+  player         players  @relation(fields: [player_id], references: [player_id], onDelete: Cascade)
+
+  @@id([player_id, achievement_id])
 }

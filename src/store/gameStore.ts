@@ -23,6 +23,11 @@ interface GameState {
     level: number;
     levelProgress: number;
     levelTitle: string;
+    topScorer: {
+        isTopScorer: boolean;
+        hasMessageToday: boolean;
+        yesterdayMessage: string | null;
+    };
 
     // Actions
     fetchUser: () => Promise<void>;
@@ -33,6 +38,8 @@ interface GameState {
     setCurrentLevel: (levelId: string | number | null) => void;
     checkDailyLogin: () => void;
     dismissDailyReward: () => void;
+    setTopScorerMessage: (message: string) => Promise<void>;
+    fetchTopScorerStatus: () => Promise<void>;
 }
 
 export const useGameStore = create<GameState>()(
@@ -52,6 +59,11 @@ export const useGameStore = create<GameState>()(
             level: 1,
             levelProgress: 0,
             levelTitle: getLevelTitle(1),
+            topScorer: {
+                isTopScorer: false,
+                hasMessageToday: false,
+                yesterdayMessage: null,
+            },
 
             fetchUser: async () => {
                 try {
@@ -73,6 +85,8 @@ export const useGameStore = create<GameState>()(
                             showDailyReward: showDailyReward || false,
                             isLoaded: true,
                         });
+                        // Fetch top scorer status separately
+                        await get().fetchTopScorerStatus();
                     }
                 } catch (error) {
                     console.error("Failed to fetch user:", error);
@@ -143,6 +157,36 @@ export const useGameStore = create<GameState>()(
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ claimReward: true }),
                 }).catch(err => console.error("Failed to sync reward claim:", err));
+            },
+
+            fetchTopScorerStatus: async () => {
+                try {
+                    const response = await fetch('/api/user/top-status');
+                    const result = await response.json();
+                    if (result.success) {
+                        set({ topScorer: result.data });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch top scorer status:", error);
+                }
+            },
+
+            setTopScorerMessage: async (message: string) => {
+                try {
+                    const response = await fetch('/api/user/top-message', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message }),
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        set((state) => ({
+                            topScorer: { ...state.topScorer, hasMessageToday: true }
+                        }));
+                    }
+                } catch (error) {
+                    console.error("Failed to set top scorer message:", error);
+                }
             },
         }),
         {
