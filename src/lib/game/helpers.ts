@@ -1,9 +1,9 @@
 // Game & Player domain helpers
 // Merged from gameData.ts + playerUtils.ts
 
-import { Planet, Level, Achievement, ArenaChallenge, QuizQuestion, LeaderboardEntry } from "@/types/game";
+import { Planet, Level, Achievement, QuizQuestion, LeaderboardEntry } from "@/types/game";
 
-export type { Planet, Level, Achievement, ArenaChallenge, QuizQuestion, LeaderboardEntry };
+export type { Planet, Level, Achievement, QuizQuestion, LeaderboardEntry };
 
 
 // ── XP / Level helpers ──────────────────────────────────────────────

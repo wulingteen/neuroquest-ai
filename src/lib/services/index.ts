@@ -1,5 +1,4 @@
 export * from "./achievement.service";
-export * from "./arena.service";
 export * from "./friends.service";
 export * from "./leaderboard.service";
 export * from "./level.service";

@@ -81,20 +81,6 @@ CREATE INDEX IF NOT EXISTS idx_quiz_questions_options_gin ON quiz_questions USIN
 CREATE INDEX IF NOT EXISTS idx_quiz_questions_level_number ON quiz_questions(rollup, level_number);
 CREATE INDEX IF NOT EXISTS idx_quiz_questions_rollup ON quiz_questions(rollup);
 
--- 5. Arena Challenges Table
--- PvP or specialized challenges
-CREATE TABLE IF NOT EXISTS arena_challenges (
-    challenge_id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    description TEXT,
-    difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
-    example_prompts JSONB NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(example_prompts) = 'array'),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_arena_challenges_difficulty ON arena_challenges(difficulty);
-
 -- 6. Players Table (New, for future user management integration)
 CREATE TABLE IF NOT EXISTS players (
     player_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -390,7 +376,6 @@ INSERT INTO achievements (achievement_id, name, description, icon, rarity, xp_re
 ('first-step', 'Beginner', 'Complete your first level', '🌱', 'common', 50),
 ('prompt-master', 'Prompt Master', 'Complete all levels on Prompt Planet', '⚡', 'epic', 500),
 ('streak-7', 'Streak Pro', 'Log in for 7 consecutive days', '🔥', 'rare', 200),
-('arena-winner', 'Arena Champion', 'Win first place in the Prompt Arena', '🏆', 'legendary', 1000),
 ('speed-run', 'Lightning Learner', 'Complete a level within 30 seconds', '⚡', 'rare', 300),
 ('perfect', 'Perfectionist', 'Complete a chapter without any mistakes', '💎', 'epic', 400)
 ON CONFLICT (achievement_id) DO UPDATE SET
@@ -426,17 +411,6 @@ ON CONFLICT (rollup, level_number, question_number) DO UPDATE SET
     correct_option_index = EXCLUDED.correct_option_index,
     explanation = EXCLUDED.explanation,
     xp_reward = EXCLUDED.xp_reward;
-
--- Arena Challenges
-INSERT INTO arena_challenges (challenge_id, title, description, difficulty, example_prompts) VALUES
-('a1', 'Poetic Chef', 'Use a Prompt to make the AI describe a "Scrambled Eggs with Tomato" recipe in a poetic way', 'easy', '["Add rhyming requirements", "Specify poetic style", "Limit word count"]'),
-('a2', 'Science Explainer', 'Have the AI explain "what a black hole is" in language a 5-year-old can understand', 'medium', '["Analogize to everyday objects", "Avoid technical jargon", "Add fun metaphors"]'),
-('a3', 'Wise Debater', 'Design a Prompt to make the AI provide arguments both for and against "AI replacing engineers"', 'hard', '["Balance both perspectives", "Cite specific examples", "Provide concluding suggestions"]')
-ON CONFLICT (challenge_id) DO UPDATE SET
-    title = EXCLUDED.title,
-    description = EXCLUDED.description,
-    difficulty = EXCLUDED.difficulty,
-    example_prompts = EXCLUDED.example_prompts;
 
 -- Profile Options (Background + Interest choices with scores)
 INSERT INTO profile_options (category, option_key, label, icon, description, score, sort_order) VALUES

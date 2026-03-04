@@ -9,4 +9,4 @@ export {
     calculateStreak,
     LEVEL_TITLES,
 } from "./helpers";
-export type { Planet, Level, Achievement, ArenaChallenge, QuizQuestion, LeaderboardEntry } from "./helpers";
+export type { Planet, Level, Achievement, QuizQuestion, LeaderboardEntry } from "./helpers";

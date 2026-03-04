@@ -36,14 +36,6 @@ export interface Achievement {
     xpReward: number;
 }
 
-export interface ArenaChallenge {
-    id: string;
-    title: string;
-    description: string;
-    difficulty: "easy" | "medium" | "hard";
-    examples: string[];
-}
-
 export interface QuizQuestion {
     id: number;
     number: number;

@@ -19,19 +19,6 @@ model achievements {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model arena_challenges {
-  challenge_id    String   @id
-  title           String
-  description     String?
-  difficulty      String
-  example_prompts Json     @default("[]")
-  created_at      DateTime @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime @default(now()) @db.Timestamptz(6)
-
-  @@index([difficulty], map: "idx_arena_challenges_difficulty")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model levels {
   level_id        Int               @id
   rollup          String

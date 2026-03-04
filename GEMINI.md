@@ -141,7 +141,6 @@ The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a co
 - **levels**: `level_id` (INTEGER PK), `planet_id` (TEXT FK), `level_number` (INTEGER), `title` (TEXT), `content_type` (TEXT CHECK), `xp_reward` (INTEGER DEFAULT 0), `created_at` (TIMESTAMPTZ DEFAULT now()), `updated_at` (TIMESTAMPTZ DEFAULT now()).
 - **achievements**: `achievement_id` (TEXT PK), `name` (TEXT), `description` (TEXT), `icon` (TEXT), `rarity` (TEXT CHECK), `xp_reward` (INTEGER DEFAULT 0), `created_at` (TIMESTAMPTZ DEFAULT now()).
 - **quiz_questions**: `question_id` (INTEGER GENERATED ALWAYS AS IDENTITY PK), `rollup` (TEXT FK), `level_id` (INTEGER FK), `question_number` (INTEGER NOT NULL, UNIQUE with level_id), `question_text` (TEXT), `options` (JSONB), `correct_option_index` (INTEGER), `explanation` (TEXT), `xp_reward` (INTEGER DEFAULT 0), `created_at` (TIMESTAMPTZ DEFAULT now()), `updated_at` (TIMESTAMPTZ DEFAULT now()).
-- **arena_challenges**: `challenge_id` (TEXT PK), `title` (TEXT), `description` (TEXT), `difficulty` (TEXT CHECK), `example_prompts` (JSONB), `created_at` (TIMESTAMPTZ DEFAULT now()), `updated_at` (TIMESTAMPTZ DEFAULT now()).
 - **players**: `player_id` (UUID PK DEFAULT gen_random_uuid()), `username` (TEXT UNIQUE), `email` (TEXT UNIQUE), `avatar` (TEXT), `xp` (INTEGER DEFAULT 0), `streak_days` (INTEGER DEFAULT 0), `guild_name` (TEXT), `last_login_at` (TIMESTAMPTZ), `last_reward_claimed_at` (TIMESTAMPTZ), `level` (INTEGER GENERATED ALWAYS AS (floor(xp / 1000) + 1) STORED), `created_at` (TIMESTAMPTZ DEFAULT now()).
 - **player_progress**: `player_id` (UUID FK), `level_id` (INTEGER FK), `completed_at` (TIMESTAMPTZ DEFAULT now()), PRIMARY KEY (`player_id`, `level_id`).
 - **rss_feeds**: Manages RSS source lists and fetch states.
@@ -155,7 +154,7 @@ The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a co
 - **cron_scan_feed_logs**: `log_id` (BIGINT PK), `run_id` (FK), `feed_id` (FK), `feed_url`, `feed_name`, `status` (success/failed/skipped), `articles_found`, `error_message`, `duration_ms`, `created_at`. One row per feed per run.
 - **friend_requests**: `request_id` (BIGINT PK), `requester_id` (UUID FK→players), `requestee_id` (UUID FK→players), `status` (TEXT: pending/accepted/declined DEFAULT 'pending'), `created_at`, `updated_at`. UNIQUE(requester_id, requestee_id). Indexed on (requestee_id, status WHERE pending) and requester_id.
 
-These tables support the core gameplay mechanics, including planet navigation, level progression, achievements, quizzes, arena challenges, and player tracking.
+These tables support the core gameplay mechanics, including planet navigation, level progression, achievements, quizzes, and player tracking.
 
 ## Commands
 
@@ -193,7 +192,7 @@ Each module folder has a barrel `index.ts` for cleaner imports.
 - **`game/`** — Player domain helpers: XP/level calculations, streak logic (`helpers.ts`).
 - **`news/`** — News cron pipeline: RSS feed fetching (`feeds.ts`), LLM article ranking (`ranker.ts`), question generation (`examiner.ts`), full-text scraping (`scraper.ts`), prompt templates (`prompts.ts`), date/title utilities (`utils.ts`), and feed list + model constants (`constants.ts`).
 - **`quiz/`** — Quiz generation pipeline: core generator (`generator.ts`), prompt templates (`prompts.ts`), model constants (`constants.ts`).
-- **`services/`** — Domain service layer for API route handlers. Each service encapsulates DB queries, DTO mapping, and business logic for its domain: `planet.service.ts`, `level.service.ts`, `achievement.service.ts`, `arena.service.ts`, `leaderboard.service.ts`, `quiz.service.ts`, `user.service.ts` (player + profile + options), `news.service.ts` (selections + scan-logs), `friends.service.ts` (list/add/remove friends, friends leaderboard), `social.service.ts` (top-scorer check + daily messages). Route handlers in `src/app/api/` delegate to these services.
+- **`services/`** — Domain service layer for API route handlers. Each service encapsulates DB queries, DTO mapping, and business logic for its domain: `planet.service.ts`, `level.service.ts`, `achievement.service.ts`, `leaderboard.service.ts`, `quiz.service.ts`, `user.service.ts` (player + profile + options), `news.service.ts` (selections + scan-logs), `friends.service.ts` (list/add/remove friends, friends leaderboard), `social.service.ts` (top-scorer check + daily messages). Route handlers in `src/app/api/` delegate to these services.
 
 ### Shared Component Directory (`src/components/`)
 
