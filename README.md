@@ -33,6 +33,33 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 npx tsx scripts/generate-quiz.ts --rollup {rollup} --count {The number of questions you need to generate}
 ```
 
+## Convert 3MF to GLB
+
+Converts `.3mf` 3D model files to binary `.glb` (glTF) using Three.js `ThreeMFLoader` + `GLTFExporter` with jsdom shims for Node.js compatibility. No extra packages required — uses the already-installed `three` and `jsdom` dependencies.
+
+```bash
+# Single file → default output: data/glb/<name>.glb
+npx tsx scripts/convert-3mf-to-glb.ts model.3mf
+
+# Single file with explicit output path
+npx tsx scripts/convert-3mf-to-glb.ts model.3mf --output public/models/model.glb
+npx tsx scripts/convert-3mf-to-glb.ts model.3mf -o public/models/model.glb
+
+# Batch: convert all .3mf files in a directory (recursive)
+npx tsx scripts/convert-3mf-to-glb.ts --dir ./assets/3mf
+npx tsx scripts/convert-3mf-to-glb.ts -d ./assets/3mf --out-dir ./public/models
+
+# npm script shortcut
+npm run convert-3mf -- model.3mf
+npm run convert-3mf -- --dir ./assets/3mf --out-dir ./public/models
+```
+
+**Options:**
+- `--output, -o` — Output `.glb` path (single file only)
+- `--dir, -d` — Directory to scan recursively for `.3mf` files
+- `--out-dir` — Output directory for batch conversion (default: `data/glb/`)
+- `--help, -h` — Show usage
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
