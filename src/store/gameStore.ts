@@ -34,6 +34,7 @@ interface GameState {
     fetchUser: () => Promise<void>;
     addXP: (amount: number) => Promise<void>;
     completeLevel: (levelId: string | number) => Promise<void>;
+    submitLevelQuizAnswers: (levelId: string | number, answers: { questionId: number, selectedOptionIndex: number }[]) => Promise<number>;
     unlockAchievement: (achievementId: string) => void;
     setCurrentPlanet: (planetId: string | null) => void;
     setCurrentLevel: (levelId: string | number | null) => void;
@@ -125,7 +126,7 @@ export const useGameStore = create<GameState>()(
                     return { completedLevels: newCompleted };
                 });
 
-                // Sync with DB
+                // Sync completion with DB (XP increment is handled by submitLevelQuizAnswers)
                 try {
                     await fetch('/api/user', {
                         method: 'POST',
@@ -134,6 +135,29 @@ export const useGameStore = create<GameState>()(
                     });
                 } catch (error) {
                     console.error("Failed to sync progress with DB:", error);
+                }
+            },
+
+            submitLevelQuizAnswers: async (levelId, answers) => {
+                try {
+                    const response = await fetch('/api/quiz/answers', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ levelId, answers }),
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        const totalXpEarned = result.data.totalXpEarned;
+
+                        // Sync XP in local state from server
+                        await get().fetchUser();
+
+                        return totalXpEarned;
+                    }
+                    return 0;
+                } catch (error) {
+                    console.error("Failed to submit quiz answers:", error);
+                    return 0;
                 }
             },
 

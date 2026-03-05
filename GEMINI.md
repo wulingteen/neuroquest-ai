@@ -148,11 +148,15 @@ The project uses a PostgreSQL database defined in `db/schema.sql`. Below is a co
 - **news_selections**: AI-chosen articles split into 5 difficulty tiers (1–5, 3 articles each) per cycle date.
 - **news_questions**: AI-generated reading comprehension questions based on `news_selections`.
 - **player_news_answers**: Tracks player answers for news questions for rewards.
+- **player_quiz_answers**: Tracks player answers for planet/level quiz questions. Implements single-award XP logic (no XP for retries or previously failed attempts).
 - **profile_options**: `option_id` (BIGINT PK), `category` (TEXT: 'background'|'interest'), `option_key` (TEXT), `label` (TEXT), `icon` (TEXT), `description` (TEXT), `score` (INTEGER 0-100), `sort_order` (INTEGER). Seed data: 7 backgrounds + 10 interests.
 - **player_profiles**: `player_id` (UUID PK FK→players), `background` (TEXT), `interests` (TEXT[]), `difficulty_score` (INTEGER 0-100), `created_at`, `updated_at`. Score = 40% background_score + 60% avg(interest_scores).
 - **cron_scan_runs**: `run_id` (BIGINT PK), `status` (TEXT: running/completed/failed), `total_feeds`, `feeds_ok`, `feeds_failed`, `articles_found`, `articles_selected`, `error_message`, `started_at`, `finished_at`. One row per cron invocation.
 - **cron_scan_feed_logs**: `log_id` (BIGINT PK), `run_id` (FK), `feed_id` (FK), `feed_url`, `feed_name`, `status` (success/failed/skipped), `articles_found`, `error_message`, `duration_ms`, `created_at`. One row per feed per run.
+- **friends**: Confirmed bidirectional friendships.
 - **friend_requests**: `request_id` (BIGINT PK), `requester_id` (UUID FK→players), `requestee_id` (UUID FK→players), `status` (TEXT: pending/accepted/declined DEFAULT 'pending'), `created_at`, `updated_at`. UNIQUE(requester_id, requestee_id). Indexed on (requestee_id, status WHERE pending) and requester_id.
+- **daily_top_messages**: Daily victory messages set by the #1 scorer among friends.
+- **player_achievements**: Tracks unlocked achievements per player.
 
 These tables support the core gameplay mechanics, including planet navigation, level progression, achievements, quizzes, and player tracking.
 

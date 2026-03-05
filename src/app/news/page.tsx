@@ -7,12 +7,10 @@ import {
     Flame,
     Zap,
     ChevronLeft,
-    CheckCircle2,
     ArrowRight,
     CircleDashed,
     RefreshCw,
     ExternalLink,
-    AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +18,13 @@ import { cn } from "@/lib/utils";
 import { type NewsItem } from "@/types/game";
 import ProfileSetupModal from "./_components/ProfileSetupModal";
 import BackgroundGraphics from "./_components/BackgroundGraphics";
+import {
+    QuizOptionList,
+    QuizConfirmButton,
+    QuizResultBanner,
+    QuizExitConfirm,
+    QuizProgressBar,
+} from "@/components/quiz";
 
 /**
  * KURZGESAGT STYLE NEWS PAGE
@@ -521,19 +526,7 @@ export default function NewsPage() {
                             </button>
                         </div>
 
-                        {/* Progress bar matching LevelModal */}
-                        <div className="mb-8">
-                            <div className="w-full h-8 bg-[#0A0A26] rounded-full p-[4px] relative overflow-hidden shadow-inner border-[2px] border-[#100a1c]">
-                                <motion.div
-                                    initial={{ width: 0 }}
-                                    animate={{ width: `${Math.max(((quizIndex) / (selectedNews.questions?.length || 1)) * 100, 5)}%` }}
-                                    className="h-full bg-[#05d9e8] rounded-full relative"
-                                    transition={{ duration: 0.8, type: "spring" }}
-                                >
-                                    <div className="absolute top-0 bottom-0 right-0 w-8 bg-white/20 blur-sm rounded-full" />
-                                </motion.div>
-                            </div>
-                        </div>
+                        <QuizProgressBar current={quizIndex} total={selectedNews.questions?.length || 1} />
 
                         <div className="mb-10 bg-[#15113B] p-8 rounded-[32px] border-[3px] border-[#0A0A26] shadow-[inset_0_4px_0_rgba(255,255,255,0.05)]">
                             <h3 className="text-2xl font-black text-white leading-[1.3] flex gap-5">
@@ -542,138 +535,34 @@ export default function NewsPage() {
                             </h3>
                         </div>
 
-                        <div className="space-y-4 flex-grow">
-                            {selectedNews.questions[quizIndex].options.map((opt, i) => {
-                                const isPending = pendingAnswer === i;
-                                const isSubmitted = selectedAnswer === i;
-                                const correctIdx = selectedNews.questions![quizIndex].correct;
-                                const showResult = selectedAnswer !== null;
-                                const isCorrectAnswer = i === correctIdx;
+                        <QuizOptionList
+                            options={selectedNews.questions[quizIndex].options}
+                            correctIndex={selectedNews.questions[quizIndex].correct}
+                            selectedIndex={selectedAnswer}
+                            pendingIndex={pendingAnswer}
+                            answered={selectedAnswer !== null}
+                            onSelect={handleSelectOption}
+                        />
 
-                                let btnClass = "bg-[#15113B] border-[#0A0A26] text-white shadow-[0_10px_0_#0A0A26]";
-                                let iconContent = (i + 1).toString();
+                        <QuizConfirmButton
+                            visible={pendingAnswer !== null && selectedAnswer === null}
+                            onConfirm={handleConfirmAnswer}
+                        />
 
-                                if (showResult) {
-                                    if (isCorrectAnswer) {
-                                        btnClass = "bg-[#58cc02] border-[#0A0A26] text-[#0a0710] shadow-[0_10px_0_#0A0A26] scale-[1.02]";
-                                        iconContent = "✓";
-                                    } else if (isSubmitted) {
-                                        btnClass = "bg-[#FF1E56] border-[#0A0A26] text-white shadow-[0_10px_0_#0A0A26]";
-                                        iconContent = "×";
-                                    } else {
-                                        btnClass = "bg-[#15113B] border-[#0A0A26] text-[#6b6b9e] opacity-40 shadow-[0_6px_0_#0A0A26]";
-                                    }
-                                } else if (isPending) {
-                                    btnClass = "bg-[#05d9e8] border-[#0A0A26] text-[#0a0710] shadow-[0_10px_0_#0A0A26] -translate-y-1";
-                                }
+                        <QuizResultBanner
+                            visible={selectedAnswer !== null}
+                            isCorrect={isCorrect === true}
+                            explanation={selectedNews.questions[quizIndex].explanation}
+                            isLastQuestion={quizIndex >= selectedNews.questions.length - 1}
+                            onNext={handleNextQuiz}
+                        />
 
-                                return (
-                                    <button
-                                        key={i}
-                                        disabled={showResult}
-                                        onClick={() => handleSelectOption(i)}
-                                        className={cn(
-                                            "relative w-full text-left p-6 rounded-[28px] border-[4px] transition-all duration-400 font-bold text-lg flex items-center gap-6",
-                                            btnClass,
-                                            !showResult && !isPending && "hover:bg-[#201d5c] hover:-translate-y-1 active:translate-y-1 active:shadow-[0_4px_0_#0A0A26]",
-                                            showResult && "cursor-default"
-                                        )}
-                                    >
-                                        <div className={cn(
-                                            "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 font-black text-xl transition-colors",
-                                            showResult
-                                                ? (isCorrectAnswer ? "bg-white/30 text-[#0a0710]" : (isSubmitted ? "bg-white/30 text-white" : "bg-black/10 text-white/20"))
-                                                : "bg-[#2a2a6e] text-white border-[3px] border-[#0A0A26]"
-                                        )}>
-                                            {iconContent}
-                                        </div>
-                                        <span className="flex-1 leading-snug">{opt}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* Confirm button matching Kurzgesagt style */}
-                        {pendingAnswer !== null && selectedAnswer === null && (
-                            <div className="fixed bottom-8 left-0 right-0 px-8 flex justify-center z-[60] pointer-events-none">
-                                <button
-                                    onClick={handleConfirmAnswer}
-                                    className="w-full max-w-xl pointer-events-auto py-6 bg-[#05d9e8] text-[#0a0710] border-[4px] border-[#0A0A26] shadow-[0_12px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] rounded-[28px] font-black text-2xl uppercase tracking-widest active:translate-y-2 active:shadow-[0_4px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] transition-all hover:brightness-110 flex items-center justify-center gap-3"
-                                >
-                                    <CheckCircle2 className="w-7 h-7" />
-                                    Send
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Result banner matching LevelModal style */}
-                        <AnimatePresence>
-                            {selectedAnswer !== null && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 120 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 120 }}
-                                    className="fixed bottom-0 left-0 right-0 p-8 z-[70] pointer-events-none"
-                                >
-                                    <div className="max-w-xl mx-auto pointer-events-auto">
-                                        <div className={cn(
-                                            "p-8 rounded-[44px] border-[5px] border-[#0A0A26] shadow-[0_20px_0_#0A0A26] flex flex-col items-center gap-6 text-center",
-                                            isCorrect ? "bg-[#58cc02]" : "bg-[#FF1E56]"
-                                        )}>
-                                            <div className="flex-1">
-                                                <div className="flex flex-col items-center gap-3 mb-4">
-                                                    <h5 className="font-black text-3xl text-white uppercase italic tracking-tighter leading-none">
-                                                        {isCorrect ? "BINGO!" : "GAP!"}
-                                                    </h5>
-                                                </div>
-                                                <div className="bg-black/10 p-4 rounded-3xl border-[2px] border-black/5 mb-6">
-                                                    <p className="text-white font-bold text-base leading-[1.4] max-w-lg mx-auto">
-                                                        {selectedNews.questions[quizIndex].explanation}
-                                                    </p>
-                                                </div>
-                                                <button
-                                                    onClick={handleNextQuiz}
-                                                    className="w-full bg-white text-[#0A0A26] border-[4px] border-[#0A0A26] shadow-[0_8px_0_#0A0A26] rounded-2xl px-8 py-4 text-xl font-black uppercase tracking-widest active:translate-y-1 active:shadow-[0_4px_0_#0A0A26] transition-all hover:bg-white/90"
-                                                >
-                                                    {quizIndex < selectedNews.questions.length - 1 ? "NEXT" : "ANALYZE"}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Exit confirmation modal */}
-                        {showExitConfirm && (
-                            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-                                <div className="bg-[#1b1236] border-[6px] border-[#100a1f] rounded-[40px] p-8 max-w-sm w-full shadow-2xl space-y-6 text-center">
-                                    <div className="w-20 h-20 bg-[#ff9600] rounded-full flex items-center justify-center mx-auto shadow-[0_8px_0_#cc7800] border-b-4 border-[#cc7800]">
-                                        <AlertTriangle className="w-10 h-10 text-white" />
-                                    </div>
-                                    <h3 className="text-2xl font-black text-white tracking-tight">
-                                        Abort Mission?
-                                    </h3>
-                                    <p className="text-[#b8aae0] font-bold text-sm leading-relaxed">
-                                        Your current progress will be lost and you&apos;ll need to start this quiz over from the beginning.
-                                    </p>
-                                    <div className="flex flex-col gap-3">
-                                        <button
-                                            onClick={handleExitQuiz}
-                                            className="w-full py-5 bg-[#251847] text-[#ff2262] rounded-[24px] font-black text-lg border-b-[6px] border-[#19102e] tracking-widest hover:bg-[#2d1d56]"
-                                        >
-                                            Yes
-                                        </button>
-                                        <button
-                                            onClick={() => setShowExitConfirm(false)}
-                                            className="w-full py-5 bg-[#05d9e8] text-[#0a0710] rounded-[24px] font-black text-lg border-b-[6px] border-[#03b8c4] tracking-widest"
-                                        >
-                                            No
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        <QuizExitConfirm
+                            visible={showExitConfirm}
+                            message="Your current progress will be lost and you'll need to start this quiz over from the beginning."
+                            onConfirm={handleExitQuiz}
+                            onCancel={() => setShowExitConfirm(false)}
+                        />
                     </div>
                 )}
 
