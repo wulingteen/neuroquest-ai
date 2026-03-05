@@ -11,10 +11,12 @@ import {
     CircleDashed,
     RefreshCw,
     ExternalLink,
+    ArrowUpCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { scoreToTier } from "@/lib/game";
 import { type NewsItem } from "@/types/game";
 import ProfileSetupModal from "./_components/ProfileSetupModal";
 import BackgroundGraphics from "./_components/BackgroundGraphics";
@@ -83,6 +85,42 @@ const TIER_STYLES: Record<number, {
 
 type Phase = "hub" | "read" | "quiz" | "completed";
 
+// ─── localStorage helpers for daily tier upgrade persistence ─────────────────
+const TIER_UPGRADE_KEY = "neuroquest:tierUpgrade";
+
+interface TierUpgradeStore {
+    date: string;   // YYYY-MM-DD
+    tier: number;   // the upgraded tier
+}
+
+function getTodayStr(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Read today's saved tier upgrade from localStorage (if any). */
+function getSavedTierUpgrade(): number | null {
+    try {
+        const raw = localStorage.getItem(TIER_UPGRADE_KEY);
+        if (!raw) return null;
+        const data: TierUpgradeStore = JSON.parse(raw);
+        if (data.date === getTodayStr()) return data.tier;
+        // Stale entry — clean up
+        localStorage.removeItem(TIER_UPGRADE_KEY);
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/** Persist the upgraded tier for today. */
+function saveTierUpgrade(tier: number): void {
+    try {
+        const data: TierUpgradeStore = { date: getTodayStr(), tier };
+        localStorage.setItem(TIER_UPGRADE_KEY, JSON.stringify(data));
+    } catch { /* localStorage may be unavailable in rare cases */ }
+}
+
 export default function NewsPage() {
     const router = useRouter();
     const { xp, level, levelProgress, addXP, streak, fetchUser, setHideBottomMenu } = useGameStore();
@@ -106,6 +144,11 @@ export default function NewsPage() {
 
     // Onboarding
     const [showOnboarding, setShowOnboarding] = useState(false);
+
+    // Tier upgrade state (persisted for the full calendar day via localStorage)
+    const [activeTier, setActiveTier] = useState<number>(3);
+    const [showTierUpgrade, setShowTierUpgrade] = useState(false);
+    const [tierUpgradeLoading, setTierUpgradeLoading] = useState(false);
 
     // Reset bottom menu visibility on unmount (e.g. browser back)
     useEffect(() => {
@@ -134,7 +177,13 @@ export default function NewsPage() {
                 const res = await fetch("/api/user/profile");
                 const data = await res.json();
                 if (data.success && data.exists) {
-                    fetchNews(data.profile.difficulty_score);
+                    const base = scoreToTier(data.profile.difficulty_score);
+
+                    // Restore today's tier upgrade from localStorage (if any)
+                    const savedTier = getSavedTierUpgrade();
+                    const effectiveTier = savedTier && savedTier > base ? savedTier : base;
+                    setActiveTier(effectiveTier);
+                    fetchNewsByTier(effectiveTier);
                 } else {
                     setShowOnboarding(true);
                     setLoading(false);
@@ -147,19 +196,9 @@ export default function NewsPage() {
         init();
     }, []);
 
-    const fetchNews = async (score: number) => {
+    const fetchNewsByTier = async (tier: number) => {
         setLoading(true);
         try {
-            const tier =
-                score <= 20
-                    ? 1
-                    : score <= 40
-                        ? 2
-                        : score <= 60
-                            ? 3
-                            : score <= 80
-                                ? 4
-                                : 5;
             const res = await fetch(`/api/news/selections?maxTier=${tier}`);
             const data = await res.json();
             const items: NewsItem[] = data.items || [];
@@ -176,6 +215,36 @@ export default function NewsPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Check if all news items are completed — trigger tier upgrade prompt
+    const allCompleted = useMemo(() => {
+        return news.length > 0 && news.every((item) => completedIds.has(item.id));
+    }, [news, completedIds]);
+
+    const canUpgradeTier = activeTier < 5;
+
+    // Show tier upgrade prompt after returning to hub with all items completed
+    useEffect(() => {
+        if (phase === "hub" && allCompleted && canUpgradeTier && !showTierUpgrade) {
+            // Small delay so the user sees the hub before the upgrade prompt
+            const timeout = setTimeout(() => setShowTierUpgrade(true), 600);
+            return () => clearTimeout(timeout);
+        }
+    }, [phase, allCompleted, canUpgradeTier, showTierUpgrade]);
+
+    const handleAcceptTierUpgrade = async () => {
+        const newTier = Math.min(5, activeTier + 1);
+        setTierUpgradeLoading(true);
+        setActiveTier(newTier);
+        saveTierUpgrade(newTier);           // persist for the full day
+        await fetchNewsByTier(newTier);
+        setTierUpgradeLoading(false);
+        setShowTierUpgrade(false);
+    };
+
+    const handleDeclineTierUpgrade = () => {
+        setShowTierUpgrade(false);
     };
 
     const handleSelectNews = (item: NewsItem) => {
@@ -281,7 +350,9 @@ export default function NewsPage() {
                     open={showOnboarding}
                     onComplete={(s) => {
                         setShowOnboarding(false);
-                        fetchNews(s);
+                        const tier = scoreToTier(s);
+                        setActiveTier(tier);
+                        fetchNewsByTier(tier);
                     }}
                 />
             </div>
@@ -611,6 +682,98 @@ export default function NewsPage() {
                     </motion.div>
                 )}
             </div>
+
+            {/* ── Tier Upgrade Prompt Modal ─────────────────────────────── */}
+            <AnimatePresence>
+                {showTierUpgrade && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] flex items-center justify-center p-6"
+                    >
+                        {/* Backdrop */}
+                        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+                        <motion.div
+                            initial={{ scale: 0.85, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.85, opacity: 0, y: 20 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                            className="relative w-full max-w-sm bg-[#15113B] border-[5px] border-[#0A0A26] rounded-[48px] p-8 shadow-[0_18px_0_#0A0A26] overflow-hidden text-center"
+                        >
+                            {/* Decorative glows */}
+                            <div className="absolute top-0 right-0 w-40 h-40 bg-[#FFB800] opacity-10 rounded-full translate-x-16 -translate-y-16 pointer-events-none" />
+                            <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#4EEAFF] opacity-10 rounded-full -translate-x-12 translate-y-12 pointer-events-none" />
+
+                            {/* Bird + upgrade icon */}
+                            <div className="relative mb-6 flex justify-center">
+                                <div className="w-28 h-28 bg-[#FFB800] rounded-full flex items-center justify-center border-[4px] border-[#0A0A26] shadow-[0_10px_0_#0A0A26]">
+                                    <FomoBird className="w-20 h-20" expression="happy" />
+                                </div>
+                                <div className="absolute -top-3 -right-2 w-12 h-12 bg-[#58CC02] rounded-full border-[3px] border-[#0A0A26] flex items-center justify-center shadow-lg">
+                                    <ArrowUpCircle className="w-7 h-7 text-white" />
+                                </div>
+                            </div>
+
+                            {/* Title */}
+                            <h2 className="text-3xl font-black text-white mb-2 uppercase tracking-tight leading-tight">
+                                All Clear!
+                            </h2>
+                            <p className="text-[#A5A5D9] font-bold text-sm mb-6 leading-relaxed">
+                                You&apos;ve completed all Sector {activeTier} missions.
+                                Ready to tackle <span className="text-[#FFB800] font-black">Sector {activeTier + 1}</span> challenges?
+                            </p>
+
+                            {/* Tier badge comparison */}
+                            <div className="flex items-center justify-center gap-3 mb-8">
+                                <div className={cn(
+                                    "px-4 py-2 rounded-2xl border-[3px] border-[#0A0A26] font-black text-sm",
+                                    TIER_STYLES[activeTier]?.iconBg ?? "bg-[#FFB800]",
+                                    "text-white"
+                                )}>
+                                    Sector {activeTier}
+                                </div>
+                                <ArrowRight className="w-6 h-6 text-[#A5A5D9]" />
+                                <div className={cn(
+                                    "px-4 py-2 rounded-2xl border-[3px] border-[#0A0A26] font-black text-sm",
+                                    TIER_STYLES[Math.min(activeTier + 1, 5)]?.iconBg ?? "bg-[#FF1E56]",
+                                    "text-white animate-pulse"
+                                )}>
+                                    Sector {Math.min(activeTier + 1, 5)}
+                                </div>
+                            </div>
+
+                            {/* Today only badge */}
+                            <div className="inline-flex items-center gap-1.5 bg-[#FFB800]/15 text-[#FFB800] text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full mb-6 border border-[#FFB800]/30">
+                                ⏳ Available today only
+                            </div>
+
+                            {/* Buttons */}
+                            <div className="space-y-3">
+                                <button
+                                    onClick={handleAcceptTierUpgrade}
+                                    disabled={tierUpgradeLoading}
+                                    className="w-full py-5 bg-[#58CC02] text-white rounded-[24px] font-black text-xl border-b-[6px] border-[#45a302] uppercase tracking-widest shadow-lg active:translate-y-1 active:border-b-[2px] transition-all hover:brightness-110 disabled:opacity-60 flex items-center justify-center gap-3"
+                                >
+                                    {tierUpgradeLoading ? (
+                                        <CircleDashed className="w-6 h-6 animate-spin" />
+                                    ) : (
+                                        <>Challenge Accepted</>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={handleDeclineTierUpgrade}
+                                    disabled={tierUpgradeLoading}
+                                    className="w-full py-4 bg-[#1b1236] text-[#A5A5D9] rounded-[24px] font-black text-base border-[3px] border-[#0A0A26] uppercase tracking-widest hover:bg-[#241a47] transition-all disabled:opacity-60"
+                                >
+                                    Not Now
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

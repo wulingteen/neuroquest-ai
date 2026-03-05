@@ -7,6 +7,7 @@ export {
     getLevelProgress,
     getLevelTitle,
     calculateStreak,
+    scoreToTier,
     LEVEL_TITLES,
 } from "./helpers";
 export type { Planet, Level, Achievement, QuizQuestion, LeaderboardEntry } from "./helpers";

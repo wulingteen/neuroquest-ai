@@ -11,6 +11,7 @@ import {
     ShieldAlert
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { scoreToTier } from "@/lib/game";
 import { type ProfileOption } from "@/types/game";
 
 /**
@@ -98,12 +99,17 @@ export default function ProfileSetupModal({
         }
     };
 
+    const RANK_MAP: Record<number, { label: string; color: string }> = {
+        1: { label: "NOVICE", color: "#58cc02" },
+        2: { label: "BASIC", color: "#1cb0f6" },
+        3: { label: "ADEPT", color: "#ce82ff" },
+        4: { label: "EXPERT", color: "#ff9600" },
+        5: { label: "MASTER", color: "#ea2b2b" },
+    };
+
     const getRank = (score: number) => {
-        if (score <= 20) return { label: "NOVICE", color: "#58cc02", tier: 1 };
-        if (score <= 40) return { label: "BASIC", color: "#1cb0f6", tier: 2 };
-        if (score <= 60) return { label: "ADEPT", color: "#ce82ff", tier: 3 };
-        if (score <= 80) return { label: "EXPERT", color: "#ff9600", tier: 4 };
-        return { label: "MASTER", color: "#ea2b2b", tier: 5 };
+        const tier = scoreToTier(score);
+        return { ...RANK_MAP[tier], tier };
     };
 
     if (!open) return null;

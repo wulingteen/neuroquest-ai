@@ -33,6 +33,17 @@ export function getLevelTitle(level: number): string {
 }
 
 
+// ── Difficulty Score → Tier helpers ─────────────────────────────────
+
+/** Convert a difficulty_score (0-100) to a news difficulty tier (1-5). */
+export function scoreToTier(score: number): number {
+    if (score <= 20) return 1;
+    if (score <= 40) return 2;
+    if (score <= 60) return 3;
+    if (score <= 80) return 4;
+    return 5;
+}
+
 // ── Streak / Daily Reward helpers ───────────────────────────────────
 
 /**

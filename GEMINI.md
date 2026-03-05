@@ -217,6 +217,7 @@ Only truly shared (app-level) components live here. Page-specific components are
 **`src/app/api/news/cron/route.ts`** — System automated workflow that: (1) fetches RSS, (2) ranks articles via LLM, (3) generates questions via LLM.
 
 **`src/app/news/page.tsx`** — Redesigned as an **Approachable Learning Hub**.
+- **Tier Upgrade Prompt**: When a player completes all news items at their current difficulty tier, a Kurzgesagt-styled modal appears asking if they want to challenge the next tier (one tier higher). Accepting re-fetches news with `maxTier + 1` (capped at 5). The upgrade is persisted for the **full calendar day** via `localStorage` key `neuroquest:tierUpgrade` (stores `{date, tier}`). On the next day, the stored value is automatically ignored and the player returns to their base tier. No DB schema changes required; the backend `maxTier` query parameter already supports this.
 
 **`src/app/_components/LevelModal.tsx`** — Revised as a **Kurzgesagt-style Assessment Hub**:
 - **Guide Character**: `FomoBird` (`src/components/icons/FomoBird.tsx`) — custom SVG bird with dynamic expressions (happy, thinking, surprised).
