@@ -18,6 +18,7 @@ interface GameState {
     currentPlanet: string | null;
     currentLevel: string | number | null;
     showDailyReward: boolean;
+    hideBottomMenu: boolean;
 
     // Computed
     level: number;
@@ -38,6 +39,7 @@ interface GameState {
     setCurrentLevel: (levelId: string | number | null) => void;
     checkDailyLogin: () => void;
     dismissDailyReward: () => void;
+    setHideBottomMenu: (hide: boolean) => void;
     setTopScorerMessage: (message: string) => Promise<void>;
     fetchTopScorerStatus: () => Promise<void>;
 }
@@ -56,6 +58,7 @@ export const useGameStore = create<GameState>()(
             currentPlanet: null,
             currentLevel: null,
             showDailyReward: false,
+            hideBottomMenu: false,
             level: 1,
             levelProgress: 0,
             levelTitle: getLevelTitle(1),
@@ -144,6 +147,7 @@ export const useGameStore = create<GameState>()(
 
             setCurrentPlanet: (planetId) => set({ currentPlanet: planetId }),
             setCurrentLevel: (levelId) => set({ currentLevel: levelId }),
+            setHideBottomMenu: (hide) => set({ hideBottomMenu: hide }),
 
             checkDailyLogin: () => {
                 // Now handled by fetchUser on backend

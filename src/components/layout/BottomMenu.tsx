@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Saturn from "@/components/icons/Saturn";
-
-
+import { useGameStore } from "@/store/gameStore";
 
 const NAV_ITEMS = [
   { href: "/", label: "Map", icon: Saturn, activeBg: "bg-[#FFB800]", activeText: "text-white" }, // Yellow bg, White text
@@ -15,6 +14,9 @@ const NAV_ITEMS = [
 
 export default function BottomMenu() {
   const pathname = usePathname();
+  const hideBottomMenu = useGameStore((s) => s.hideBottomMenu);
+
+  if (hideBottomMenu) return null;
 
   return (
     <div className={cn(

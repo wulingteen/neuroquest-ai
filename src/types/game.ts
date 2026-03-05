@@ -69,6 +69,7 @@ export interface NewsItem {
     category: string;
     categoryColor: string;
     reward: number;
+    completed?: boolean;
     questions?: QuizQuestion[];
 }
 

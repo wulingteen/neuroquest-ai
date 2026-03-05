@@ -209,24 +209,15 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                     {/* Progress header */}
                                     <div className="mb-10">
                                         <div className="flex justify-between items-end mb-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-[#15113B] rounded-xl border-[2px] border-[#0A0A26] flex items-center justify-center">
-                                                    <span className="text-lg">🛰️</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[#A5A5D9] text-[10px] font-black uppercase tracking-[0.3em]">Synchronizing</p>
-                                                    <h4 className="text-white text-xl font-black uppercase">Probe {currentQ + 1} / {questions.length}</h4>
-                                                </div>
-                                            </div>
-                                            <div className="bg-[#15113B] border-[3px] border-[#0A0A26] px-5 py-2 rounded-2xl shadow-[0_6px_0_#0A0A26]">
+                                            <div className="bg-[#15113B] border-[3px] border-[#0A0A26] px-5 py-2 rounded-2xl shadow-[0_6px_0_#0A0A26] ml-auto">
                                                 <span className="text-[#FEB47B] font-black text-lg">{totalXP} XP</span>
                                             </div>
                                         </div>
                                         <div className="w-full h-8 bg-[#0A0A26] rounded-full p-[4px] relative overflow-hidden shadow-inner">
                                             <motion.div
                                                 initial={{ width: 0 }}
-                                                animate={{ width: `${((currentQ) / questions.length) * 100}%` }}
-                                                className="h-full bg-gradient-to-r from-[#4EEAFF] to-[#58CC02] rounded-full relative"
+                                                animate={{ width: `${Math.max(((currentQ) / questions.length) * 100, 5)}%` }}
+                                                className="h-full bg-[#05d9e8] rounded-full relative"
                                                 transition={{ duration: 0.8, type: "spring" }}
                                             >
                                                 <div className="absolute top-0 bottom-0 right-0 w-8 bg-white/20 blur-sm rounded-full" />
@@ -251,7 +242,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
 
                                             if (answered) {
                                                 if (isCorrect) {
-                                                    btnClass = "bg-[#58CC02] border-[#0A0A26] text-white shadow-[0_10px_0_#0A0A26] scale-[1.02]";
+                                                    btnClass = "bg-[#05d9e8] border-[#0A0A26] text-[#0a0710] shadow-[0_10px_0_#0A0A26] scale-[1.02]";
                                                     icon = "✓";
                                                 } else if (isSelected && !isCorrect) {
                                                     btnClass = "bg-[#FF4B4B] border-[#0A0A26] text-white shadow-[0_10px_0_#0A0A26]";
@@ -275,7 +266,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                                 >
                                                     <div className={cn(
                                                         "w-12 h-12 rounded-2xl border-[3px] border-[#0A0A26] flex items-center justify-center shrink-0 font-black text-xl transition-colors",
-                                                        answered && isCorrect ? "bg-white text-[#58CC02]" : "bg-[#2a2a6e] text-white"
+                                                        answered && isCorrect ? "bg-white text-[#05d9e8]" : "bg-[#2a2a6e] text-white"
                                                     )}>
                                                         {icon}
                                                     </div>
@@ -296,13 +287,10 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                                 <div className="max-w-2xl mx-auto pointer-events-auto">
                                                     <div className={cn(
                                                         "p-8 sm:p-10 rounded-[44px] border-[5px] border-[#0A0A26] shadow-[0_20px_0_#0A0A26] flex flex-col sm:flex-row items-center gap-10",
-                                                        selected === question.correct ? "bg-[#58CC02]" : "bg-[#FF4B4B]"
+                                                        selected === question.correct ? "bg-[#05d9e8]" : "bg-[#FF4B4B]"
                                                     )}>
                                                         <div className="w-28 h-28 bg-white/20 rounded-full flex items-center justify-center border-[4px] border-[#0A0A26] shrink-0 shadow-lg relative">
                                                             <FomoBird className="w-20 h-20" expression={selected === question.correct ? "happy" : "surprised"} />
-                                                            <div className="absolute -top-2 -right-2 bg-white w-10 h-10 rounded-full border-[3px] border-[#0A0A26] flex items-center justify-center font-black text-xl">
-                                                                {selected === question.correct ? "★" : "!"}
-                                                            </div>
                                                         </div>
 
                                                         <div className="flex-1 text-center sm:text-left">
@@ -311,7 +299,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                                                     {selected === question.correct ? "BINGO!" : "GAP!"}
                                                                 </h5>
                                                                 {selected === question.correct && (
-                                                                    <div className="bg-white text-[#58CC02] px-4 py-1 rounded-2xl text-xl font-black border-[3px] border-[#0A0A26]">
+                                                                    <div className="bg-white text-[#05d9e8] px-4 py-1 rounded-2xl text-xl font-black border-[3px] border-[#0A0A26]">
                                                                         +{question.xp} XP
                                                                     </div>
                                                                 )}
@@ -325,7 +313,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                                                 onClick={handleNext}
                                                                 className="w-full sm:w-auto min-w-[220px] bg-white text-[#0A0A26] border-[4px] border-[#0A0A26] shadow-[0_10px_0_#0A0A26] rounded-3xl px-10 py-5 text-2xl font-black uppercase tracking-widest active:translate-y-1 active:shadow-[0_4px_0_#0A0A26] transition-all hover:bg-[#A5A5D9]"
                                                             >
-                                                                {currentQ < questions.length - 1 ? "NEXT TEST" : "ANALYZE"}
+                                                                {currentQ < questions.length - 1 ? "NEXT" : "ANALYZE"}
                                                             </button>
                                                         </div>
                                                     </div>

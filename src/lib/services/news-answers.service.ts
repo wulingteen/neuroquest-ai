@@ -1,8 +1,6 @@
 import db from "@/lib/db";
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const PLAYER_USERNAME = "YouPlayer";
+import { PLAYER_USERNAME } from "./constants";
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 

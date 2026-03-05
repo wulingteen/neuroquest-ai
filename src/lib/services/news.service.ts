@@ -1,4 +1,5 @@
 import db from "@/lib/db";
+import { PLAYER_USERNAME } from "./constants";
 
 // ─── Selections DTOs ─────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ export interface NewsSelectionDTO {
     category: string;
     categoryColor: string;
     reward: number;
+    completed: boolean;
     questions: NewsQuestionDTO[];
 }
 
@@ -92,6 +94,31 @@ export async function getSelections(params: {
         return true;
     });
 
+    // ── Check which selections the player has already completed ──────────
+    const player = await db.players.findUnique({
+        where: { username: PLAYER_USERNAME },
+    });
+
+    // Collect ALL question IDs across all capped selections
+    const allQuestionIds = cappedSelections.flatMap((sel) =>
+        sel.news_questions.map((q) => q.question_id),
+    );
+
+    // Query answered question IDs in a single round-trip
+    const answeredQuestionIds = new Set<bigint>();
+    if (player && allQuestionIds.length > 0) {
+        const answered = await db.player_news_answers.findMany({
+            where: {
+                player_id: player.player_id,
+                question_id: { in: allQuestionIds },
+            },
+            select: { question_id: true },
+        });
+        for (const a of answered) {
+            answeredQuestionIds.add(a.question_id);
+        }
+    }
+
     const items: NewsSelectionDTO[] = cappedSelections.map((sel) => {
         const article = sel.news_articles;
         const meta = TIER_META[sel.tier] ?? TIER_META[3];
@@ -100,6 +127,13 @@ export async function getSelections(params: {
             (sum, q) => sum + (q.xp_reward ?? 50),
             0,
         );
+
+        // A selection is "completed" when ALL its questions have been answered
+        const completed =
+            sel.news_questions.length > 0 &&
+            sel.news_questions.every((q) =>
+                answeredQuestionIds.has(q.question_id),
+            );
 
         return {
             id: sel.selection_id.toString(),
@@ -115,6 +149,7 @@ export async function getSelections(params: {
             category: meta.category,
             categoryColor: meta.categoryColor,
             reward: totalXp,
+            completed,
             questions: sel.news_questions.map((q) => ({
                 id: Number(q.question_id),
                 number: q.question_number,

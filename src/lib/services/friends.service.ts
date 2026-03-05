@@ -31,9 +31,9 @@ export interface FriendsLeaderboardEntryDTO {
     isMe: boolean;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+import { PLAYER_USERNAME } from "./constants";
 
-const PLAYER_USERNAME = "YouPlayer";
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function getCurrentPlayer() {
     return db.players.findUnique({ where: { username: PLAYER_USERNAME } });

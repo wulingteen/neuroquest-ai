@@ -32,9 +32,9 @@ export interface ProfileOptionDTO {
     score: number;
 }
 
-// ─── Player ──────────────────────────────────────────────────────────────────
+import { PLAYER_USERNAME } from "./constants";
 
-const PLAYER_USERNAME = "YouPlayer";
+// ─── Player ──────────────────────────────────────────────────────────────────
 
 export async function getPlayer(): Promise<PlayerDTO | null> {
     const player = await db.players.findUnique({
