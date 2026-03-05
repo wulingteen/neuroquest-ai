@@ -5,7 +5,7 @@ import { useGameStore } from "@/store/gameStore";
 import { type QuizQuestion } from "@/types/game";
 import dynamic from "next/dynamic";
 import FomoBird from "@/components/icons/FomoBird";
-import { CheckCircle2 } from "lucide-react";
+
 import {
     QuizOptionList,
     QuizConfirmButton,
