@@ -3,7 +3,7 @@ import db from "@/lib/db";
 export interface TopScorerStatus {
     isTopScorer: boolean;
     hasMessageToday: boolean;
-    yesterdayMessage: string | null;
+    lastMessage: string | null;
 }
 
 export async function getTopScorerStatus(playerId: string): Promise<TopScorerStatus> {
@@ -20,7 +20,7 @@ export async function getTopScorerStatus(playerId: string): Promise<TopScorerSta
         // But usually "top among friends" implies having friends.
         // The prompt says "highest among all their friends".
         // Let's assume if 0 friends, you are not prompted.
-        return { isTopScorer: false, hasMessageToday: false, yesterdayMessage: null };
+        return { isTopScorer: false, hasMessageToday: false, lastMessage: null };
     }
 
     // 2. Get player XP
@@ -29,7 +29,7 @@ export async function getTopScorerStatus(playerId: string): Promise<TopScorerSta
         select: { xp: true }
     });
 
-    if (!player) return { isTopScorer: false, hasMessageToday: false, yesterdayMessage: null };
+    if (!player) return { isTopScorer: false, hasMessageToday: false, lastMessage: null };
 
     // 3. Get max XP among friends
     const friends = await db.players.findMany({
@@ -53,21 +53,18 @@ export async function getTopScorerStatus(playerId: string): Promise<TopScorerSta
         }
     });
 
-    // 5. Get yesterday's message for quick re-entry
-    const yesterdayDate = new Date(todayDate);
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-
-    const yesterdayMessage = await db.daily_top_messages.findFirst({
+    // 5. Get the most recent message for quick re-use
+    const lastUsedMessage = await db.daily_top_messages.findFirst({
         where: {
             player_id: playerId,
-            message_date: yesterdayDate
-        }
+        },
+        orderBy: { message_date: 'desc' },
     });
 
     return {
         isTopScorer,
         hasMessageToday: !!todayMessage,
-        yesterdayMessage: yesterdayMessage?.message || null
+        lastMessage: lastUsedMessage?.message || null,
     };
 }
 

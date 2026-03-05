@@ -26,7 +26,7 @@ interface GameState {
     topScorer: {
         isTopScorer: boolean;
         hasMessageToday: boolean;
-        yesterdayMessage: string | null;
+        lastMessage: string | null;
     };
 
     // Actions
@@ -62,7 +62,7 @@ export const useGameStore = create<GameState>()(
             topScorer: {
                 isTopScorer: false,
                 hasMessageToday: false,
-                yesterdayMessage: null,
+                lastMessage: null,
             },
 
             fetchUser: async () => {

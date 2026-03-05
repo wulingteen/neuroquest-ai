@@ -22,7 +22,7 @@ export default function TopScorerModal() {
 
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        if (!message.trim() || message.length > 20) return;
+        if (message.length > 20) return;
 
         setIsSubmitting(true);
         try {
@@ -36,8 +36,9 @@ export default function TopScorerModal() {
     };
 
     const handleQuickReuse = () => {
-        if (topScorer.yesterdayMessage) {
-            setMessage(topScorer.yesterdayMessage);
+        const lastMsg = useGameStore.getState().topScorer.lastMessage;
+        if (lastMsg) {
+            setMessage(lastMsg);
         }
     };
 
@@ -84,13 +85,13 @@ export default function TopScorerModal() {
                                 </div>
                             </div>
 
-                            {topScorer.yesterdayMessage && (
+                            {topScorer.lastMessage && (
                                 <button
                                     type="button"
                                     onClick={handleQuickReuse}
                                     className="text-[#4EEAFF] text-xs font-bold hover:underline underline-offset-2 flex items-center justify-center gap-2 w-full transition-all active:scale-95"
                                 >
-                                    <span>🔄 Reuse yesterday's: "{topScorer.yesterdayMessage}"</span>
+                                    <span>Reuse last: "{topScorer.lastMessage}"</span>
                                 </button>
                             )}
 
@@ -104,10 +105,10 @@ export default function TopScorerModal() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={!message.trim() || isSubmitting}
+                                    disabled={isSubmitting}
                                     className={cn(
                                         "flex-[2] bg-[#FFE100] border-b-4 border-[#B29D00] text-[#0A0A26] font-black py-3 rounded-xl transition-all active:translate-y-0.5 active:border-b-0",
-                                        (!message.trim() || isSubmitting) && "opacity-50 grayscale cursor-not-allowed"
+                                        isSubmitting && "opacity-50 grayscale cursor-not-allowed"
                                     )}
                                 >
                                     {isSubmitting ? "SENDING..." : "BROADCAST"}

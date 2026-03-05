@@ -14,6 +14,7 @@ import {
     Trophy,
     Building,
     ArrowLeft,
+    AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -81,7 +82,7 @@ type Phase = "hub" | "read" | "quiz" | "completed";
 
 export default function NewsPage() {
     const router = useRouter();
-    const { xp, level, levelProgress, addXP, streak } = useGameStore();
+    const { xp, level, levelProgress, addXP, streak, fetchUser } = useGameStore();
     const [news, setNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -93,6 +94,11 @@ export default function NewsPage() {
     const [quizIndex, setQuizIndex] = useState(0);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+    const [pendingAnswer, setPendingAnswer] = useState<number | null>(null);
+    const [showExitConfirm, setShowExitConfirm] = useState(false);
+    const [quizAnswers, setQuizAnswers] = useState<{ questionId: number; selectedOptionIndex: number; isCorrect: boolean }[]>([]);
+    const [earnedXP, setEarnedXP] = useState(0);
+    const [submitting, setSubmitting] = useState(false);
 
     // Onboarding
     const [showOnboarding, setShowOnboarding] = useState(false);
@@ -149,18 +155,44 @@ export default function NewsPage() {
         setQuizIndex(0);
         setSelectedAnswer(null);
         setIsCorrect(null);
+        setPendingAnswer(null);
+        setQuizAnswers([]);
+        setEarnedXP(0);
     };
 
-    const handleAnswer = (index: number) => {
-        if (selectedAnswer !== null || !selectedNews?.questions) return;
+    const handleSelectOption = (index: number) => {
+        if (selectedAnswer !== null) return;
+        setPendingAnswer(index);
+    };
+
+    const handleConfirmAnswer = () => {
+        if (pendingAnswer === null || selectedAnswer !== null || !selectedNews?.questions) return;
         const correct = selectedNews.questions[quizIndex].correct;
-        setSelectedAnswer(index);
-        const correctFlag = index === correct;
+        setSelectedAnswer(pendingAnswer);
+        const correctFlag = pendingAnswer === correct;
         setIsCorrect(correctFlag);
 
-        if (correctFlag) {
-            addXP(selectedNews.questions[quizIndex].xp);
-        }
+        // Track the answer locally — XP will be awarded on quiz completion
+        setQuizAnswers((prev) => [
+            ...prev,
+            {
+                questionId: selectedNews.questions![quizIndex].id,
+                selectedOptionIndex: pendingAnswer,
+                isCorrect: correctFlag,
+            },
+        ]);
+    };
+
+    const handleExitQuiz = () => {
+        setShowExitConfirm(false);
+        setPhase("hub");
+        setSelectedNews(null);
+        setQuizIndex(0);
+        setSelectedAnswer(null);
+        setIsCorrect(null);
+        setPendingAnswer(null);
+        setQuizAnswers([]);
+        setEarnedXP(0);
     };
 
     const handleNextQuiz = () => {
@@ -169,8 +201,39 @@ export default function NewsPage() {
             setQuizIndex(quizIndex + 1);
             setSelectedAnswer(null);
             setIsCorrect(null);
+            setPendingAnswer(null);
         } else {
-            setCompletedIds((prev) => new Set([...prev, selectedNews.id]));
+            // Quiz complete — submit all answers to backend
+            submitQuizResults();
+        }
+    };
+
+    const submitQuizResults = async () => {
+        if (!selectedNews) return;
+        setSubmitting(true);
+        try {
+            const res = await fetch("/api/news/answers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    selectionId: selectedNews.id,
+                    answers: quizAnswers.map((a) => ({
+                        questionId: a.questionId,
+                        selectedOptionIndex: a.selectedOptionIndex,
+                    })),
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setEarnedXP(data.totalXpEarned);
+                // Refresh store XP from server to stay in sync
+                await fetchUser();
+            }
+        } catch (err) {
+            console.error("Failed to submit quiz answers:", err);
+        } finally {
+            setSubmitting(false);
+            setCompletedIds((prev) => new Set([...prev, selectedNews!.id]));
             setPhase("completed");
         }
     };
@@ -403,13 +466,23 @@ export default function NewsPage() {
 
                 {phase === "quiz" && selectedNews && selectedNews.questions && (
                     <div className="flex flex-col h-full">
-                        <div className="w-full h-4 bg-[#18102e] rounded-full mb-12 overflow-hidden border-[3px] border-[#100a1c]">
-                            <div
-                                className="h-full bg-[#05d9e8]"
-                                style={{
-                                    width: `${((quizIndex + 1) / selectedNews.questions.length) * 100}%`,
-                                }}
-                            />
+                        {/* Top bar: back button + progress */}
+                        <div className="flex items-center gap-3 mb-12">
+                            <button
+                                onClick={() => setShowExitConfirm(true)}
+                                className="flex-shrink-0 w-10 h-10 rounded-[14px] bg-[#18102e] border-[3px] border-[#100a1c] flex items-center justify-center text-white/50 hover:text-white hover:bg-[#251847] transition-colors"
+                                aria-label="Back to list"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <div className="flex-grow h-4 bg-[#18102e] rounded-full overflow-hidden border-[3px] border-[#100a1c]">
+                                <div
+                                    className="h-full bg-[#05d9e8] transition-all duration-500"
+                                    style={{
+                                        width: `${((quizIndex + 1) / selectedNews.questions.length) * 100}%`,
+                                    }}
+                                />
+                            </div>
                         </div>
 
                         <h2 className="text-2xl font-black mb-10 text-center text-white tracking-tight leading-snug">
@@ -418,7 +491,8 @@ export default function NewsPage() {
 
                         <div className="space-y-4 flex-grow">
                             {selectedNews.questions[quizIndex].options.map((opt, i) => {
-                                const isSelected = selectedAnswer === i;
+                                const isPending = pendingAnswer === i;
+                                const isSubmitted = selectedAnswer === i;
                                 const correctIdx = selectedNews.questions![quizIndex].correct;
                                 const showResult = selectedAnswer !== null;
 
@@ -428,11 +502,11 @@ export default function NewsPage() {
                                     if (i === correctIdx)
                                         style =
                                             "bg-[#58cc02] border-[#46a302] text-white shadow-[0_4px_0_#3d8c11]";
-                                    else if (isSelected)
+                                    else if (isSubmitted)
                                         style =
                                             "bg-[#ff2262] border-[#cc184c] text-white shadow-[0_4px_0_#990d34]";
                                     else style = "bg-[#150e29] border-[#0f0a1c] text-[#4d3d75]";
-                                } else if (isSelected) {
+                                } else if (isPending) {
                                     style =
                                         "bg-[#05d9e8] border-[#03b8c4] text-[#0a0710] shadow-[0_4px_0_#028e99]";
                                 }
@@ -441,9 +515,9 @@ export default function NewsPage() {
                                     <button
                                         key={i}
                                         disabled={showResult}
-                                        onClick={() => handleAnswer(i)}
+                                        onClick={() => handleSelectOption(i)}
                                         className={cn(
-                                            "w-full p-6 rounded-[32px] border-b-[6px] font-black text-lg text-left uppercase tracking-tight",
+                                            "w-full p-6 rounded-[32px] border-b-[6px] font-black text-lg text-left uppercase tracking-tight transition-colors",
                                             style,
                                         )}
                                     >
@@ -453,6 +527,20 @@ export default function NewsPage() {
                             })}
                         </div>
 
+                        {/* Confirm button — shown after selecting but before submitting */}
+                        {pendingAnswer !== null && selectedAnswer === null && (
+                            <div className="fixed bottom-0 left-0 right-0 p-8 flex justify-center z-[60] bg-[#18102e]/90 backdrop-blur-md border-t-[6px] border-[#100a1c]">
+                                <button
+                                    onClick={handleConfirmAnswer}
+                                    className="w-full max-w-xl py-6 bg-[#05d9e8] text-[#0a0710] rounded-[32px] font-black text-2xl border-b-[8px] border-[#03b8c4] uppercase tracking-tighter shadow-lg flex items-center justify-center gap-3 hover:brightness-110 active:translate-y-1 active:shadow-none transition-all"
+                                >
+                                    <CheckCircle2 className="w-7 h-7" />
+                                    Confirm
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Result banner — shown after answer is submitted */}
                         {selectedAnswer !== null && (
                             <div
                                 className={cn(
@@ -497,6 +585,37 @@ export default function NewsPage() {
                                 </div>
                             </div>
                         )}
+
+                        {/* Exit confirmation modal */}
+                        {showExitConfirm && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+                                <div className="bg-[#1b1236] border-[6px] border-[#100a1f] rounded-[40px] p-8 max-w-sm w-full shadow-2xl space-y-6 text-center">
+                                    <div className="w-20 h-20 bg-[#ff9600] rounded-full flex items-center justify-center mx-auto shadow-[0_8px_0_#cc7800] border-b-4 border-[#cc7800]">
+                                        <AlertTriangle className="w-10 h-10 text-white" />
+                                    </div>
+                                    <h3 className="text-2xl font-black text-white tracking-tight">
+                                        Abort Mission?
+                                    </h3>
+                                    <p className="text-[#b8aae0] font-bold text-sm leading-relaxed">
+                                        Your current progress will be lost and you&apos;ll need to start this quiz over from the beginning.
+                                    </p>
+                                    <div className="flex flex-col gap-3">
+                                        <button
+                                            onClick={() => setShowExitConfirm(false)}
+                                            className="w-full py-5 bg-[#05d9e8] text-[#0a0710] rounded-[24px] font-black text-lg border-b-[6px] border-[#03b8c4] uppercase tracking-widest"
+                                        >
+                                            Continue Mission
+                                        </button>
+                                        <button
+                                            onClick={handleExitQuiz}
+                                            className="w-full py-5 bg-[#251847] text-[#ff2262] rounded-[24px] font-black text-lg border-b-[6px] border-[#19102e] uppercase tracking-widest hover:bg-[#2d1d56]"
+                                        >
+                                            Abort &amp; Return
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -525,7 +644,7 @@ export default function NewsPage() {
                                 </p>
                                 <div className="text-4xl font-black text-[#ffb800] flex items-center gap-2">
                                     <Zap className="w-8 h-8 fill-[#ffb800]" /> +
-                                    {selectedNews.reward}
+                                    {earnedXP}
                                 </div>
                             </div>
                             <div className="w-2 h-16 bg-[#100a1f] rounded-full" />
@@ -534,7 +653,7 @@ export default function NewsPage() {
                                     CAPACITY
                                 </p>
                                 <div className="text-4xl font-black text-[#05d9e8]">
-                                    +{Math.ceil(selectedNews.reward / 10)}%
+                                    +{earnedXP > 0 ? Math.ceil(earnedXP / 10) : 0}%
                                 </div>
                             </div>
                         </div>

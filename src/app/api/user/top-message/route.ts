@@ -13,15 +13,16 @@ export async function POST(request: Request) {
         }
 
         const { message } = await request.json();
+        const msg = typeof message === "string" ? message : "";
 
-        if (!message || message.length > 20) {
+        if (msg.length > 20) {
             return NextResponse.json(
                 { success: false, error: "Invalid message (max 20 chars)" },
                 { status: 400 },
             );
         }
 
-        await setDailyTopMessage(player.player_id, message);
+        await setDailyTopMessage(player.player_id, msg);
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("Error setting daily top message:", error);
