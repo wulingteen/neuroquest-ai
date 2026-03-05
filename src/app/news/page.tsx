@@ -12,10 +12,6 @@ import {
     CircleDashed,
     RefreshCw,
     ExternalLink,
-    BookOpen,
-    Trophy,
-    Building,
-    ArrowLeft,
     AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
@@ -322,7 +318,7 @@ export default function NewsPage() {
         <div className="min-h-screen w-full relative text-white font-['Inter',sans-serif] flex flex-col pt-24 pb-32 bg-[#110a24]">
             <BackgroundGraphics />
 
-            {(() => {
+            {phase !== "quiz" && phase !== "completed" && (() => {
                 const remainingXP = news.reduce((acc, item) => {
                     return acc + (completedIds.has(item.id) ? 0 : item.reward);
                 }, 0);
@@ -382,71 +378,71 @@ export default function NewsPage() {
 
                         <div className="space-y-4">
                             {sortedNews.map(({ item, originalIndex }) => {
-                                    const isDone = completedIds.has(item.id);
-                                    const styles = TIER_STYLES[item.tier] || TIER_STYLES[3];
-                                    const isTopReward = top3Ids.includes(item.id);
+                                const isDone = completedIds.has(item.id);
+                                const styles = TIER_STYLES[item.tier] || TIER_STYLES[3];
+                                const isTopReward = top3Ids.includes(item.id);
 
-                                    return (
-                                        <button
-                                            key={item.id}
-                                            onClick={() => handleSelectNews(item)}
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => handleSelectNews(item)}
+                                        className={cn(
+                                            "w-full text-left p-5 rounded-[32px] border-b-[8px] flex items-center gap-5 relative overflow-visible",
+                                            isDone
+                                                ? "bg-[#181129] border-[#0f0b1a] text-[#4d3d75]"
+                                                : `${styles.card} ${styles.border}`,
+                                        )}
+                                    >
+                                        {/* Top Reward Fire Icon */}
+                                        {!isDone && isTopReward && (
+                                            <div className="absolute -top-3 -left-3 z-20 bg-[#FF1E56] text-white p-2 rounded-full shadow-lg border-2 border-white scale-110">
+                                                <Flame className="w-5 h-5 fill-current" />
+                                            </div>
+                                        )}
+
+                                        <div
                                             className={cn(
-                                                "w-full text-left p-5 rounded-[32px] border-b-[8px] flex items-center gap-5 relative overflow-visible",
+                                                "w-16 h-16 rounded-[24px] flex items-center justify-center flex-shrink-0 border-b-4 text-2xl font-black",
                                                 isDone
-                                                    ? "bg-[#181129] border-[#0f0b1a] text-[#4d3d75]"
-                                                    : `${styles.card} ${styles.border}`,
+                                                    ? "bg-[#1f1635] text-[#4d3d75] border-[#181129]"
+                                                    : `${styles.iconBg} text-white border-black/10`,
                                             )}
                                         >
-                                            {/* Top Reward Fire Icon */}
-                                            {!isDone && isTopReward && (
-                                                <div className="absolute -top-3 -left-3 z-20 bg-[#FF1E56] text-white p-2 rounded-full shadow-lg border-2 border-white scale-110">
-                                                    <Flame className="w-5 h-5 fill-current" />
-                                                </div>
-                                            )}
-
-                                            <div
+                                            {originalIndex + 1}
+                                        </div>
+                                        <div className="flex-grow">
+                                            <h3
                                                 className={cn(
-                                                    "w-16 h-16 rounded-[24px] flex items-center justify-center flex-shrink-0 border-b-4 text-2xl font-black",
-                                                    isDone
-                                                        ? "bg-[#1f1635] text-[#4d3d75] border-[#181129]"
-                                                        : `${styles.iconBg} text-white border-black/10`,
+                                                    "text-xl font-black mb-1 line-clamp-2 tracking-tight",
+                                                    isDone ? "text-[#4d3d75]" : styles.title,
                                                 )}
                                             >
-                                                {originalIndex + 1}
-                                            </div>
-                                            <div className="flex-grow">
-                                                <h3
+                                                {item.title}
+                                            </h3>
+                                            <div className="flex items-center gap-3">
+                                                <span
                                                     className={cn(
-                                                        "text-xl font-black mb-1 line-clamp-2 tracking-tight",
-                                                        isDone ? "text-[#4d3d75]" : styles.title,
+                                                        "font-bold text-xs uppercase flex items-center gap-1",
+                                                        isDone ? "text-[#4d3d75]/60" : styles.xp,
                                                     )}
                                                 >
-                                                    {item.title}
-                                                </h3>
-                                                <div className="flex items-center gap-3">
-                                                    <span
-                                                        className={cn(
-                                                            "font-bold text-xs uppercase flex items-center gap-1",
-                                                            isDone ? "text-[#4d3d75]/60" : styles.xp,
-                                                        )}
-                                                    >
-                                                        <Zap className="w-4 h-4 fill-current" /> +
-                                                        {item.reward} XP
-                                                    </span>
-                                                    <span
-                                                        className={cn(
-                                                            "text-[10px] font-black uppercase tracking-widest",
-                                                            isDone ? "text-[#4d3d75]/40" : styles.sector,
-                                                        )}
-                                                    >
-                                                        Sector {item.tier}
-                                                    </span>
-                                                </div>
+                                                    <Zap className="w-4 h-4 fill-current" /> +
+                                                    {item.reward} XP
+                                                </span>
+                                                <span
+                                                    className={cn(
+                                                        "text-[10px] font-black uppercase tracking-widest",
+                                                        isDone ? "text-[#4d3d75]/40" : styles.sector,
+                                                    )}
+                                                >
+                                                    Sector {item.tier}
+                                                </span>
                                             </div>
-                                            {/* Right arrow removed as per request */}
-                                        </button>
-                                    );
-                                })}
+                                        </div>
+                                        {/* Right arrow removed as per request */}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
@@ -465,7 +461,10 @@ export default function NewsPage() {
                                 {selectedNews.title}
                             </h1>
 
-                            <div className="bg-[#1b1236] border-[6px] border-[#110a24] p-8 rounded-[40px] shadow-2xl relative overflow-hidden">
+                            <div className="bg-[#1b1236] border-[3px] border-[#0A0A26] p-8 pt-10 rounded-[32px] shadow-2xl relative">
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FF7E5F] px-4 py-1 rounded-full border-[2px] border-[#0A0A26] text-white font-black text-xs uppercase tracking-widest z-20">
+                                    SUMMARY
+                                </div>
                                 <div className="absolute top-0 right-0 w-48 h-48 bg-[#ff2262]/5 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none" />
                                 <p className="text-xl text-[#d4c5f9] leading-relaxed font-semibold relative z-10">
                                     {selectedNews.summary}
@@ -474,11 +473,11 @@ export default function NewsPage() {
 
                             <div className="flex flex-col gap-4">
                                 <div className="flex gap-4 mb-4">
-                                    <div className="flex-1 bg-[#15113B] border-[3px] border-[#0A0A26] rounded-2xl p-4 flex flex-col items-center justify-center">
-                                        <span className="text-3xl font-black text-[#FFB800]">{selectedNews.reward}</span>
+                                    <div className="flex-1 bg-[#15113B] rounded-2xl p-4 flex flex-col items-center justify-center">
+                                        <span className="text-3xl font-black text-white">{selectedNews.reward}</span>
                                         <span className="text-[10px] font-black text-[#A5A5D9] uppercase tracking-widest">EXP REWARD</span>
                                     </div>
-                                    <div className="flex-1 bg-[#15113B] border-[3px] border-[#0A0A26] rounded-2xl p-4 flex flex-col items-center justify-center">
+                                    <div className="flex-1 bg-[#15113B] rounded-2xl p-4 flex flex-col items-center justify-center">
                                         <span className="text-3xl font-black text-white">{selectedNews.questions?.length || 0}</span>
                                         <span className="text-[10px] font-black text-[#A5A5D9] uppercase tracking-widest">NEURAL PROBES</span>
                                     </div>
@@ -488,14 +487,19 @@ export default function NewsPage() {
                                     href={selectedNews.url}
                                     target="_blank"
                                     onClick={() => setArticleOpened(true)}
-                                    className="w-full py-5 bg-[#18102e] border-[4px] border-[#100a1c] rounded-[24px] font-black uppercase tracking-widest text-[#7a64ad] flex items-center justify-center gap-2 hover:bg-[#1d1435] hover:text-[#05d9e8]"
+                                    className={cn(
+                                        "w-full py-5 rounded-[24px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all",
+                                        articleOpened
+                                            ? "bg-[#18102e] border-[4px] border-[#100a1c] text-[#7a64ad]"
+                                            : "bg-white border-[4px] border-[#0A0A26] text-[#0A0A26] hover:brightness-95"
+                                    )}
                                 >
                                     <ExternalLink className="w-5 h-5" /> Full Article
                                 </a>
                                 {articleOpened && (
                                     <button
                                         onClick={handleStartQuiz}
-                                        className="w-full py-6 bg-[#05d9e8] text-[#0a0710] rounded-[32px] font-black text-2xl border-b-[8px] border-[#03b8c4] flex items-center justify-center gap-4 uppercase tracking-tighter shadow-lg"
+                                        className="w-full py-5 bg-[#58CC02] text-white rounded-[32px] font-black text-2xl border-b-[8px] border-[#45a302] flex items-center justify-center gap-4 uppercase tracking-tighter shadow-lg"
                                     >
                                         Start <ArrowRight className="w-8 h-8" />
                                     </button>
@@ -507,13 +511,15 @@ export default function NewsPage() {
 
                 {phase === "quiz" && selectedNews && selectedNews.questions && (
                     <div className="flex flex-col h-full">
-                        {/* Back button */}
-                        <button
-                            onClick={() => setShowExitConfirm(true)}
-                            className="mb-4 flex items-center gap-2 text-white/60 font-black uppercase tracking-widest text-xs hover:text-white"
-                        >
-                            <ChevronLeft className="w-5 h-5" /> Back to List
-                        </button>
+                        {/* Close button matching LevelModal */}
+                        <div className="flex justify-end mb-4">
+                            <button
+                                onClick={() => setShowExitConfirm(true)}
+                                className="w-12 h-12 bg-[#2a1f45] border-[4px] border-[#0A0A26] shadow-[0_6px_0_#0A0A26] rounded-2xl text-white font-black text-2xl flex items-center justify-center hover:bg-[#3d2f63] active:translate-y-1 active:shadow-[0_2px_0_#0A0A26] transition-all"
+                            >
+                                ×
+                            </button>
+                        </div>
 
                         {/* Progress bar matching LevelModal */}
                         <div className="mb-8">
@@ -549,10 +555,10 @@ export default function NewsPage() {
 
                                 if (showResult) {
                                     if (isCorrectAnswer) {
-                                        btnClass = "bg-[#05d9e8] border-[#0A0A26] text-[#0a0710] shadow-[0_10px_0_#0A0A26] scale-[1.02]";
+                                        btnClass = "bg-[#58cc02] border-[#0A0A26] text-[#0a0710] shadow-[0_10px_0_#0A0A26] scale-[1.02]";
                                         iconContent = "✓";
                                     } else if (isSubmitted) {
-                                        btnClass = "bg-[#FF4B4B] border-[#0A0A26] text-white shadow-[0_10px_0_#0A0A26]";
+                                        btnClass = "bg-[#FF1E56] border-[#0A0A26] text-white shadow-[0_10px_0_#0A0A26]";
                                         iconContent = "×";
                                     } else {
                                         btnClass = "bg-[#15113B] border-[#0A0A26] text-[#6b6b9e] opacity-40 shadow-[0_6px_0_#0A0A26]";
@@ -574,8 +580,10 @@ export default function NewsPage() {
                                         )}
                                     >
                                         <div className={cn(
-                                            "w-12 h-12 rounded-2xl border-[3px] border-[#0A0A26] flex items-center justify-center shrink-0 font-black text-xl transition-colors",
-                                            showResult && isCorrectAnswer ? "bg-white text-[#05d9e8]" : "bg-[#2a2a6e] text-white"
+                                            "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 font-black text-xl transition-colors",
+                                            showResult
+                                                ? (isCorrectAnswer ? "bg-white/30 text-[#0a0710]" : (isSubmitted ? "bg-white/30 text-white" : "bg-black/10 text-white/20"))
+                                                : "bg-[#2a2a6e] text-white border-[3px] border-[#0A0A26]"
                                         )}>
                                             {iconContent}
                                         </div>
@@ -593,7 +601,7 @@ export default function NewsPage() {
                                     className="w-full max-w-xl pointer-events-auto py-6 bg-[#05d9e8] text-[#0a0710] border-[4px] border-[#0A0A26] shadow-[0_12px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] rounded-[28px] font-black text-2xl uppercase tracking-widest active:translate-y-2 active:shadow-[0_4px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] transition-all hover:brightness-110 flex items-center justify-center gap-3"
                                 >
                                     <CheckCircle2 className="w-7 h-7" />
-                                    Confirm Scan
+                                    Send
                                 </button>
                             </div>
                         )}
@@ -609,27 +617,23 @@ export default function NewsPage() {
                                 >
                                     <div className="max-w-xl mx-auto pointer-events-auto">
                                         <div className={cn(
-                                            "p-8 rounded-[44px] border-[5px] border-[#0A0A26] shadow-[0_20px_0_#0A0A26] flex items-center gap-8",
-                                            isCorrect ? "bg-[#05d9e8]" : "bg-[#FF4B4B]"
+                                            "p-8 rounded-[44px] border-[5px] border-[#0A0A26] shadow-[0_20px_0_#0A0A26] flex flex-col items-center gap-6 text-center",
+                                            isCorrect ? "bg-[#58cc02]" : "bg-[#FF1E56]"
                                         )}>
-                                            <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center border-[4px] border-[#0A0A26] shrink-0 shadow-lg relative">
-                                                <FomoBird className="w-16 h-16" expression={isCorrect ? "happy" : "surprised"} />
-                                            </div>
-
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-4 mb-2">
+                                                <div className="flex flex-col items-center gap-3 mb-4">
                                                     <h5 className="font-black text-3xl text-white uppercase italic tracking-tighter leading-none">
                                                         {isCorrect ? "BINGO!" : "GAP!"}
                                                     </h5>
                                                 </div>
-                                                <div className="bg-black/10 p-4 rounded-2xl border-[2px] border-black/5 mb-6">
-                                                    <p className="text-white font-bold text-base leading-[1.4]">
+                                                <div className="bg-black/10 p-4 rounded-3xl border-[2px] border-black/5 mb-6">
+                                                    <p className="text-white font-bold text-base leading-[1.4] max-w-lg mx-auto">
                                                         {selectedNews.questions[quizIndex].explanation}
                                                     </p>
                                                 </div>
                                                 <button
                                                     onClick={handleNextQuiz}
-                                                    className="w-full bg-white text-[#0A0A26] border-[4px] border-[#0A0A26] shadow-[0_8px_0_#0A0A26] rounded-2xl px-8 py-4 text-xl font-black uppercase tracking-widest active:translate-y-1 active:shadow-[0_4px_0_#0A0A26] transition-all hover:bg-[#A5A5D9]"
+                                                    className="w-full bg-white text-[#0A0A26] border-[4px] border-[#0A0A26] shadow-[0_8px_0_#0A0A26] rounded-2xl px-8 py-4 text-xl font-black uppercase tracking-widest active:translate-y-1 active:shadow-[0_4px_0_#0A0A26] transition-all hover:bg-white/90"
                                                 >
                                                     {quizIndex < selectedNews.questions.length - 1 ? "NEXT" : "ANALYZE"}
                                                 </button>

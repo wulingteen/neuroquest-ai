@@ -6,28 +6,32 @@ import { type QuizQuestion } from "@/types/game";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import FomoBird from "@/components/icons/FomoBird";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 const Confetti = dynamic(() => import("react-confetti"), { ssr: false });
 
 interface LevelModalProps {
     onClose: () => void;
     planetName: string;
+    levelTitle: string;
     levelId: string | number;
     levelNumber: number;
     rollup: string;
 }
 
-export default function LevelModal({ onClose, planetName, levelId, levelNumber, rollup }: LevelModalProps) {
+export default function LevelModal({ onClose, planetName, levelTitle, levelId, levelNumber, rollup }: LevelModalProps) {
     const { addXP, completeLevel } = useGameStore();
     const [phase, setPhase] = useState<"intro" | "quiz" | "result">("intro");
     const [currentQ, setCurrentQ] = useState(0);
     const [selected, setSelected] = useState<number | null>(null);
     const [answered, setAnswered] = useState(false);
+    const [pendingAnswer, setPendingAnswer] = useState<number | null>(null);
     const [score, setScore] = useState(0);
     const [totalXP, setTotalXP] = useState(0);
     const [showConfetti, setShowConfetti] = useState(false);
     const [questions, setQuestions] = useState<QuizQuestion[]>([]);
     const [fetching, setFetching] = useState(true);
+    const [showExitConfirm, setShowExitConfirm] = useState(false);
 
     useEffect(() => {
         const fetchQuiz = async () => {
@@ -76,11 +80,16 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
         );
     }
 
-    const handleAnswer = (idx: number) => {
+    const handleSelectOption = (idx: number) => {
         if (answered) return;
-        setSelected(idx);
+        setPendingAnswer(idx);
+    };
+
+    const handleConfirmAnswer = () => {
+        if (pendingAnswer === null || answered) return;
+        setSelected(pendingAnswer);
         setAnswered(true);
-        if (idx === question.correct) {
+        if (pendingAnswer === question.correct) {
             setScore((s) => s + 1);
             setTotalXP((x) => x + question.xp);
         }
@@ -91,11 +100,29 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
             setCurrentQ((q) => q + 1);
             setSelected(null);
             setAnswered(false);
+            setPendingAnswer(null);
         } else {
             await addXP(totalXP);
             await completeLevel(String(levelId));
             setShowConfetti(true);
             setPhase("result");
+        }
+    };
+
+    const handleExitQuiz = async () => {
+        setShowExitConfirm(false);
+        // Award XP for correct answers given so far
+        if (totalXP > 0) {
+            await addXP(totalXP);
+        }
+        onClose();
+    };
+
+    const handleCloseClick = () => {
+        if (phase === "quiz") {
+            setShowExitConfirm(true);
+        } else {
+            onClose();
         }
     };
 
@@ -135,17 +162,16 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
                     className="w-full max-w-2xl bg-[#1D1C44] border-[4px] border-[#0A0A26] rounded-[40px] flex flex-col max-h-[95vh] min-h-[600px] overflow-hidden relative shadow-[0_20px_0_#0A0A26] z-10"
                 >
-                    {/* Header with Exit Icon */}
-                    <div className="absolute top-6 right-6 z-20">
-                        <button
-                            onClick={onClose}
-                            className="w-12 h-12 bg-[#2a1f45] border-[4px] border-[#0A0A26] shadow-[0_6px_0_#0A0A26] rounded-2xl text-white font-black text-2xl flex items-center justify-center hover:bg-[#3d2f63] active:translate-y-1 active:shadow-[0_2px_0_#0A0A26] transition-all"
-                        >
-                            ×
-                        </button>
-                    </div>
-
+                    {/* Header with Close Button inside flex container */}
                     <div className="flex-1 overflow-y-auto min-h-0 flex flex-col scrollbar-hide">
+                        <div className="px-6 pt-6 sm:px-10 sm:pt-8 flex justify-end">
+                            <button
+                                onClick={handleCloseClick}
+                                className="w-12 h-12 bg-[#2a1f45] border-[4px] border-[#0A0A26] shadow-[0_6px_0_#0A0A26] rounded-2xl text-white font-black text-2xl flex items-center justify-center hover:bg-[#3d2f63] active:translate-y-1 active:shadow-[0_2px_0_#0A0A26] transition-all"
+                            >
+                                ×
+                            </button>
+                        </div>
 
                         <AnimatePresence mode="wait">
                             {/* Intro Phase */}
@@ -157,15 +183,8 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                     exit={{ opacity: 0, scale: 1.05 }}
                                     className="p-8 sm:p-14 text-center flex flex-col items-center justify-center flex-1"
                                 >
-                                    <div className="relative mb-8">
-                                        <FomoBird className="w-32 h-32" />
-                                        <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-[#58CC02] rounded-full border-[3px] border-[#0A0A26] flex items-center justify-center shadow-[0_4px_0_#0A0A26]">
-                                            <span className="text-xl font-black text-white">HI!</span>
-                                        </div>
-                                    </div>
-
-                                    <h2 className="text-4xl sm:text-6xl font-black text-white mb-2 uppercase tracking-tighter leading-tight italic">{planetName}</h2>
-                                    <h3 className="text-2xl font-bold text-[#4EEAFF] mb-8 uppercase tracking-[0.2em] opacity-80">Knowledge Briefing</h3>
+                                    <h2 className="text-4xl sm:text-6xl font-black text-white mb-2 uppercase tracking-tighter leading-tight italic">{levelTitle || planetName}</h2>
+                                    <h3 className="text-2xl font-bold text-[#A5A5D9] mb-8 uppercase tracking-[0.2em]">Knowledge Briefing</h3>
 
                                     <div className="bg-[#15113B] border-[3px] border-[#0A0A26] rounded-[32px] p-6 mb-12 max-w-md w-full relative">
                                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#FF7E5F] px-4 py-1 rounded-full border-[2px] border-[#0A0A26] text-white font-black text-xs uppercase tracking-widest">
@@ -176,23 +195,22 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                         </p>
                                     </div>
 
-                                    <div className="flex gap-4 sm:gap-12 mb-12">
-                                        <div className="flex flex-col items-center">
-                                            <div className="text-4xl font-black text-[#FFFFFF] mb-1">{questions.length}</div>
-                                            <div className="text-[10px] font-black text-[#A5A5D9] uppercase tracking-[0.3em]">Neural Tests</div>
+                                    <div className="flex gap-4 mb-12 w-full max-w-md">
+                                        <div className="flex-1 bg-[#15113B] rounded-2xl p-4 flex flex-col items-center justify-center">
+                                            <span className="text-3xl font-black text-white">{questions.length}</span>
+                                            <span className="text-[10px] font-black text-[#A5A5D9] uppercase tracking-widest">Neural Tests</span>
                                         </div>
-                                        <div className="w-[3px] h-14 bg-[#0A0A26] self-center rounded-full opacity-30" />
-                                        <div className="flex flex-col items-center">
-                                            <div className="text-4xl font-black text-[#FEB47B] mb-1">{questions.reduce((a, q) => a + q.xp, 0)}</div>
-                                            <div className="text-[10px] font-black text-[#A5A5D9] uppercase tracking-[0.3em]">Total XP</div>
+                                        <div className="flex-1 bg-[#15113B] rounded-2xl p-4 flex flex-col items-center justify-center">
+                                            <span className="text-3xl font-black text-white">{questions.reduce((a, q) => a + q.xp, 0)}</span>
+                                            <span className="text-[10px] font-black text-[#A5A5D9] uppercase tracking-widest">Total XP</span>
                                         </div>
                                     </div>
 
                                     <button
-                                        className="w-full max-w-sm bg-[#58CC02] text-white border-[4px] border-[#0A0A26] shadow-[0_12px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] rounded-[28px] px-8 py-6 text-2xl font-black uppercase tracking-widest active:translate-y-2 active:shadow-[0_4px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] transition-all hover:brightness-110"
+                                        className="w-full max-w-md bg-[#58CC02] text-white border-[4px] border-[#0A0A26] shadow-[0_12px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] rounded-[28px] px-8 py-6 text-2xl font-black uppercase tracking-widest active:translate-y-2 active:shadow-[0_4px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] transition-all hover:brightness-110"
                                         onClick={() => setPhase("quiz")}
                                     >
-                                        BEGIN SCAN
+                                        Start
                                     </button>
                                 </motion.div>
                             )}
@@ -208,11 +226,6 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                 >
                                     {/* Progress header */}
                                     <div className="mb-10">
-                                        <div className="flex justify-between items-end mb-4">
-                                            <div className="bg-[#15113B] border-[3px] border-[#0A0A26] px-5 py-2 rounded-2xl shadow-[0_6px_0_#0A0A26] ml-auto">
-                                                <span className="text-[#FEB47B] font-black text-lg">{totalXP} XP</span>
-                                            </div>
-                                        </div>
                                         <div className="w-full h-8 bg-[#0A0A26] rounded-full p-[4px] relative overflow-hidden shadow-inner">
                                             <motion.div
                                                 initial={{ width: 0 }}
@@ -236,37 +249,42 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                         {question.options.map((opt, idx) => {
                                             const isCorrect = idx === question.correct;
                                             const isSelected = idx === selected;
+                                            const isPending = pendingAnswer === idx;
 
                                             let btnClass = "bg-[#15113B] border-[#0A0A26] text-white shadow-[0_10px_0_#0A0A26]";
                                             let icon = (idx + 1).toString();
 
                                             if (answered) {
                                                 if (isCorrect) {
-                                                    btnClass = "bg-[#05d9e8] border-[#0A0A26] text-[#0a0710] shadow-[0_10px_0_#0A0A26] scale-[1.02]";
+                                                    btnClass = "bg-[#58cc02] border-[#0A0A26] text-[#0a0710] shadow-[0_10px_0_#0A0A26] scale-[1.02]";
                                                     icon = "✓";
                                                 } else if (isSelected && !isCorrect) {
-                                                    btnClass = "bg-[#FF4B4B] border-[#0A0A26] text-white shadow-[0_10px_0_#0A0A26]";
+                                                    btnClass = "bg-[#FF1E56] border-[#0A0A26] text-white shadow-[0_10px_0_#0A0A26]";
                                                     icon = "×";
                                                 } else {
                                                     btnClass = "bg-[#15113B] border-[#0A0A26] text-[#6b6b9e] opacity-40 shadow-[0_6px_0_#0A0A26]";
                                                 }
+                                            } else if (isPending) {
+                                                btnClass = "bg-[#05d9e8] border-[#0A0A26] text-[#0a0710] shadow-[0_10px_0_#0A0A26] -translate-y-1";
                                             }
 
                                             return (
                                                 <button
                                                     key={idx}
                                                     disabled={answered}
-                                                    onClick={() => handleAnswer(idx)}
+                                                    onClick={() => handleSelectOption(idx)}
                                                     className={cn(
                                                         "relative w-full text-left p-6 rounded-[28px] border-[4px] transition-all duration-400 font-bold text-lg sm:text-xl flex items-center gap-6",
                                                         btnClass,
-                                                        !answered && "hover:bg-[#201d5c] hover:-translate-y-1 active:translate-y-1 active:shadow-[0_4px_0_#0A0A26]",
+                                                        !answered && !isPending && "hover:bg-[#201d5c] hover:-translate-y-1 active:translate-y-1 active:shadow-[0_4px_0_#0A0A26]",
                                                         answered && "cursor-default"
                                                     )}
                                                 >
                                                     <div className={cn(
-                                                        "w-12 h-12 rounded-2xl border-[3px] border-[#0A0A26] flex items-center justify-center shrink-0 font-black text-xl transition-colors",
-                                                        answered && isCorrect ? "bg-white text-[#05d9e8]" : "bg-[#2a2a6e] text-white"
+                                                        "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 font-black text-xl transition-colors",
+                                                        answered
+                                                            ? (isCorrect ? "bg-white/30 text-[#0a0710]" : (isSelected ? "bg-white/30 text-white" : "bg-black/10 text-white/20"))
+                                                            : "bg-[#2a2a6e] text-white border-[3px] border-[#0A0A26]"
                                                     )}>
                                                         {icon}
                                                     </div>
@@ -275,6 +293,19 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                             );
                                         })}
                                     </div>
+
+                                    {/* Confirm Send button — appears when an option is selected but not yet submitted */}
+                                    {pendingAnswer !== null && !answered && (
+                                        <div className="fixed bottom-8 left-0 right-0 px-8 flex justify-center z-[60] pointer-events-none">
+                                            <button
+                                                onClick={handleConfirmAnswer}
+                                                className="w-full max-w-2xl pointer-events-auto py-6 bg-[#05d9e8] text-[#0a0710] border-[4px] border-[#0A0A26] shadow-[0_12px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] rounded-[28px] font-black text-2xl uppercase tracking-widest active:translate-y-2 active:shadow-[0_4px_0_#0A0A26,inset_0_-8px_0_rgba(0,0,0,0.1)] transition-all hover:brightness-110 flex items-center justify-center gap-3"
+                                            >
+                                                <CheckCircle2 className="w-7 h-7" />
+                                                Send
+                                            </button>
+                                        </div>
+                                    )}
 
                                     <AnimatePresence>
                                         {answered && (
@@ -286,32 +317,23 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                             >
                                                 <div className="max-w-2xl mx-auto pointer-events-auto">
                                                     <div className={cn(
-                                                        "p-8 sm:p-10 rounded-[44px] border-[5px] border-[#0A0A26] shadow-[0_20px_0_#0A0A26] flex flex-col sm:flex-row items-center gap-10",
-                                                        selected === question.correct ? "bg-[#05d9e8]" : "bg-[#FF4B4B]"
+                                                        "p-8 sm:p-10 rounded-[44px] border-[5px] border-[#0A0A26] shadow-[0_20px_0_#0A0A26] flex flex-col items-center gap-6 text-center",
+                                                        selected === question.correct ? "bg-[#58cc02]" : "bg-[#FF1E56]"
                                                     )}>
-                                                        <div className="w-28 h-28 bg-white/20 rounded-full flex items-center justify-center border-[4px] border-[#0A0A26] shrink-0 shadow-lg relative">
-                                                            <FomoBird className="w-20 h-20" expression={selected === question.correct ? "happy" : "surprised"} />
-                                                        </div>
-
-                                                        <div className="flex-1 text-center sm:text-left">
-                                                            <div className="flex items-center justify-center sm:justify-start gap-4 mb-3">
+                                                        <div className="flex-1">
+                                                            <div className="flex flex-col items-center gap-3 mb-4">
                                                                 <h5 className="font-black text-4xl text-white uppercase italic tracking-tighter">
                                                                     {selected === question.correct ? "BINGO!" : "GAP!"}
                                                                 </h5>
-                                                                {selected === question.correct && (
-                                                                    <div className="bg-white text-[#05d9e8] px-4 py-1 rounded-2xl text-xl font-black border-[3px] border-[#0A0A26]">
-                                                                        +{question.xp} XP
-                                                                    </div>
-                                                                )}
                                                             </div>
-                                                            <div className="bg-black/10 p-5 rounded-2xl border-[2px] border-black/5 mb-8">
-                                                                <p className="text-white font-bold text-lg leading-[1.4]">
+                                                            <div className="bg-black/10 p-5 rounded-3xl border-[2px] border-black/5 mb-8">
+                                                                <p className="text-white font-bold text-lg leading-[1.4] max-w-lg mx-auto">
                                                                     {question.explanation}
                                                                 </p>
                                                             </div>
                                                             <button
                                                                 onClick={handleNext}
-                                                                className="w-full sm:w-auto min-w-[220px] bg-white text-[#0A0A26] border-[4px] border-[#0A0A26] shadow-[0_10px_0_#0A0A26] rounded-3xl px-10 py-5 text-2xl font-black uppercase tracking-widest active:translate-y-1 active:shadow-[0_4px_0_#0A0A26] transition-all hover:bg-[#A5A5D9]"
+                                                                className="w-full sm:w-auto min-w-[220px] bg-white text-[#0A0A26] border-[4px] border-[#0A0A26] shadow-[0_10px_0_#0A0A26] rounded-3xl px-10 py-5 text-2xl font-black uppercase tracking-widest active:translate-y-1 active:shadow-[0_4px_0_#0A0A26] transition-all hover:bg-white/90"
                                                             >
                                                                 {currentQ < questions.length - 1 ? "NEXT" : "ANALYZE"}
                                                             </button>
@@ -321,6 +343,39 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
+
+                                    {/* Exit confirmation modal */}
+                                    {showExitConfirm && (
+                                        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+                                            <div className="bg-[#1b1236] border-[6px] border-[#100a1f] rounded-[40px] p-8 max-w-sm w-full shadow-2xl space-y-6 text-center">
+                                                <div className="w-20 h-20 bg-[#ff9600] rounded-full flex items-center justify-center mx-auto shadow-[0_8px_0_#cc7800] border-b-4 border-[#cc7800]">
+                                                    <AlertTriangle className="w-10 h-10 text-white" />
+                                                </div>
+                                                <h3 className="text-2xl font-black text-white tracking-tight">
+                                                    Abort Mission?
+                                                </h3>
+                                                <p className="text-[#b8aae0] font-bold text-sm leading-relaxed">
+                                                    {totalXP > 0
+                                                        ? `You'll keep the ${totalXP} XP earned so far, but won't complete this level.`
+                                                        : "Your current progress will be lost and you'll need to start over."}
+                                                </p>
+                                                <div className="flex flex-col gap-3">
+                                                    <button
+                                                        onClick={handleExitQuiz}
+                                                        className="w-full py-5 bg-[#251847] text-[#ff2262] rounded-[24px] font-black text-lg border-b-[6px] border-[#19102e] tracking-widest hover:bg-[#2d1d56]"
+                                                    >
+                                                        Yes
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setShowExitConfirm(false)}
+                                                        className="w-full py-5 bg-[#05d9e8] text-[#0a0710] rounded-[24px] font-black text-lg border-b-[6px] border-[#03b8c4] tracking-widest"
+                                                    >
+                                                        No
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </motion.div>
                             )}
 
@@ -371,6 +426,7 @@ export default function LevelModal({ onClose, planetName, levelId, levelNumber, 
                                                 setCurrentQ(0);
                                                 setSelected(null);
                                                 setAnswered(false);
+                                                setPendingAnswer(null);
                                                 setScore(0);
                                                 setTotalXP(0);
                                                 setShowConfetti(false);

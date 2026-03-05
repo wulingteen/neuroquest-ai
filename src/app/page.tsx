@@ -354,15 +354,19 @@ export default function WorldMapPage() {
         ) : <div className="w-14" />}
       </div>
 
-      {showLevelModal && selectedPlanetForModal && (
-        <LevelModal
-          onClose={() => setShowLevelModal(false)}
-          planetName={selectedPlanetForModal.name}
-          levelId={currentLevel?.toString() || ""}
-          levelNumber={levels.find(l => String(l.id) === String(currentLevel))?.number || 1}
-          rollup={selectedPlanetForModal.id}
-        />
-      )}
+      {showLevelModal && selectedPlanetForModal && (() => {
+        const currentLevelData = levels.find(l => String(l.id) === String(currentLevel));
+        return (
+          <LevelModal
+            onClose={() => setShowLevelModal(false)}
+            planetName={selectedPlanetForModal.name}
+            levelTitle={currentLevelData?.title || ""}
+            levelId={currentLevel?.toString() || ""}
+            levelNumber={currentLevelData?.number || 1}
+            rollup={selectedPlanetForModal.id}
+          />
+        );
+      })()}
     </div>
   );
 }
