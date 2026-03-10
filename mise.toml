@@ -1,2 +1,7 @@
 [tools]
 node = "22.9"
+python = "3.13"
+uv = "0.10.2"
+
+[settings]
+python.uv_venv_auto = "source"
