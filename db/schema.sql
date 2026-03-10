@@ -317,59 +317,9 @@ CREATE TABLE IF NOT EXISTS player_achievements (
 );
 
 -- Initial Data Migration
-
--- Planets
-INSERT INTO planets (planet_id, rollup, label, subtitle, icon, color, glow_color, bg_gradient, x, y, description) VALUES
-(1, 'prompt', 'Prompt Planet', 'Prompt Engineering', '⚡', '#8B5CF6', 'rgba(139,92,246,0.5)', 'from-purple-900 to-violet-950', 30, 40, 'Master the power of Prompts and make AI work for you'),
-(2, 'model', 'Model Planet', 'LLM Fundamentals', '🧠', '#3B82F6', 'rgba(59,130,246,0.5)', 'from-blue-900 to-cyan-950', 62, 25, 'Dive into the core of Transformers and understand how AI thinks'),
-(3, 'vision', 'Vision Planet', 'Multimodal AI', '👁️', '#F97316', 'rgba(249,115,22,0.5)', 'from-orange-900 to-red-950', 75, 58, 'See through the eyes of AI, exploring the fusion of images, sounds, and text'),
-(4, 'ethics', 'Ethics Planet', 'AI Ethics', '⚖️', '#EF4444', 'rgba(239,68,68,0.5)', 'from-red-900 to-rose-950', 45, 70, 'Guard the boundaries of AI and become a responsible creator'),
-(5, 'agent', 'Agent Planet', 'AI Agents', '🤖', '#10B981', 'rgba(16,185,129,0.5)', 'from-emerald-900 to-green-950', 18, 65, 'Unleash the potential of AI Agents and build autonomous intelligent systems'),
-(6, 'future', 'Future Planet', 'AGI & Future Trends', '🌟', '#FFB800', 'rgba(255,184,0,0.5)', 'from-yellow-900 to-amber-950', 50, 48, 'Stay on the cutting edge and gain insights into the future of AI')
-ON CONFLICT (planet_id) DO UPDATE SET
-    rollup = EXCLUDED.rollup,
-    label = EXCLUDED.label,
-    subtitle = EXCLUDED.subtitle,
-    icon = EXCLUDED.icon,
-    color = EXCLUDED.color,
-    glow_color = EXCLUDED.glow_color,
-    bg_gradient = EXCLUDED.bg_gradient,
-    x = EXCLUDED.x,
-    y = EXCLUDED.y,
-    description = EXCLUDED.description;
-
-UPDATE planets SET required_rollup = 'prompt' WHERE rollup = 'model';
-UPDATE planets SET required_rollup = 'model' WHERE rollup = 'vision';
-UPDATE planets SET required_rollup = 'vision' WHERE rollup = 'ethics';
-UPDATE planets SET required_rollup = 'ethics' WHERE rollup = 'agent';
-UPDATE planets SET required_rollup = 'agent' WHERE rollup = 'future';
-
--- Levels
-INSERT INTO levels (level_id, rollup, level_number, title, content_type, xp_reward) VALUES
-(1, 'prompt', 1, 'What is a Prompt?', 'teach', 100),
-(2, 'prompt', 2, 'Zero-shot vs Few-shot', 'quiz', 150),
-(3, 'prompt', 3, 'Role-play Prompting', 'teach', 100),
-(4, 'prompt', 4, 'Chain of Thought', 'quiz', 200),
-(5, 'prompt', 5, 'Prompt Injection Defense', 'quiz', 200),
-(6, 'prompt', 6, 'BOSS: Comprehensive Challenge', 'boss', 500),
-(10, 'model', 1, 'What is an LLM?', 'teach', 150),
-(11, 'model', 2, 'Transformer Architecture', 'quiz', 200),
-(12, 'model', 3, 'Fine-tuning Techniques', 'boss', 400),
-(13, 'vision', 1, 'Introduction to Multimodality', 'teach', 150),
-(14, 'vision', 2, 'Image Generation Models', 'quiz', 250),
-(15, 'ethics', 1, 'AI Bias and Fairness', 'teach', 150),
-(16, 'ethics', 2, 'Copyright and Privacy', 'quiz', 200),
-(17, 'ethics', 3, 'Responsible AI', 'boss', 400),
-(18, 'agent', 1, 'What is an AI Agent?', 'teach', 200),
-(19, 'agent', 2, 'Tool Use / Function Calling', 'quiz', 300),
-(20, 'future', 1, 'AGI Concepts', 'teach', 250),
-(21, 'future', 2, 'The Next Step of AI', 'quiz', 350)
-ON CONFLICT (level_id) DO UPDATE SET
-    rollup = EXCLUDED.rollup,
-    level_number = EXCLUDED.level_number,
-    title = EXCLUDED.title,
-    content_type = EXCLUDED.content_type,
-    xp_reward = EXCLUDED.xp_reward;
+-- NOTE: planets, levels, and quiz_questions are NOT seeded here.
+-- Use the quiz generation pipeline to populate them:
+--   npx tsx scripts/generate-quiz.ts --rollup <rollup> --count <n> --level-count <levels>
 
 -- Achievements
 INSERT INTO achievements (achievement_id, name, description, icon, rarity, xp_reward) VALUES
@@ -383,33 +333,6 @@ ON CONFLICT (achievement_id) DO UPDATE SET
     description = EXCLUDED.description,
     icon = EXCLUDED.icon,
     rarity = EXCLUDED.rarity,
-    xp_reward = EXCLUDED.xp_reward;
-
--- Quiz Questions
-INSERT INTO quiz_questions (rollup, level_number, question_number, question_text, options, correct_option_index, explanation, xp_reward) VALUES
-('prompt', 1, 1, 'Which of the following Prompt techniques is best suited for tasks requiring AI to perform step-by-step reasoning?', '["Zero-shot Prompting", "Chain of Thought (CoT) Prompting", "One-shot Prompting", "Temperature Adjustment"]', 1, 'Chain of Thought Prompting allows the AI to show its reasoning steps, making it particularly suitable for tasks requiring multi-step reasoning like math and logic.', 150),
-('prompt', 2, 2, 'What concept does "Token" in an LLM most closely represent?', '["A complete word", "The smallest unit of text processing (about 3-4 characters)", "A complete sentence", "A block of code"]', 1, 'A Token is the smallest unit an LLM uses to process text. In English, it is about 4 characters; in Chinese, each character is usually 1-2 Tokens.', 150),
-('prompt', 3, 1, 'In an LLM''s Temperature parameter, what effect does a value close to 0 have?', '["More creative and diverse output", "More random and unpredictable responses", "More deterministic and conservative output", "Faster response speed"]', 2, 'When Temperature is close to 0, the model tends to choose the most probable Tokens, making the output more deterministic and consistent; close to 1 makes it more creative and diverse.', 200),
-('prompt', 4, 1, 'Which of the following statements about RAG (Retrieval-Augmented Generation) is correct?', '["RAG permanently modifies LLM parameters", "RAG dynamically retrieves from an external knowledge base during inference", "RAG requires more training data than Fine-tuning", "RAG only applies to image generation"]', 1, 'RAG retrieves relevant information from an external knowledge base in real-time when generating responses, without modifying the model itself, making it suitable for scenarios needing up-to-date information.', 200),
-('prompt', 5, 1, 'Which of the following statements about RAG (Retrieval-Augmented Generation) is correct?', '["RAG permanently modifies LLM parameters", "RAG dynamically retrieves from an external knowledge base during inference", "RAG requires more training data than Fine-tuning", "RAG only applies to image generation"]', 1, 'RAG retrieves relevant information from an external knowledge base in real-time when generating responses, without modifying the model itself, making it suitable for scenarios needing up-to-date information.', 200),
-('prompt', 6, 1, 'Which of the following statements about RAG (Retrieval-Augmented Generation) is correct?', '["RAG permanently modifies LLM parameters", "RAG dynamically retrieves from an external knowledge base during inference", "RAG requires more training data than Fine-tuning", "RAG only applies to image generation"]', 1, 'RAG retrieves relevant information from an external knowledge base in real-time when generating responses, without modifying the model itself, making it suitable for scenarios needing up-to-date information.', 200),
-('model', 1, 1, 'Which core mechanism of the Transformer model allows it to handle dependencies in long texts?', '["Self-Attention mechanism", "Convolutional layer (Convolution)", "Recurrent Neural Network (RNN)", "Pooling layer (Pooling)"]', 0, 'Self-Attention allows the model to focus on other words in a sequence while processing a single word, thereby understanding long-distance dependencies.', 200),
-('model', 2, 1, 'Which of the following fine-tuning methods can adjust large models while significantly reducing computational resources?', '["Full Fine-tuning", "LoRA (Low-Rank Adaptation)", "Pre-training", "RAG"]', 1, 'LoRA is a Parameter-Efficient Fine-Tuning (PEFT) method that updates parameters by adding low-rank matrices alongside the model''s weight matrices, significantly saving resources.', 400),
-('model', 3, 1, 'Which of the following fine-tuning methods can adjust large models while significantly reducing computational resources?', '["Full Fine-tuning", "LoRA (Low-Rank Adaptation)", "Pre-training", "RAG"]', 1, 'LoRA is a Parameter-Efficient Fine-Tuning (PEFT) method that updates parameters by adding low-rank matrices alongside the model''s weight matrices, significantly saving resources.', 400),
-('vision', 1, 1, 'What technical architecture are Midjourney and Stable Diffusion primarily based on?', '["GAN (Generative Adversarial Network)", "Diffusion Model", "RNN", "CNN"]', 1, 'Diffusion Models are currently the mainstream image generation technology, generating high-quality images by learning a denoising process.', 250),
-('vision', 2, 1, 'What technical architecture are Midjourney and Stable Diffusion primarily based on?', '["GAN (Generative Adversarial Network)", "Diffusion Model", "RNN", "CNN"]', 1, 'Diffusion Models are currently the mainstream image generation technology, generating high-quality images by learning a denoising process.', 250),
-('ethics', 1, 1, 'If an AI model is trained using copyrighted material, what is the primary legal controversy it faces?', '["Violating model safety protocols", "The boundary between Fair Use and infringement", "The model will become slower", "Conflicts in open-source agreements"]', 1, 'Whether AI training data constitutes "Fair Use" is currently a major controversy in copyright law, involving creator rights and technological development.', 200),
-('ethics', 2, 1, 'If an AI model is trained using copyrighted material, what is the primary legal controversy it faces?', '["Violating model safety protocols", "The boundary between Fair Use and infringement", "The model will become slower", "Conflicts in open-source agreements"]', 1, 'Whether AI training data constitutes "Fair Use" is currently a major controversy in copyright law, involving creator rights and technological development.', 200),
-('ethics', 3, 1, 'Which of the following is one of the core principles when developing "Responsible AI"?', '["Increasing parameters as much as possible", "Ensuring transparency and explainability", "Complete automation without human review", "Pursuing highest accuracy while ignoring bias"]', 1, 'Transparency and explainability are benchmarks for Responsible AI, allowing users and developers to understand the AI''s decision-making process and trace potential errors.', 400),
-('agent', 1, 1, 'When an AI Agent needs to obtain real-time weather information, what key capability does it rely on?', '["Increasing Temperature", "Tool Use / Function Calling", "Changing Prompt style", "Zero-shot reasoning"]', 1, 'Tool Use (or Function Calling) empowers an Agent to execute external APIs or scripts, enabling it to obtain real-time data.', 300),
-('agent', 2, 1, 'When an AI Agent needs to obtain real-time weather information, what key capability does it rely on?', '["Increasing Temperature", "Tool Use / Function Calling", "Changing Prompt style", "Zero-shot reasoning"]', 1, 'Tool Use (or Function Calling) empowers an Agent to execute external APIs or scripts, enabling it to obtain real-time data.', 300),
-('future', 1, 1, 'Which statement regarding AGI (Artificial General Intelligence) is the most accurate?', '["AGI refers to expert systems capable of only a single task", "AGI can reach or exceed human levels in any intellectual task", "Current ChatGPT is already a perfect AGI", "AGI just refers to a significant increase in computer power"]', 1, 'AGI is a hypothetical artificial intelligence that can demonstrate abilities comparable to or exceeding humans in a wide range of cognitive tasks.', 350),
-('future', 2, 1, 'Which statement regarding AGI (Artificial General Intelligence) is the most accurate?', '["AGI refers to expert systems capable of only a single task", "AGI can reach or exceed human levels in any intellectual task", "Current ChatGPT is already a perfect AGI", "AGI just refers to a significant increase in computer power"]', 1, 'AGI is a hypothetical artificial intelligence that can demonstrate abilities comparable to or exceeding humans in a wide range of cognitive tasks.', 350)
-ON CONFLICT (rollup, level_number, question_number) DO UPDATE SET
-    question_text = EXCLUDED.question_text,
-    options = EXCLUDED.options,
-    correct_option_index = EXCLUDED.correct_option_index,
-    explanation = EXCLUDED.explanation,
     xp_reward = EXCLUDED.xp_reward;
 
 -- Profile Options (Background + Interest choices with scores)
@@ -448,7 +371,7 @@ ON CONFLICT (category, option_key) DO UPDATE SET
     score = EXCLUDED.score,
     sort_order = EXCLUDED.sort_order;
 
--- Dummy Players and Progress for Testing
+-- Dummy Players for Testing
 INSERT INTO players (username, xp, streak_days, guild_name) VALUES
 ('NeuralNinja', 8000, 32, 'AI Pioneers'),
 ('PromptPhysicist', 2000, 15, 'Deep Minds'),
@@ -461,13 +384,6 @@ INSERT INTO players (username, xp, streak_days, guild_name) VALUES
 ('AgentAlpha', 7200, 9, 'AI Pioneers'),
 ('YouPlayer', 50000, 4, 'Beginner Village')
 ON CONFLICT (username) DO NOTHING;
-
--- Initial Progress for YouPlayer
-INSERT INTO player_progress (player_id, level_id)
-SELECT p.player_id, l.level_id
-FROM players p, levels l
-WHERE p.username = 'YouPlayer' AND l.level_id IN (1, 2, 3)
-ON CONFLICT (player_id, level_id) DO NOTHING;
 
 -- Seed Friends for YouPlayer
 INSERT INTO friends (player_id, friend_id)
