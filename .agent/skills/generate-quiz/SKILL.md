@@ -19,17 +19,16 @@ description: generate quiz questions for any planet **ONLY use when user allow y
 
 1. If the {rollup name} exists in neither the database nor external sources, ask the user if they want to "create a new planet with this rollup name and generate {level count} questions".
 2. If the {rollup name} exists in the database, ask the user if they want to "add new questions".
-3. **Based on the user's needs, decide whether to initiate "Command Mode" (to create a new planet) or "Manual Mode" (if the rollup name already exists in the database).**
+3. **Based on the user's needs, decide whether to initiate "Command Mode" (to create a new planet, first) or "Manual Mode" (if the rollup name already exists in the database, skip `command mode`).**
 
 ## Step 4 — follow the mode
 
 ### Command Mode
 
 1. Determine whether the user-entered {rollup name} appears in the output of the recent `npm run graph -- {rollup-name}` command (or if a similar rollup name exists). **If further user questioning would improve your accuracy, please ask them.**
-2. Use command `npx tsx scripts/generate-quiz.ts --rollup {rollup} --count {The number of questions you need to generate}` or `npx tsx scripts/generate-quiz.ts -r {rollup} -c {The number of questions you need to generate}`to generate new questions for the user.
+2. If {rollup name} does not exist, use `npx tsx scripts/generate-quiz.ts --rollup {rollup} --count 3 --level 1` command to generate one level of questions.
 3. this command may ask you the "overview", you may give a brief overview of this rollup name. And it requires starting with the simplest questions.
-4. wait for about 6 minutes.
-5. finished. and tell user, briefly.
+4. wait for about 6 minutes. After the command completes execution, the remaining number of levels and questions for the user are generated via `manual mode`.
 
 ### Manual Mode
 

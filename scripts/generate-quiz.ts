@@ -18,6 +18,7 @@ import { parseArgs } from "node:util";
 import { createInterface } from "node:readline";
 
 const TIMEOUT_MS = 180_000; // 3 minutes
+const LLM_MODEL = "deepseek/deepseek-v3.2";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -119,6 +120,38 @@ function promptForOverview(rollupName: string): Promise<string> {
     });
 }
 
+// ─── Progress Spinner ────────────────────────────────────────────────────────
+
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+interface Spinner {
+    stop: (finalMessage?: string) => void;
+}
+
+function startSpinner(message: string): Spinner {
+    const startTime = Date.now();
+    let frameIndex = 0;
+
+    const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const frame = SPINNER_FRAMES[frameIndex % SPINNER_FRAMES.length];
+        process.stdout.write(`\r${frame} ${message} ${elapsed}s`);
+        frameIndex++;
+    }, 100);
+
+    return {
+        stop(finalMessage?: string) {
+            clearInterval(interval);
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            // Clear the spinner line
+            process.stdout.write("\r" + " ".repeat(message.length + 20) + "\r");
+            if (finalMessage) {
+                console.log(`${finalMessage} (${elapsed}s)`);
+            }
+        },
+    };
+}
+
 // ─── API Call ────────────────────────────────────────────────────────────────
 
 interface ApiCallResult {
@@ -177,6 +210,7 @@ function printBanner(opts: CliOptions): void {
     }
     console.log(`  Difficulty mode  : ${modeLabel}`);
     console.log(`  Server           : ${host}`);
+    console.log(`  LLM model        : ${LLM_MODEL}`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
 }
 
@@ -225,7 +259,14 @@ async function main(): Promise<void> {
     printBanner(opts);
 
     console.log("⏳ Calling LLM… this may take 15–60 seconds.\n");
-    let { res, data } = await callGenerateApi(opts);
+    let spinner = startSpinner("Waiting for LLM response…");
+    let apiResult: ApiCallResult;
+    try {
+        apiResult = await callGenerateApi(opts);
+    } finally {
+        spinner.stop();
+    }
+    let { res, data } = apiResult;
 
     // Handle "needs overview" for unregistered rollups
     if (!res.ok && data.needsOverview) {
@@ -236,7 +277,12 @@ async function main(): Promise<void> {
         }
         console.log(`\n✅ Overview received (${overview.length} chars). Sending to LLM…\n`);
         console.log("⏳ Creating planet & generating questions… this may take 15–60 seconds.\n");
-        ({ res, data } = await callGenerateApi(opts, overview));
+        spinner = startSpinner("Waiting for LLM response…");
+        try {
+            ({ res, data } = await callGenerateApi(opts, overview));
+        } finally {
+            spinner.stop();
+        }
     }
 
     if (!res.ok || !data.success) {
