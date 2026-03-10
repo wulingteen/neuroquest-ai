@@ -47,6 +47,7 @@ description: generate quiz questions for any planet **ONLY use when user allow y
 - Ensure each question directly relates to the core topic.
 - Create questions based on this level's theme, ensuring no duplication with previous questions.
 - `explanation` is used to clarify foundational concepts and the rationale for the correct answer. Less than 30 words.
+- `description` is used to describe the question. Less than 30 words.
 - Provide exactly 4 options per question, with incorrect options distinguishable from the correct answer. Each option must be under 10 words.
 - Exclude options like “All of the above” or “None of the above.”
 - Distribute `correct_option_index` evenly across the 0, 1, 2, 3 range.
