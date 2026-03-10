@@ -1,35 +1,44 @@
+```shell
 #!/usr/bin/env bash
 
 set -euo pipefail
 
-echo "開始執行 neuroquest-ai 完整重置（加強版）..."
+echo "Starting full reset of neuroquest-ai (enhanced version)..."
 
-# 強制停止 & 移除容器（不管有沒有在跑）
-echo "強制移除容器 neuroquest-ai ..."
+# Force stop & remove container (regardless of status)
+echo "Force removing container neuroquest-ai..."
 docker rm -f neuroquest-ai 2>/dev/null || true
 
-# 移除任何可能還綁定的容器（保險）
-echo "清除任何還在使用該 volume 的容器..."
+# Remove any containers still bound to the volume (safety measure)
+echo "Clearing any containers still using the volume..."
 docker rm -f $(docker ps -a --filter volume=neuroquest-ai_postgres_data -q) 2>/dev/null || true
 
-# 移除 volume（先普通再強制）
-echo "移除 volume neuroquest-ai_postgres_data ..."
+# Remove volume (normal then force)
+echo "Removing volume neuroquest-ai_postgres_data..."
 docker volume rm neuroquest-ai_postgres_data 2>/dev/null || \
 docker volume rm --force neuroquest-ai_postgres_data 2>/dev/null || true
 
-# 確認是否真的沒了
+# Verify if it's really gone
 if docker volume ls -q | grep -q neuroquest-ai_postgres_data; then
-    echo "警告：volume 還是存在！請手動檢查 docker volume inspect"
+    echo "Warning: volume still exists! Please manually check docker volume inspect"
 else
-    echo "volume 已成功移除 ✓"
+    echo "Volume successfully removed ✓"
 fi
 
-# 執行一次 compose up-down 循環（背景）
-echo "啟動 docker compose up -d ..."
+# Run compose up (background)
+echo "Starting docker compose up -d ..."
 docker compose up -d --quiet-pull
 
-echo "等待 5 秒..."
+# Ensure .env exists (DATABASE_URL is required for Prisma)
+if [ ! -f .env ]; then
+    echo "Creating .env from .env.example..."
+    cp .env.example .env
+    echo ".env created ✓ (please fill in actual values as needed)"
+fi
+
+echo "Waiting for 5 seconds..."
 sleep 5
 
-echo "啟動.."
+echo "Starting..."
 npm run dev
+```
